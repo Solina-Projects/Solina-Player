@@ -80,9 +80,6 @@ android {
     defaultConfig {
         applicationId = "app.solina.player"
         minSdk = 31
-        ndk {
-            abiFilters += "arm64-v8a"
-        }
         targetSdk = 37
         versionCode = (project.findProperty("APP_VERSION_CODE") as? String)?.toInt() ?: 1
         versionName = (project.findProperty("APP_VERSION_NAME") as? String) ?: "1.0.0"
