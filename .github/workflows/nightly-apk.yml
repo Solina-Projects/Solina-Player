@@ -121,8 +121,8 @@ jobs:
           } > keystore.properties
 
       - name: Make gradlew executable
-              run: chmod +x gradlew
-              - name: Build Phone nightly release APKs
+        run: chmod +x gradlew
+      - name: Build Phone nightly release APKs
         run: ./gradlew :app:assembleRelease -Psolina.enableAbiSplits=true
 
       - name: Verify Phone nightly split APKs
