@@ -120,7 +120,9 @@ jobs:
             echo "keyPassword=$KEYSTORE_PASSWORD"
           } > keystore.properties
 
-      - name: Build Phone nightly release APKs
+      - name: Make gradlew executable
+              run: chmod +x gradlew
+              - name: Build Phone nightly release APKs
         run: ./gradlew :app:assembleRelease -Psolina.enableAbiSplits=true
 
       - name: Verify Phone nightly split APKs
