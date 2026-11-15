@@ -74,7 +74,9 @@ jobs:
             echo "keyPassword=$KEYSTORE_PASSWORD"
           } > keystore.properties
 
-      - name: Build PR release APKs
+      - name: Make gradlew executable
+              run: chmod +x gradlew
+              - name: Build PR release APKs
         run: >
           ./gradlew :app:assembleRelease
           -Psolina.enableAbiSplits=true
