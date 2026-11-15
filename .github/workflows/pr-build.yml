@@ -75,8 +75,8 @@ jobs:
           } > keystore.properties
 
       - name: Make gradlew executable
-              run: chmod +x gradlew
-              - name: Build PR release APKs
+        run: chmod +x gradlew
+      - name: Build PR release APKs
         run: >
           ./gradlew :app:assembleRelease
           -Psolina.enableAbiSplits=true
