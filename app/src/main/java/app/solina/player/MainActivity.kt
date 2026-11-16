@@ -725,6 +725,10 @@ class MainActivity : ComponentActivity() {
                 // any more — the floating bar stays active on the Music
                 // Search screen (Home / Search / Library, Search selected).
                 // The video Search screen shows the video bar instead.
+                // Folders + Player feedback (2026-11-16): the floating bar
+                // must be HIDDEN while a video is playing, so it never
+                // covers the player controls.
+                Screen.VideoPlayer.route,
                 Screen.Home.route,
                 Screen.HomeCustomization.route,
                 Screen.Settings.route,
