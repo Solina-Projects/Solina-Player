@@ -392,7 +392,8 @@ fun VideoFoldersScreen(
                     folders = shownFolders,
                     isGrid = isGrid,
                     showPaths = showPaths,
-                    showAllVideosCard = viewMode == FolderViewMode.ALL_FOLDERS,
+                    showAllVideosCard = viewMode == FolderViewMode.ALL_FOLDERS &&
+                        playAllVideos.isNotEmpty(),
                     allVideosCount = if (query.isBlank()) videos.size else playAllVideos.size,
                     allVideosDurationMs = if (query.isBlank()) {
                         videos.sumOf { it.durationMs }
@@ -851,10 +852,6 @@ private fun VideoFileGridCard(
  * plus "Fields" and "Advanced" sections — MediaStore gives this app no
  * per-video play history, watch status or frame rate, so those are left
  * out rather than shown as dead controls.
- */
-@Composable
-/**
- * Folder settings dialog.
  *
  * Home-entry + Player feedback (2026-11-16): the old dialog put the three
  * View Mode chips in a single non-wrapping [Row] inside the narrow
@@ -865,6 +862,7 @@ private fun VideoFileGridCard(
  * second row instead of squeezing, and every chip label is a single
  * non-wrapping line, so no label can ever render vertically.
  */
+@Composable
 @OptIn(ExperimentalLayoutApi::class)
 private fun VideoFoldersSettingsDialog(
     viewMode: FolderViewMode,
