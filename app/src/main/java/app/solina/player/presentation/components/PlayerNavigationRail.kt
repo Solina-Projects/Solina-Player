@@ -36,6 +36,7 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import app.solina.player.BottomNavItem
 import app.solina.player.presentation.navigation.Screen
+import app.solina.player.presentation.navigation.navigateHomeSafely
 import app.solina.player.presentation.navigation.navigateToTopLevelSafely
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.coroutines.delay
@@ -102,6 +103,16 @@ fun PlayerNavigationRail(
                         val itemRoute = item.screen.route
                         val isSearchTab = itemRoute == Screen.Search.route
                         val isAlreadySelected = latestCurrentRoute == itemRoute
+
+                        // Bottom-bar feedback (2026-11-16): Home must always
+                        // land on the main Home page — see the bottom bar.
+                        if (itemRoute == Screen.Home.route) {
+                            lastSearchTapTimestamp = 0L
+                            if (!isAlreadySelected) {
+                                navController.navigateHomeSafely()
+                            }
+                            return@click
+                        }
 
                         if (isSearchTab) {
                             val now = SystemClock.elapsedRealtime()
