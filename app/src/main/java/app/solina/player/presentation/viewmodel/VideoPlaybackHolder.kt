@@ -1,14 +1,18 @@
 package app.solina.player.presentation.viewmodel
 
 import android.content.Context
+import android.media.MediaCodecList
+import android.media.MediaFormat
 import android.net.Uri
 import androidx.annotation.OptIn
+import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.common.Tracks
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
+import app.solina.player.data.model.ExternalVideoSubtitle
 import app.solina.player.data.model.VideoItem
 import app.solina.player.data.preferences.UserPreferencesRepository
 import app.solina.player.data.repository.VideoRepository
@@ -99,6 +103,49 @@ class VideoPlaybackHolder @Inject constructor(
     private val _volume = MutableStateFlow(1f)
     val volume: StateFlow<Float> = _volume.asStateFlow()
 
+    /**
+     * Reference-player redesign (2026-11-16): the "HW" / "SW" decoder
+     * badge. This is a REAL indicator, not a toggle: when the video
+     * tracks change, the platform [MediaCodecList] is asked which decoder
+     * would decode this video format. A Google software decoder
+     * (c2.android.* / OMX.google.*) — or no platform decoder at all, in
+     * which case the FFmpeg extension decodes in software — means "SW";
+     * any vendor/hardware decoder means "HW".
+     */
+    private val _decoderBadge = MutableStateFlow("HW")
+    val decoderBadge: StateFlow<String> = _decoderBadge.asStateFlow()
+
+    /**
+     * External subtitle files picked per video (persisted, so they reload
+     * with the video). Keyed by video content URI.
+     */
+    private val externalSubtitles =
+        MutableStateFlow<Map<String, ExternalVideoSubtitle>>(emptyMap())
+
+    private fun computeDecoderBadge() {
+        val format = exoPlayer?.videoFormat
+        if (format == null) {
+            _decoderBadge.value = "HW"
+            return
+        }
+        _decoderBadge.value = runCatching {
+            val mime = format.sampleMimeType ?: return@runCatching "HW"
+            val mediaFormat = MediaFormat.createVideoFormat(
+                mime,
+                format.width.takeIf { it > 0 } ?: 1280,
+                format.height.takeIf { it > 0 } ?: 720
+            )
+            val codecName = MediaCodecList(MediaCodecList.REGULAR_CODECS)
+                .findDecoderForFormat(mediaFormat)
+            when {
+                codecName == null -> "SW" // no platform decoder: FFmpeg (software)
+                codecName.startsWith("OMX.google.") ||
+                    codecName.startsWith("c2.android.") -> "SW"
+                else -> "HW"
+            }
+        }.getOrElse { "HW" }
+    }
+
     private var pollJob: Job? = null
 
     private val playerListener = object : Player.Listener {
@@ -113,6 +160,7 @@ class VideoPlaybackHolder @Inject constructor(
 
         override fun onTracksChanged(tracks: Tracks) {
             _tracks.value = tracks
+            computeDecoderBadge()
         }
 
         // Queue playback (Play all): keep the title in sync when the
@@ -131,6 +179,62 @@ class VideoPlaybackHolder @Inject constructor(
             _playbackSpeed.value = userPreferencesRepository.videoPlaybackSpeedFlow.first()
             _volume.value = userPreferencesRepository.videoVolumeFlow.first()
         }
+        // External subtitle files picked earlier, keyed by video URI.
+        scope.launch {
+            externalSubtitles.value = userPreferencesRepository
+                .videoExternalSubtitlesFlow.first()
+                .associateBy { it.videoUri }
+        }
+    }
+
+    /**
+     * Build a MediaItem for a video URI, attaching a previously picked
+     * external subtitle file for this video (if any) as a
+     * [MediaItem.SubtitleConfiguration].
+     */
+    private fun buildMediaItem(contentUriString: String): MediaItem {
+        val builder = MediaItem.Builder().setUri(Uri.parse(contentUriString))
+        externalSubtitles.value[contentUriString]?.let { external ->
+            builder.setSubtitleConfigurations(
+                listOf(
+                    MediaItem.SubtitleConfiguration.Builder(
+                        Uri.parse(external.subUri)
+                    )
+                        .setMimeType(external.mimeType)
+                        .setLanguage(C.LANGUAGE_UNDETERMINED)
+                        .setLabel(external.label)
+                        .setSelectionFlags(C.SELECTION_FLAG_DEFAULT)
+                        .build()
+                )
+            )
+        }
+        return builder.build()
+    }
+
+    /**
+     * Attach an external subtitle file (.srt / .vtt / .ass / .ssa) to the
+     * video that is playing now: the current media item is rebuilt with
+     * the subtitle configuration and swapped in place (queue untouched),
+     * the position is kept, and the file is remembered so it reloads
+     * next time this video plays. Returns the label to auto-select.
+     */
+    fun attachExternalSubtitle(subUri: Uri, label: String, mimeType: String): String {
+        val player = exoPlayer ?: return label
+        val videoUri = _currentVideo.value?.contentUriString ?: return label
+        val entry = ExternalVideoSubtitle(
+            videoUri = videoUri,
+            subUri = subUri.toString(),
+            label = label,
+            mimeType = mimeType
+        )
+        externalSubtitles.value = externalSubtitles.value + (videoUri to entry)
+        scope.launch { userPreferencesRepository.setExternalVideoSubtitle(entry) }
+        val position = player.currentPosition
+        val index = player.currentMediaItemIndex
+        player.replaceMediaItem(index, buildMediaItem(videoUri))
+        player.seekTo(position)
+        player.play()
+        return label
     }
 
     private fun buildPlayer(): ExoPlayer {
@@ -179,7 +283,7 @@ class VideoPlaybackHolder @Inject constructor(
         releasePlayer()
         _queueUris.value = listOf(contentUriString)
         val player = buildPlayer().apply {
-            setMediaItem(MediaItem.fromUri(Uri.parse(contentUriString)))
+            setMediaItem(buildMediaItem(contentUriString))
             prepare()
             if (startPositionMs > 0) seekTo(startPositionMs)
             play()
@@ -230,7 +334,7 @@ class VideoPlaybackHolder @Inject constructor(
         _queueUris.value = contentUriStrings
         val player = buildPlayer().apply {
             setMediaItems(
-                contentUriStrings.map { MediaItem.fromUri(Uri.parse(it)) },
+                contentUriStrings.map { buildMediaItem(it) },
                 wantedIndex,
                 startPositionMs.coerceAtLeast(0L)
             )
@@ -319,6 +423,19 @@ class VideoPlaybackHolder @Inject constructor(
     fun seekToPrevious() {
         exoPlayer?.seekToPrevious()
     }
+
+    /** Playing Queue (reference-player redesign): jump to a queue item. */
+    fun playQueueIndex(index: Int) {
+        val player = exoPlayer ?: return
+        if (index in 0 until player.mediaItemCount) {
+            player.seekTo(index, 0L)
+            player.play()
+        }
+    }
+
+    /** Resolve a queue URI to its [VideoItem] (for the Playing Queue list). */
+    suspend fun getVideoByUri(contentUriString: String): VideoItem? =
+        videoRepository.getVideoByContentUri(contentUriString)
 
     fun pause() {
         exoPlayer?.pause()

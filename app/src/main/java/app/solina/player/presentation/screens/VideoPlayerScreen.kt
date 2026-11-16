@@ -13,6 +13,8 @@ import android.net.Uri
 import android.os.Environment
 import android.os.Handler
 import android.os.Looper
+import android.provider.OpenableColumns
+import android.util.TypedValue
 import android.provider.MediaStore
 import android.view.PixelCopy
 import android.view.SurfaceView
@@ -24,7 +26,10 @@ import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.fadeIn
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutHorizontally
@@ -39,6 +44,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -50,7 +56,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
-import androidx.compose.material.icons.rounded.Audiotrack
+import androidx.compose.material.icons.rounded.AspectRatio
 import androidx.compose.material.icons.rounded.Bedtime
 import androidx.compose.material.icons.rounded.ClosedCaption
 import androidx.compose.material.icons.rounded.Equalizer
@@ -60,6 +66,7 @@ import androidx.compose.material.icons.rounded.Headphones
 import androidx.compose.material.icons.rounded.KeyboardArrowUp
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.MoreVert
+import androidx.compose.material.icons.rounded.MusicNote
 import androidx.compose.material.icons.rounded.NightsStay
 import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.PhotoCamera
@@ -104,10 +111,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalConfiguration
@@ -121,6 +133,8 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
@@ -129,6 +143,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.ui.AspectRatioFrameLayout
+import androidx.media3.ui.CaptionStyleCompat
 import androidx.media3.ui.PlayerView
 import androidx.navigation.NavController
 import app.solina.player.R
@@ -218,6 +233,25 @@ import kotlin.math.roundToInt
  *   exiting shows the bars and goes back to portrait, with a toast.
  * - Every menu and dialog opened during playback is transparent like
  *   the rest of the player (Black ~0.75–0.85 alpha, white text).
+ *
+ * Reference-player redesign (2026-11-16):
+ * - Top bar like the reference: back, title (2 lines in portrait),
+ *   music note (audio tracks), subtitle icon (subtitle panel), a real
+ *   HW/SW decoder badge, three-dot grid menu.
+ * - Quick-action row under the top bar in landscape (equalizer,
+ *   screenshot, audio, aspect Fit/Fill/Zoom/Stretch, speed circle,
+ *   arrow); hidden in portrait until the arrow opens it.
+ * - Big centre feedback label on aspect / speed / volume / brightness
+ *   changes; vertical edge sliders for brightness / volume swipes.
+ * - Three-dot grid menu (Audio, Subtitle, Queue, Aspect, Display,
+ *   Bookmark, Chapter, Favourite, Playlist, Info, Share, Tutorial,
+ *   More) — every item real; Cut omitted (no transcoder in the app),
+ *   Online subtitles omitted (no subtitle provider).
+ * - Subtitle panel (side panel in landscape, bottom sheet in
+ *   portrait) with embedded tracks, a subtitle-file picker and
+ *   subtitle style settings.
+ * - Modern layer: gradient scrims instead of flat black, spring
+ *   animations, press-scale on round buttons, one blue accent.
  */
 @OptIn(ExperimentalMaterial3Api::class, UnstableApi::class)
 @Composable
@@ -252,11 +286,23 @@ fun VideoPlayerScreen(
     val aPointMs by videoPlayerViewModel.aPointMs.collectAsStateWithLifecycle()
     val bPointMs by videoPlayerViewModel.bPointMs.collectAsStateWithLifecycle()
     val visibleButtons by videoPlayerViewModel.visibleControlButtons.collectAsStateWithLifecycle()
+    val decoderBadge by videoPlayerViewModel.decoderBadge.collectAsStateWithLifecycle()
+    val isFavourite by videoPlayerViewModel.isFavourite.collectAsStateWithLifecycle()
+    val bookmarks by videoPlayerViewModel.bookmarksForCurrentVideo.collectAsStateWithLifecycle()
+    val queueItems by videoPlayerViewModel.queueItems.collectAsStateWithLifecycle()
+    val subtitleStyle by videoPlayerViewModel.subtitleStyle.collectAsStateWithLifecycle()
+    val actionMessage by videoPlayerViewModel.actionMessage.collectAsStateWithLifecycle()
 
     var showSpeedMenu by remember { mutableStateOf(false) }
-    var showSubtitleMenu by remember { mutableStateOf(false) }
-    var showAudioMenu by remember { mutableStateOf(false) }
-    var showOverflowMenu by remember { mutableStateOf(false) }
+    var showGridMenu by remember { mutableStateOf(false) }
+    var showSubtitlePanel by remember { mutableStateOf(false) }
+    var showAudioListDialog by remember { mutableStateOf(false) }
+    var showQueueDialog by remember { mutableStateOf(false) }
+    var showBookmarksDialog by remember { mutableStateOf(false) }
+    var showChaptersDialog by remember { mutableStateOf(false) }
+    var showInfoDialog by remember { mutableStateOf(false) }
+    var showTutorialDialog by remember { mutableStateOf(false) }
+    var showDisplayDialog by remember { mutableStateOf(false) }
     var showAudioDialog by remember { mutableStateOf(false) }
     var showCustomiseDialog by remember { mutableStateOf(false) }
     var controlsExpanded by rememberSaveable { mutableStateOf(false) }
@@ -302,6 +348,97 @@ fun VideoPlayerScreen(
     var isPlaying by remember { mutableStateOf(false) }
     var lastTapTimeMs by remember { mutableLongStateOf(0L) }
 
+    // Centre feedback label (reference-player redesign): a big white
+    // label in the middle of the video ("STRETCH", "1.5×", "Volume
+    // 80%") that fades out after ~1 s.
+    var feedbackLabel by remember { mutableStateOf<String?>(null) }
+    fun showFeedback(text: String) {
+        feedbackLabel = text
+    }
+    LaunchedEffect(feedbackLabel) {
+        if (feedbackLabel != null) {
+            delay(1_100)
+            feedbackLabel = null
+        }
+    }
+    fun applySpeed(speed: Float) {
+        videoPlayerViewModel.setSpeed(speed)
+        showFeedback(formatSpeedLabel(speed))
+        poke()
+    }
+    fun cycleAspect() {
+        val next = videoPlayerViewModel.nextAspectMode()
+        videoPlayerViewModel.cycleAspectMode()
+        showFeedback(next)
+        poke()
+    }
+    fun shareVideo() {
+        val uri = currentVideo?.contentUriString ?: return
+        val intent = Intent(Intent.ACTION_SEND).apply {
+            type = "video/*"
+            putExtra(Intent.EXTRA_STREAM, Uri.parse(uri))
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+        runCatching {
+            context.startActivity(
+                Intent.createChooser(
+                    intent,
+                    context.getString(R.string.video_grid_menu_share)
+                )
+            )
+        }
+        poke()
+    }
+    // Subtitle-file picker (reference-player redesign): .srt / .vtt /
+    // .ass / .ssa, loaded as an external subtitle track.
+    val subtitlePicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        runCatching {
+            context.contentResolver.takePersistableUriPermission(
+                uri,
+                Intent.FLAG_GRANT_READ_URI_PERMISSION
+            )
+        }
+        val name = runCatching {
+            context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
+                val index = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+                if (cursor.moveToFirst() && index >= 0) cursor.getString(index) else null
+            }
+        }.getOrNull() ?: uri.lastPathSegment ?: "subtitle.srt"
+        val mime = videoPlayerViewModel.subtitleMimeTypeFor(name)
+        if (mime == null) {
+            Toast.makeText(
+                context,
+                context.getString(R.string.video_subtitle_unsupported),
+                Toast.LENGTH_SHORT
+            ).show()
+            return@rememberLauncherForActivityResult
+        }
+        videoPlayerViewModel.addExternalSubtitle(uri, name, mime)
+        poke()
+    }
+    // Action messages from the ViewModel (bookmark / favourite /
+    // playlist / subtitle file) as toasts.
+    LaunchedEffect(actionMessage) {
+        val message = actionMessage ?: return@LaunchedEffect
+        val resId = when (message) {
+            "bookmark_saved" -> R.string.video_bookmark_saved
+            "bookmark_deleted" -> R.string.video_bookmark_deleted
+            "favourite_added" -> R.string.video_favourite_added
+            "favourite_removed" -> R.string.video_favourite_removed
+            "added_to_playlist" -> R.string.video_added_to_playlist
+            "already_in_playlist" -> R.string.video_already_in_playlist
+            "subtitle_loaded" -> R.string.video_subtitle_loaded
+            else -> null
+        }
+        if (resId != null) {
+            Toast.makeText(context, context.getString(resId), Toast.LENGTH_SHORT).show()
+        }
+        videoPlayerViewModel.consumeActionMessage()
+    }
+
     val brightnessLabel = stringResource(R.string.video_brightness)
     val volumeLabel = stringResource(R.string.video_volume)
     val speedOptions = videoPlayerViewModel.availableSpeeds
@@ -321,6 +458,14 @@ fun VideoPlayerScreen(
         } else {
             1f
         }
+
+    // Reference-player redesign (2026-11-16): landscape gets the
+    // quick-action row under the top bar; portrait letterboxes the
+    // video and hides the row until the arrow opens it.
+    val isLandscape =
+        configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+    // ZOOM aspect mode adds a 1.5x zoom on top of the pinch zoom.
+    val aspectZoom = if (aspectMode == "ZOOM") 1.5f else 1f
 
     // Pixels per speed step while sliding in long-press speed mode.
     // (Computed here with LocalDensity: inside pointerInput, `density`
@@ -343,8 +488,10 @@ fun VideoPlayerScreen(
 
     // Auto-hide: hide all bars 3 s after the last interaction, only while
     // playing, and never while a menu/dialog or the speed bar is open.
-    val anyMenuOpen = showSpeedMenu || showSubtitleMenu || showAudioMenu ||
-        showOverflowMenu || showAudioDialog || showCustomiseDialog
+    val anyMenuOpen = showSpeedMenu || showGridMenu || showSubtitlePanel ||
+        showAudioListDialog || showQueueDialog || showBookmarksDialog ||
+        showChaptersDialog || showInfoDialog || showTutorialDialog ||
+        showDisplayDialog || showAudioDialog || showCustomiseDialog
     LaunchedEffect(barsVisible, interactionTick, isPlaying, anyMenuOpen, speedMode, speedBarVisible) {
         if (barsVisible && isPlaying && !anyMenuOpen && !speedMode && !speedBarVisible) {
             delay(3_000)
@@ -575,6 +722,51 @@ fun VideoPlayerScreen(
         else allButtons.filter { visibleButtons.contains(it.id) }
     }
 
+    // The quick row's buttons (reference-player redesign): in
+    // landscape it shows the five reference buttons + the arrow when
+    // collapsed, every button when expanded; in portrait it shows
+    // every button once the arrow opens it.
+    val quickRowPriorityIds =
+        listOf("equalizer", "screenshot", "audiofx", "aspect", "speed")
+    val quickRowButtons = remember(shownButtons, controlsExpanded, isLandscape) {
+        if (!isLandscape || controlsExpanded) shownButtons
+        else shownButtons.filter { quickRowPriorityIds.contains(it.id) }
+            .sortedBy { quickRowPriorityIds.indexOf(it.id) }
+    }
+
+    /** One place for every round control button's action. */
+    fun onControlButtonClick(button: VideoControlButton) {
+        when (button.id) {
+            "night" -> videoPlayerViewModel.setNightLight(!nightLight)
+            "customise" -> showCustomiseDialog = true
+            "shuffle" -> videoPlayerViewModel.toggleShuffle()
+            "loop" -> videoPlayerViewModel.cycleRepeatMode()
+            "mute" -> {
+                val muting = !isMuted
+                videoPlayerViewModel.toggleMute()
+                if (muting) showFeedback(context.getString(R.string.video_muted))
+            }
+            "sleep" -> videoPlayerViewModel.setSleepTimer(
+                when (sleepTimerMinutes) {
+                    0 -> 15
+                    15 -> 30
+                    30 -> 60
+                    else -> 0
+                }
+            )
+            "ab" -> videoPlayerViewModel.tapABRepeat()
+            "audiofx" -> showAudioDialog = true
+            "equalizer" -> openSystemEqualizer()
+            "screenshot" -> takeScreenshot()
+            "background" -> videoPlayerViewModel.setBackgroundPlayback(
+                !backgroundPlayback
+            )
+            "aspect" -> cycleAspect()
+            "speed" -> showSpeedMenu = true
+        }
+        poke()
+    }
+
     // The arrow handle's rotation (mini-player feedback, 2026-11-16):
     // the chevron points LEFT while the bar is closed and RIGHT once it
     // is open (KeyboardArrowUp rotated -90° / +90°).
@@ -585,21 +777,23 @@ fun VideoPlayerScreen(
 
     // Position shown on the seek bar: the drag preview while seeking.
     val displayPositionMs = if (seekPreviewMs >= 0) seekPreviewMs else positionMs
-    // Centre hint: seek delta + target time, or brightness / volume %.
+    // Centre hint: seek delta + target time only. Brightness / volume
+    // use the vertical edge slider while dragging, and the centre
+    // feedback label reports the final value on release.
     // (Local copy: gestureHint is a delegated property, so it cannot be
     // smart-cast after a null check.)
     val hint = gestureHint
     val indicatorText: String? = when {
+        feedbackLabel != null -> null
         seekPreviewMs >= 0 && seekDeltaText != null ->
             "$seekDeltaText • ${formatVideoTime(seekPreviewMs)}"
-        hint != null -> "${hint.label} ${hint.percent}%"
         else -> null
     }
 
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.surface)
+            .background(Color.Black)
     ) {
         AndroidView(
             factory = { ctx ->
@@ -619,39 +813,90 @@ fun VideoPlayerScreen(
             },
             update = { playerView ->
                 playerView.player = player
+                // Aspect modes (reference-player redesign): FIT fits
+                // inside the screen, FILL fills it cropping (aspect
+                // kept), ZOOM fills + extra 1.5x (via aspectZoom
+                // below), STRETCH stretches to fill, aspect ignored.
                 playerView.resizeMode = when (aspectMode) {
-                    "FILL" -> AspectRatioFrameLayout.RESIZE_MODE_FILL
+                    "FILL" -> AspectRatioFrameLayout.RESIZE_MODE_ZOOM
                     "ZOOM" -> AspectRatioFrameLayout.RESIZE_MODE_ZOOM
+                    "STRETCH" -> AspectRatioFrameLayout.RESIZE_MODE_FILL
                     else -> AspectRatioFrameLayout.RESIZE_MODE_FIT
+                }
+                // Subtitle style (reference-player redesign): the
+                // user's text size / colour / background.
+                playerView.subtitleView?.let { subtitleView ->
+                    subtitleView.setApplyEmbeddedStyles(false)
+                    subtitleView.setFixedTextSize(
+                        TypedValue.COMPLEX_UNIT_SP,
+                        subtitleStyle.textSizeSp
+                    )
+                    subtitleView.setStyle(
+                        CaptionStyleCompat(
+                            subtitleStyle.textColorArgb,
+                            when (subtitleStyle.backgroundMode) {
+                                0 -> Color.Transparent.toArgb()
+                                2 -> Color.Black.toArgb()
+                                else -> Color.Black.copy(alpha = 0.5f).toArgb()
+                            },
+                            Color.Transparent.toArgb(),
+                            CaptionStyleCompat.EDGE_TYPE_NONE,
+                            Color.Black.toArgb(),
+                            null
+                        )
+                    )
                 }
             },
             modifier = Modifier
                 .fillMaxSize()
                 .graphicsLayer {
                     // Pinch zoom: scale the whole PlayerView (video
-                    // surface) around its centre, 1.0x–3.0x.
-                    scaleX = zoomScale
-                    scaleY = zoomScale
+                    // surface) around its centre, 1.0x–3.0x — times
+                    // the ZOOM aspect mode's extra 1.5x.
+                    scaleX = zoomScale * aspectZoom
+                    scaleY = zoomScale * aspectZoom
                 }
         )
 
         if (controlsLocked) {
-            // Controls locked (reference bottom-left lock): only the unlock
-            // button stays on screen; the PlayerView controller is off.
-            IconButton(
-                onClick = { controlsLocked = false },
+            // Controls locked (modern layer): a dim scrim with a
+            // centred lock and a labelled unlock pill — nothing else
+            // on screen; the PlayerView controller is off.
+            Box(
                 modifier = Modifier
-                    .align(Alignment.BottomStart)
-                    .padding(start = 16.dp, bottom = 32.dp)
-                    .size(56.dp)
-                    .background(Color.Black.copy(alpha = 0.55f), CircleShape)
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.35f))
             ) {
-                Icon(
-                    imageVector = Icons.Rounded.Lock,
-                    contentDescription = stringResource(R.string.video_unlock_controls),
-                    tint = Color.White,
-                    modifier = Modifier.size(28.dp)
-                )
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    modifier = Modifier.align(Alignment.Center)
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.Lock,
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.size(48.dp)
+                    )
+                    Text(
+                        text = stringResource(R.string.video_controls_locked_label),
+                        color = Color.White,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Surface(
+                        onClick = { controlsLocked = false },
+                        shape = RoundedCornerShape(24.dp),
+                        color = Color.White.copy(alpha = 0.15f)
+                    ) {
+                        Text(
+                            text = stringResource(R.string.video_tap_to_unlock),
+                            color = Color.White,
+                            fontSize = 14.sp,
+                            modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp)
+                        )
+                    }
+                }
             }
         } else {
             // ---- One gesture layer over the video surface. It sits above
@@ -840,10 +1085,7 @@ fun VideoPlayerScreen(
                                                 speedIndex = (speedIndex + steps)
                                                     .coerceIn(0, speedOptions.lastIndex)
                                                 speedAnchorX = pos.x
-                                                videoPlayerViewModel.setSpeed(
-                                                    speedOptions[speedIndex]
-                                                )
-                                                poke()
+                                                applySpeed(speedOptions[speedIndex])
                                             }
                                         }
                                         GestureMode.Pinch -> {
@@ -880,11 +1122,18 @@ fun VideoPlayerScreen(
                                     scrubbing = false
                                 }
                                 GestureMode.Brightness, GestureMode.Volume -> {
+                                    val finishedHint = gestureHint
                                     gestureHint = null
                                     if (mode == GestureMode.Volume) {
                                         // Persist the volume once, at the
                                         // end of the swipe.
                                         videoPlayerViewModel.setVolume(volume)
+                                    }
+                                    // Centre feedback label with the
+                                    // final value (the edge slider shows
+                                    // it while dragging).
+                                    finishedHint?.let { hint ->
+                                        showFeedback("${hint.label} ${hint.percent}%")
                                     }
                                 }
                                 GestureMode.Speed -> {
@@ -902,18 +1151,23 @@ fun VideoPlayerScreen(
                     }
             )
 
-            // ---- Top bar: back, film title, subtitles, audio (dubbing),
-            // three-dot menu — and nothing else. Its background is the
-            // same translucent dark as the arrow bar (no solid surface),
-            // and it sits below the status bar (statusBarsPadding + extra
-            // margin) so the title never clashes with it, in portrait and
-            // in fullscreen-landscape. The animated arrow handle sits
-            // right under the three-dot menu, and the long-press speed bar
-            // opens just below the arrow. The whole top area auto-hides
-            // with the other bars.
+            // ---- Top bar (reference-player redesign, 2026-11-16):
+            // back, film title (2 lines in portrait, like the
+            // reference), music note (audio tracks), subtitle icon
+            // (subtitle panel), the HW/SW decoder badge — a real
+            // indicator of the decoder in use, not a toggle — and the
+            // three-dot menu, which opens the grid menu. All icons
+            // white. The background is a soft gradient scrim (modern
+            // layer), not a flat black bar. The whole top area
+            // auto-hides with the other bars.
             AnimatedVisibility(
                 visible = barsVisible,
-                enter = fadeIn(),
+                enter = fadeIn(
+                    animationSpec = spring(
+                        dampingRatio = Spring.DampingRatioNoBouncy,
+                        stiffness = Spring.StiffnessMediumLow
+                    )
+                ),
                 exit = fadeOut(),
                 modifier = Modifier.align(Alignment.TopCenter)
             ) {
@@ -925,8 +1179,15 @@ fun VideoPlayerScreen(
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .background(Color.Black.copy(alpha = 0.55f))
-                            .padding(start = 4.dp, end = 4.dp, top = 12.dp, bottom = 4.dp)
+                            .background(
+                                Brush.verticalGradient(
+                                    listOf(
+                                        Color.Black.copy(alpha = 0.65f),
+                                        Color.Transparent
+                                    )
+                                )
+                            )
+                            .padding(start = 4.dp, end = 4.dp, top = 12.dp, bottom = 16.dp)
                     ) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
@@ -944,246 +1205,236 @@ fun VideoPlayerScreen(
                                     ?: stringResource(R.string.video_player_title),
                                 style = MaterialTheme.typography.titleMedium,
                                 color = Color.White,
-                                maxLines = 1,
+                                maxLines = if (isLandscape) 1 else 2,
                                 overflow = TextOverflow.Ellipsis,
                                 modifier = Modifier.weight(1f)
                             )
-                            // Subtitles: the file's subtitle tracks, or "off".
-                            Box {
-                                IconButton(onClick = { showSubtitleMenu = true }) {
-                                    Icon(
-                                        imageVector = Icons.Rounded.ClosedCaption,
-                                        contentDescription = stringResource(R.string.video_subtitles),
-                                        // White like every other player icon
-                                        // (mini-player feedback, 2026-11-16):
-                                        // the primary tint read as brown.
-                                        tint = Color.White
+                            // Audio tracks (dubbing).
+                            IconButton(onClick = {
+                                showAudioListDialog = true
+                                poke()
+                            }) {
+                                Icon(
+                                    imageVector = Icons.Rounded.MusicNote,
+                                    contentDescription = stringResource(R.string.video_audio_settings),
+                                    tint = Color.White
+                                )
+                            }
+                            // Subtitles: opens the subtitle panel.
+                            IconButton(onClick = {
+                                showSubtitlePanel = true
+                                poke()
+                            }) {
+                                Icon(
+                                    imageVector = Icons.Rounded.ClosedCaption,
+                                    contentDescription = stringResource(R.string.video_subtitles),
+                                    tint = Color.White
+                                )
+                            }
+                            // Decoder badge: HW or SW, the decoder
+                            // actually in use (holder, real detection).
+                            Text(
+                                text = decoderBadge,
+                                color = Color.White,
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(horizontal = 4.dp)
+                            )
+                            // Three-dot menu: the grid menu.
+                            IconButton(onClick = {
+                                showGridMenu = true
+                                poke()
+                            }) {
+                                Icon(
+                                    imageVector = Icons.Rounded.MoreVert,
+                                    contentDescription = null,
+                                    tint = Color.White
+                                )
+                            }
+                        }
+                    }
+                    // Quick-action row (reference-player redesign):
+                    // in landscape it sits under the top bar, left
+                    // aligned — equalizer, screenshot, audio,
+                    // aspect, speed circle, then the arrow. Collapsed
+                    // it shows just those five + the arrow; the arrow
+                    // expands it to every control button (it scrolls).
+                    // In portrait the row is hidden until the arrow
+                    // handle (below) opens it.
+                    AnimatedVisibility(
+                        visible = barsVisible && (isLandscape || controlsExpanded),
+                        enter = slideInHorizontally(
+                            initialOffsetX = { it },
+                            animationSpec = spring(
+                                dampingRatio = Spring.DampingRatioNoBouncy,
+                                stiffness = Spring.StiffnessMediumLow
+                            )
+                        ) + fadeIn(),
+                        exit = slideOutHorizontally(
+                            targetOffsetX = { it },
+                            animationSpec = spring(
+                                dampingRatio = Spring.DampingRatioNoBouncy,
+                                stiffness = Spring.StiffnessMediumLow
+                            )
+                        ) + fadeOut()
+                    ) {
+                        Surface(
+                            modifier = Modifier.fillMaxWidth(),
+                            color = Color.Black.copy(alpha = 0.55f),
+                            shape = RoundedCornerShape(
+                                bottomStart = 28.dp,
+                                bottomEnd = 28.dp
+                            )
+                        ) {
+                            LazyRow(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 8.dp),
+                                contentPadding = PaddingValues(horizontal = 12.dp),
+                                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                            ) {
+                                items(quickRowButtons, key = { it.id }) { button ->
+                                    VideoRoundControlButton(
+                                        button = button,
+                                        isActive = when (button.id) {
+                                            "night" -> nightLight
+                                            "shuffle" -> shuffleEnabled
+                                            "mute" -> isMuted
+                                            "background" -> backgroundPlayback
+                                            "loop" -> repeatMode != Player.REPEAT_MODE_OFF
+                                            "sleep" -> sleepTimerMinutes > 0
+                                            "ab" -> aPointMs >= 0
+                                            "speed" -> playbackSpeed != 1f
+                                            else -> false
+                                        },
+                                        labelOverride = when (button.id) {
+                                            "loop" -> when (repeatMode) {
+                                                Player.REPEAT_MODE_ONE ->
+                                                    stringResource(R.string.video_loop_one)
+                                                Player.REPEAT_MODE_ALL ->
+                                                    stringResource(R.string.video_loop_all)
+                                                else -> stringResource(R.string.video_loop)
+                                            }
+                                            "sleep" -> if (sleepTimerMinutes > 0) {
+                                                stringResource(
+                                                    R.string.video_sleep_timer_active,
+                                                    sleepTimerMinutes
+                                                )
+                                            } else {
+                                                stringResource(R.string.video_sleep_timer)
+                                            }
+                                            "ab" -> when {
+                                                bPointMs >= 0 ->
+                                                    stringResource(R.string.video_ab_repeat_active)
+                                                aPointMs >= 0 ->
+                                                    stringResource(R.string.video_ab_repeat_set_a)
+                                                else -> stringResource(R.string.video_ab_repeat)
+                                            }
+                                            "aspect" -> stringResource(R.string.video_aspect_ratio) +
+                                                ": " + when (aspectMode) {
+                                                    "FILL" -> stringResource(R.string.video_aspect_fill)
+                                                    "ZOOM" -> stringResource(R.string.video_aspect_zoom)
+                                                    "STRETCH" -> stringResource(R.string.video_aspect_stretch)
+                                                    else -> stringResource(R.string.video_aspect_fit)
+                                                }
+                                            else -> null
+                                        },
+                                        iconOverride = if (button.id == "loop" &&
+                                            repeatMode == Player.REPEAT_MODE_ONE
+                                        ) {
+                                            Icons.Rounded.RepeatOne
+                                        } else {
+                                            null
+                                        },
+                                        circleText = if (button.id == "speed") {
+                                            formatSpeedLabel(playbackSpeed)
+                                        } else {
+                                            null
+                                        },
+                                        activeColor = if (button.id == "speed") {
+                                            videoAccentColor
+                                        } else {
+                                            null
+                                        },
+                                        onClick = { onControlButtonClick(button) }
                                     )
                                 }
-                                DropdownMenu(
-                                    expanded = showSubtitleMenu,
-                                    onDismissRequest = { showSubtitleMenu = false },
-                                    // Transparent like the rest of the
-                                    // player (Search + Player polish,
-                                    // 2026-11-16): no solid surface.
-                                    containerColor = Color.Black.copy(alpha = 0.75f)
-                                ) {
-                                    DropdownMenuItem(
-                                        text = {
-                                            Text(
-                                                text = stringResource(R.string.video_subtitle_off),
-                                                color = Color.White
-                                            )
-                                        },
-                                        onClick = {
-                                            videoPlayerViewModel.selectSubtitleTrack(-1)
-                                            showSubtitleMenu = false
-                                        }
-                                    )
-                                    if (subtitleTrackLabels.isEmpty()) {
-                                        DropdownMenuItem(
-                                            text = {
-                                                Text(
-                                                    text = stringResource(R.string.video_no_subtitles),
-                                                    color = Color.White.copy(alpha = 0.5f)
-                                                )
-                                            },
-                                            onClick = { showSubtitleMenu = false },
-                                            enabled = false
+                                // The arrow handle, last in the row in
+                                // landscape: closed it points LEFT,
+                                // open it points RIGHT (mini-player
+                                // feedback, 2026-11-16).
+                                if (isLandscape) {
+                                    item(key = "arrow") {
+                                        VideoRowArrowButton(
+                                            expanded = controlsExpanded,
+                                            arrowRotation = arrowRotation,
+                                            onClick = {
+                                                controlsExpanded = !controlsExpanded
+                                                poke()
+                                            }
                                         )
-                                    } else {
-                                        subtitleTrackLabels.forEachIndexed { index, label ->
-                                            DropdownMenuItem(
-                                                text = {
-                                                    Text(
-                                                        text = label,
-                                                        color = Color.White
-                                                    )
-                                                },
-                                                onClick = {
-                                                    videoPlayerViewModel.selectSubtitleTrack(index)
-                                                    showSubtitleMenu = false
-                                                }
-                                            )
-                                        }
                                     }
                                 }
                             }
-                            // Audio: the file's audio tracks (dubbing).
-                            Box {
-                                IconButton(onClick = { showAudioMenu = true }) {
-                                    Icon(
-                                        imageVector = Icons.Rounded.Audiotrack,
-                                        contentDescription = stringResource(R.string.video_audio_settings),
-                                        // White like every other player icon
-                                        // (mini-player feedback, 2026-11-16).
-                                        tint = Color.White
-                                    )
-                                }
-                                DropdownMenu(
-                                    expanded = showAudioMenu,
-                                    onDismissRequest = { showAudioMenu = false },
-                                    containerColor = Color.Black.copy(alpha = 0.75f)
-                                ) {
-                                    if (audioTrackLabels.isEmpty()) {
-                                        DropdownMenuItem(
-                                            text = {
-                                                Text(
-                                                    text = stringResource(R.string.video_no_audio_tracks),
-                                                    color = Color.White.copy(alpha = 0.5f)
-                                                )
-                                            },
-                                            onClick = { showAudioMenu = false },
-                                            enabled = false
-                                        )
-                                    } else {
-                                        audioTrackLabels.forEachIndexed { index, label ->
-                                            DropdownMenuItem(
-                                                text = {
-                                                    Text(
-                                                        text = label,
-                                                        color = Color.White
-                                                    )
-                                                },
-                                                onClick = {
-                                                    videoPlayerViewModel.selectAudioTrack(index)
-                                                    showAudioMenu = false
-                                                }
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-                            // Three-dot menu: the remaining actions.
-                            Box {
-                                IconButton(onClick = { showOverflowMenu = true }) {
-                                    Icon(
-                                        imageVector = Icons.Rounded.MoreVert,
-                                        contentDescription = null,
-                                        tint = Color.White
-                                    )
-                                }
-                                DropdownMenu(
-                                    expanded = showOverflowMenu,
-                                    onDismissRequest = { showOverflowMenu = false },
-                                    containerColor = Color.Black.copy(alpha = 0.75f)
-                                ) {
+                            // Speed menu, anchored to the speed round button.
+                            DropdownMenu(
+                                expanded = showSpeedMenu,
+                                onDismissRequest = { showSpeedMenu = false },
+                                containerColor = Color.Black.copy(alpha = 0.75f)
+                            ) {
+                                speedOptions.forEach { speed ->
                                     DropdownMenuItem(
                                         text = {
                                             Text(
-                                                text = stringResource(R.string.video_aspect_ratio) +
-                                                    ": " + when (aspectMode) {
-                                                        "FILL" -> stringResource(R.string.video_aspect_fill)
-                                                        "ZOOM" -> stringResource(R.string.video_aspect_zoom)
-                                                        else -> stringResource(R.string.video_aspect_fit)
-                                                    },
+                                                text = formatSpeedLabel(speed),
                                                 color = Color.White
                                             )
                                         },
                                         onClick = {
-                                            videoPlayerViewModel.cycleAspectMode()
-                                            showOverflowMenu = false
-                                        }
-                                    )
-                                    DropdownMenuItem(
-                                        text = {
-                                            Text(
-                                                text = stringResource(R.string.video_screenshot),
-                                                color = Color.White
-                                            )
-                                        },
-                                        onClick = {
-                                            takeScreenshot()
-                                            showOverflowMenu = false
-                                        }
-                                    )
-                                    DropdownMenuItem(
-                                        text = {
-                                            Text(
-                                                text = stringResource(R.string.video_background_playback) +
-                                                    if (backgroundPlayback) " ✓" else "",
-                                                color = Color.White
-                                            )
-                                        },
-                                        onClick = {
-                                            videoPlayerViewModel.setBackgroundPlayback(!backgroundPlayback)
-                                            showOverflowMenu = false
-                                        }
-                                    )
-                                    DropdownMenuItem(
-                                        text = {
-                                            Text(
-                                                text = stringResource(R.string.video_fullscreen),
-                                                color = Color.White
-                                            )
-                                        },
-                                        onClick = {
-                                            toggleFullscreenMode()
-                                            showOverflowMenu = false
-                                        }
-                                    )
-                                    DropdownMenuItem(
-                                        text = {
-                                            Text(
-                                                text = stringResource(R.string.video_picture_in_picture),
-                                                color = Color.White
-                                            )
-                                        },
-                                        onClick = {
-                                            enterPictureInPicture()
-                                            showOverflowMenu = false
-                                        }
-                                    )
-                                    DropdownMenuItem(
-                                        text = {
-                                            Text(
-                                                text = stringResource(R.string.video_lock_controls),
-                                                color = Color.White
-                                            )
-                                        },
-                                        onClick = {
-                                            controlsLocked = true
-                                            showOverflowMenu = false
+                                            applySpeed(speed)
+                                            showSpeedMenu = false
                                         }
                                     )
                                 }
                             }
                         }
                     }
-                    // The animated arrow handle, transparent like its bar,
-                    // right under the three-dot menu. Tapping it slides
-                    // the round-button control bar in/out; the arrow
-                    // itself rotates 180°.
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(end = 16.dp, top = 8.dp),
-                        horizontalArrangement = Arrangement.End
-                    ) {
-                        Surface(
-                            onClick = {
-                                controlsExpanded = !controlsExpanded
-                                poke()
-                            },
-                            shape = CircleShape,
-                            color = Color.Black.copy(alpha = 0.45f),
-                            modifier = Modifier.size(40.dp)
+                    // Portrait arrow handle (reference-player redesign):
+                    // in portrait the quick row is hidden, so the
+                    // handle stays as its own transparent circle under
+                    // the three-dot menu and opens the row.
+                    if (!isLandscape) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(end = 16.dp, top = 8.dp),
+                            horizontalArrangement = Arrangement.End
                         ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                Icon(
-                                    imageVector = Icons.Rounded.KeyboardArrowUp,
-                                    contentDescription = stringResource(
-                                        if (controlsExpanded) {
-                                            R.string.video_player_hide_controls
-                                        } else {
-                                            R.string.video_player_more_controls
-                                        }
-                                    ),
-                                    tint = Color.White,
-                                    modifier = Modifier
-                                        .size(24.dp)
-                                        .rotate(arrowRotation)
-                                )
+                            Surface(
+                                onClick = {
+                                    controlsExpanded = !controlsExpanded
+                                    poke()
+                                },
+                                shape = CircleShape,
+                                color = Color.Black.copy(alpha = 0.45f),
+                                modifier = Modifier.size(40.dp)
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(
+                                        imageVector = Icons.Rounded.KeyboardArrowUp,
+                                        contentDescription = stringResource(
+                                            if (controlsExpanded) {
+                                                R.string.video_player_hide_controls
+                                            } else {
+                                                R.string.video_player_more_controls
+                                            }
+                                        ),
+                                        tint = Color.White,
+                                        modifier = Modifier
+                                            .size(24.dp)
+                                            .rotate(arrowRotation)
+                                    )
+                                }
                             }
                         }
                     }
@@ -1191,11 +1442,6 @@ fun VideoPlayerScreen(
                     // arrow. Opens on long-press (and stays 2 s after
                     // release); the current speed is highlighted, and
                     // tapping a chip picks it directly.
-                    // Speed bar (mini-player feedback, 2026-11-16): only
-                    // as wide as its chips — a plain Row, not a full-width
-                    // LazyRow, so there is no empty space — and the chips
-                    // are 20% smaller and tighter (10 sp text, 10x5 dp
-                    // padding, 6 dp gaps) than before.
                     AnimatedVisibility(
                         visible = speedBarVisible,
                         enter = fadeIn() + slideInVertically { -it / 2 },
@@ -1219,10 +1465,7 @@ fun VideoPlayerScreen(
                                 speedOptions.forEach { speed ->
                                     val selected = speed == playbackSpeed
                                     Surface(
-                                        onClick = {
-                                            videoPlayerViewModel.setSpeed(speed)
-                                            poke()
-                                        },
+                                        onClick = { applySpeed(speed) },
                                         shape = RoundedCornerShape(13.dp),
                                         color = if (selected) {
                                             MaterialTheme.colorScheme.primary
@@ -1249,133 +1492,6 @@ fun VideoPlayerScreen(
                             }
                         }
                     }
-                // Extra control bar (round buttons, like the reference):
-                // it hangs under the arrow at the top and slides in
-                // from the right edge (Search + Player polish,
-                // 2026-11-16), hidden unless the arrow opened it.
-                AnimatedVisibility(
-                    visible = barsVisible && controlsExpanded,
-                    enter = slideInHorizontally(initialOffsetX = { it }) + fadeIn(),
-                    exit = slideOutHorizontally(targetOffsetX = { it }) + fadeOut()
-                ) {
-                    Surface(
-                        modifier = Modifier.fillMaxWidth(),
-                        color = Color.Black.copy(alpha = 0.55f),
-                        shape = RoundedCornerShape(
-                            bottomStart = 28.dp,
-                            bottomEnd = 28.dp
-                        )
-                    ) {
-                        LazyRow(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 8.dp),
-                            contentPadding = PaddingValues(horizontal = 12.dp),
-                            horizontalArrangement = Arrangement.spacedBy(10.dp)
-                        ) {
-                            items(shownButtons, key = { it.id }) { button ->
-                                VideoRoundControlButton(
-                                    button = button,
-                                    isActive = when (button.id) {
-                                        "night" -> nightLight
-                                        "shuffle" -> shuffleEnabled
-                                        "mute" -> isMuted
-                                        "background" -> backgroundPlayback
-                                        "loop" -> repeatMode != Player.REPEAT_MODE_OFF
-                                        "sleep" -> sleepTimerMinutes > 0
-                                        "ab" -> aPointMs >= 0
-                                        else -> false
-                                    },
-                                    labelOverride = when (button.id) {
-                                        "loop" -> when (repeatMode) {
-                                            Player.REPEAT_MODE_ONE ->
-                                                stringResource(R.string.video_loop_one)
-                                            Player.REPEAT_MODE_ALL ->
-                                                stringResource(R.string.video_loop_all)
-                                            else -> stringResource(R.string.video_loop)
-                                        }
-                                        "sleep" -> if (sleepTimerMinutes > 0) {
-                                            stringResource(
-                                                R.string.video_sleep_timer_active,
-                                                sleepTimerMinutes
-                                            )
-                                        } else {
-                                            stringResource(R.string.video_sleep_timer)
-                                        }
-                                        "ab" -> when {
-                                            bPointMs >= 0 ->
-                                                stringResource(R.string.video_ab_repeat_active)
-                                            aPointMs >= 0 ->
-                                                stringResource(R.string.video_ab_repeat_set_a)
-                                            else -> stringResource(R.string.video_ab_repeat)
-                                        }
-                                        else -> null
-                                    },
-                                    iconOverride = if (button.id == "loop" &&
-                                        repeatMode == Player.REPEAT_MODE_ONE
-                                    ) {
-                                        Icons.Rounded.RepeatOne
-                                    } else {
-                                        null
-                                    },
-                                    circleText = if (button.id == "speed") {
-                                        formatSpeedLabel(playbackSpeed)
-                                    } else {
-                                        null
-                                    },
-                                    onClick = {
-                                        when (button.id) {
-                                            "night" -> videoPlayerViewModel.setNightLight(!nightLight)
-                                            "customise" -> showCustomiseDialog = true
-                                            "shuffle" -> videoPlayerViewModel.toggleShuffle()
-                                            "loop" -> videoPlayerViewModel.cycleRepeatMode()
-                                            "mute" -> videoPlayerViewModel.toggleMute()
-                                            "sleep" -> videoPlayerViewModel.setSleepTimer(
-                                                when (sleepTimerMinutes) {
-                                                    0 -> 15
-                                                    15 -> 30
-                                                    30 -> 60
-                                                    else -> 0
-                                                }
-                                            )
-                                            "ab" -> videoPlayerViewModel.tapABRepeat()
-                                            "audiofx" -> showAudioDialog = true
-                                            "equalizer" -> openSystemEqualizer()
-                                            "screenshot" -> takeScreenshot()
-                                            "background" -> videoPlayerViewModel.setBackgroundPlayback(
-                                                !backgroundPlayback
-                                            )
-                                            "speed" -> showSpeedMenu = true
-                                        }
-                                        poke()
-                                    },
-                                )
-                            }
-                        }
-                        // Speed menu, anchored to the speed round button.
-                        DropdownMenu(
-                            expanded = showSpeedMenu,
-                            onDismissRequest = { showSpeedMenu = false },
-                            containerColor = Color.Black.copy(alpha = 0.75f)
-                        ) {
-                            speedOptions.forEach { speed ->
-                                DropdownMenuItem(
-                                    text = {
-                                        Text(
-                                            text = formatSpeedLabel(speed),
-                                            color = Color.White
-                                        )
-                                    },
-                                    onClick = {
-                                        videoPlayerViewModel.setSpeed(speed)
-                                        showSpeedMenu = false
-                                    }
-                                )
-                            }
-                        }
-                    }
-                }
-
                 }
             }
 
@@ -1400,7 +1516,14 @@ fun VideoPlayerScreen(
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .background(Color.Black.copy(alpha = 0.55f))
+                            .background(
+                                Brush.verticalGradient(
+                                    listOf(
+                                        Color.Transparent,
+                                        Color.Black.copy(alpha = 0.65f)
+                                    )
+                                )
+                            )
                             .padding(start = 8.dp, end = 8.dp, top = 4.dp, bottom = 8.dp)
                     ) {
                         Row(
@@ -1638,8 +1761,7 @@ fun VideoPlayerScreen(
                 }
             }
 
-            // Centre hint for gesture feedback: seek delta + target time,
-            // or brightness / volume while swiping.
+            // Centre hint for gesture feedback: seek delta + target time.
             indicatorText?.let { text ->
                 Surface(
                     color = Color.Black.copy(alpha = 0.6f),
@@ -1655,17 +1777,205 @@ fun VideoPlayerScreen(
                     )
                 }
             }
-            // Buffering spinner (the built-in controller is off, so show
-            // our own) — hidden while a gesture hint is on screen.
-            if (isLoading && indicatorText == null) {
-                CircularProgressIndicator(
-                    color = Color.White,
+            // Centre feedback label (reference-player redesign): a big
+            // white label ("STRETCH", "1.5×", "Volume 80%") that
+            // fades + scales out after ~1 s.
+            AnimatedVisibility(
+                visible = feedbackLabel != null,
+                enter = fadeIn(
+                    animationSpec = spring(
+                        dampingRatio = Spring.DampingRatioNoBouncy,
+                        stiffness = Spring.StiffnessMediumLow
+                    )
+                ) + scaleIn(
+                    initialScale = 0.85f,
+                    animationSpec = spring(
+                        dampingRatio = Spring.DampingRatioMediumBouncy,
+                        stiffness = Spring.StiffnessMediumLow
+                    )
+                ),
+                exit = fadeOut(),
+                modifier = Modifier.align(Alignment.Center)
+            ) {
+                feedbackLabel?.let { text ->
+                    Text(
+                        text = text,
+                        color = Color.White,
+                        fontSize = 30.sp,
+                        fontWeight = FontWeight.Bold,
+                        style = MaterialTheme.typography.displaySmall.copy(
+                            shadow = Shadow(
+                                color = Color.Black.copy(alpha = 0.6f),
+                                blurRadius = 12f
+                            )
+                        )
+                    )
+                }
+            }
+            // Volume / brightness gesture: a vertical edge slider with
+            // % and icon (reference portrait frame) — left edge for
+            // brightness, right edge for volume.
+            hint?.let { edgeHint ->
+                val isBrightnessHint = edgeHint.label == brightnessLabel
+                VideoEdgeSlider(
+                    label = edgeHint.label,
+                    percent = edgeHint.percent,
+                    isBrightness = isBrightnessHint,
                     modifier = Modifier
-                        .align(Alignment.Center)
-                        .size(48.dp)
+                        .align(
+                            if (isBrightnessHint) Alignment.CenterStart else Alignment.CenterEnd
+                        )
+                        .padding(horizontal = 16.dp)
+                )
+            }
+            // Buffering: our own spinner in a translucent pill (the
+            // built-in controller is off) — hidden while a hint or a
+            // feedback label is on screen.
+            if (isLoading && indicatorText == null && feedbackLabel == null) {
+                Surface(
+                    color = Color.Black.copy(alpha = 0.55f),
+                    shape = RoundedCornerShape(20.dp),
+                    modifier = Modifier.align(Alignment.Center)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp)
+                    ) {
+                        CircularProgressIndicator(
+                            color = Color.White,
+                            strokeWidth = 3.dp,
+                            modifier = Modifier.size(22.dp)
+                        )
+                        Text(
+                            text = stringResource(R.string.video_loading),
+                            color = Color.White,
+                            fontSize = 13.sp
+                        )
+                    }
+                }
+            }
+        }
+        // Subtitle panel (landscape): a translucent side panel on the
+        // right, like the reference. Portrait uses a bottom sheet
+        // (below, with the other dialogs).
+        if (showSubtitlePanel && isLandscape) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.CenterEnd)
+                    .fillMaxWidth(0.42f)
+                    .fillMaxHeight()
+                    .background(Color.Black.copy(alpha = 0.82f))
+                    .statusBarsPadding()
+            ) {
+                VideoSubtitlePanelContent(
+                    subtitleTrackLabels = subtitleTrackLabels,
+                    selectedSubtitleTrack = selectedSubtitleTrack,
+                    onSelectTrack = {
+                        videoPlayerViewModel.selectSubtitleTrack(it)
+                        poke()
+                    },
+                    onOpenFile = { subtitlePicker.launch(arrayOf("*/*")) },
+                    subtitleStyle = subtitleStyle,
+                    onTextSize = { videoPlayerViewModel.setSubtitleTextSize(it) },
+                    onTextColor = { videoPlayerViewModel.setSubtitleTextColor(it) },
+                    onBackground = { videoPlayerViewModel.setSubtitleBackground(it) },
+                    onClose = { showSubtitlePanel = false }
                 )
             }
         }
+    }
+
+    // ---- Reference-player redesign: grid menu + subtitle panel
+    // (portrait) + the grid's dialogs. ----
+    if (showGridMenu) {
+        VideoGridMenuSheet(
+            isFavourite = isFavourite,
+            onDismiss = { showGridMenu = false },
+            onAction = { action ->
+                when (action) {
+                    VideoGridAction.AUDIO -> showAudioListDialog = true
+                    VideoGridAction.SUBTITLE -> showSubtitlePanel = true
+                    VideoGridAction.QUEUE -> showQueueDialog = true
+                    VideoGridAction.ASPECT -> cycleAspect()
+                    VideoGridAction.DISPLAY -> showDisplayDialog = true
+                    VideoGridAction.BOOKMARK -> showBookmarksDialog = true
+                    VideoGridAction.CHAPTER -> showChaptersDialog = true
+                    VideoGridAction.FAVOURITE -> videoPlayerViewModel.toggleFavourite()
+                    VideoGridAction.PLAYLIST -> videoPlayerViewModel.addCurrentVideoToPlaylist()
+                    VideoGridAction.INFO -> showInfoDialog = true
+                    VideoGridAction.SHARE -> shareVideo()
+                    VideoGridAction.TUTORIAL -> showTutorialDialog = true
+                    VideoGridAction.MORE -> {
+                        controlsExpanded = true
+                        poke()
+                    }
+                }
+            }
+        )
+    }
+    if (showSubtitlePanel && !isLandscape) {
+        VideoSubtitlePanelSheet(
+            subtitleTrackLabels = subtitleTrackLabels,
+            selectedSubtitleTrack = selectedSubtitleTrack,
+            onSelectTrack = {
+                videoPlayerViewModel.selectSubtitleTrack(it)
+                poke()
+            },
+            onOpenFile = { subtitlePicker.launch(arrayOf("*/*")) },
+            subtitleStyle = subtitleStyle,
+            onTextSize = { videoPlayerViewModel.setSubtitleTextSize(it) },
+            onTextColor = { videoPlayerViewModel.setSubtitleTextColor(it) },
+            onBackground = { videoPlayerViewModel.setSubtitleBackground(it) },
+            onDismiss = { showSubtitlePanel = false }
+        )
+    }
+    if (showAudioListDialog) {
+        VideoAudioTrackDialog(
+            audioTrackLabels = audioTrackLabels,
+            selectedAudioTrack = selectedAudioTrack,
+            onSelectTrack = { videoPlayerViewModel.selectAudioTrack(it) },
+            onDismiss = { showAudioListDialog = false }
+        )
+    }
+    if (showQueueDialog) {
+        VideoQueueDialog(
+            queueItems = queueItems,
+            currentIndex = player?.currentMediaItemIndex ?: 0,
+            onSelect = { videoPlayerViewModel.playQueueIndex(it) },
+            onDismiss = { showQueueDialog = false }
+        )
+    }
+    if (showBookmarksDialog) {
+        VideoBookmarksDialog(
+            bookmarks = bookmarks,
+            onAdd = { videoPlayerViewModel.addBookmark() },
+            onJump = { videoPlayerViewModel.seekTo(it) },
+            onDelete = { videoPlayerViewModel.deleteBookmark(it) },
+            onDismiss = { showBookmarksDialog = false }
+        )
+    }
+    if (showChaptersDialog) {
+        VideoChaptersDialog(onDismiss = { showChaptersDialog = false })
+    }
+    if (showInfoDialog) {
+        VideoInfoDialog(
+            video = currentVideo,
+            decoderBadge = decoderBadge,
+            onDismiss = { showInfoDialog = false }
+        )
+    }
+    if (showTutorialDialog) {
+        VideoTutorialDialog(onDismiss = { showTutorialDialog = false })
+    }
+    if (showDisplayDialog) {
+        VideoDisplaySettingsDialog(
+            nightLight = nightLight,
+            brightness = brightness,
+            onNightLight = { videoPlayerViewModel.setNightLight(it) },
+            onBrightness = { videoPlayerViewModel.setBrightness(it) },
+            onDismiss = { showDisplayDialog = false }
+        )
     }
 
     // ---- Audio Effect dialog: volume + audio track + night light.
@@ -1832,18 +2142,37 @@ private fun VideoRoundControlButton(
     labelOverride: String?,
     circleText: String? = null,
     iconOverride: ImageVector? = null,
+    activeColor: Color? = null,
     onClick: () -> Unit
 ) {
+    // Press-scale micro-feedback (modern layer): the button shrinks
+    // a little while pressed, with a spring back.
+    val interactionSource = remember { MutableInteractionSource() }
+    val pressed by interactionSource.collectIsPressedAsState()
+    val pressScale by animateFloatAsState(
+        targetValue = if (pressed) 0.9f else 1f,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessMediumLow
+        ),
+        label = "roundButtonPress"
+    )
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(2.dp),
-        modifier = Modifier.width(56.dp)
+        modifier = Modifier
+            .width(56.dp)
+            .graphicsLayer {
+                scaleX = pressScale
+                scaleY = pressScale
+            }
     ) {
         Surface(
             onClick = onClick,
+            interactionSource = interactionSource,
             shape = CircleShape,
             color = if (isActive) {
-                MaterialTheme.colorScheme.primary
+                activeColor ?: MaterialTheme.colorScheme.primary
             } else {
                 Color.Black.copy(alpha = 0.45f)
             },
@@ -1853,7 +2182,7 @@ private fun VideoRoundControlButton(
                 if (circleText != null) {
                     Text(
                         text = circleText,
-                        color = if (isActive) {
+                        color = if (isActive && activeColor == null) {
                             MaterialTheme.colorScheme.onPrimary
                         } else {
                             Color.White
@@ -1866,7 +2195,7 @@ private fun VideoRoundControlButton(
                     Icon(
                         imageVector = iconOverride ?: button.icon,
                         contentDescription = null,
-                        tint = if (isActive) {
+                        tint = if (isActive && activeColor == null) {
                             MaterialTheme.colorScheme.onPrimary
                         } else {
                             Color.White
@@ -1929,12 +2258,59 @@ private val videoControlButtons = listOf(
     VideoControlButton("mute", Icons.Rounded.VolumeOff, R.string.video_mute),
     VideoControlButton("sleep", Icons.Rounded.Bedtime, R.string.video_sleep_timer),
     VideoControlButton("ab", Icons.Rounded.RepeatOne, R.string.video_ab_repeat),
-    VideoControlButton("audiofx", Icons.Rounded.Audiotrack, R.string.video_audio_effect),
+    VideoControlButton("audiofx", Icons.Rounded.Headphones, R.string.video_audio_effect),
     VideoControlButton("equalizer", Icons.Rounded.Equalizer, R.string.video_equalizer),
     VideoControlButton("screenshot", Icons.Rounded.PhotoCamera, R.string.video_screenshot),
+    VideoControlButton("aspect", Icons.Rounded.AspectRatio, R.string.video_aspect_ratio),
     VideoControlButton("background", Icons.Rounded.Headphones, R.string.video_background_play),
     VideoControlButton("speed", Icons.Rounded.Speed, R.string.video_speed)
 )
+
+/** The arrow at the end of the quick row: a round button like the others. */
+@Composable
+private fun VideoRowArrowButton(
+    expanded: Boolean,
+    arrowRotation: Float,
+    onClick: () -> Unit
+) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(2.dp),
+        modifier = Modifier.width(56.dp)
+    ) {
+        Surface(
+            onClick = onClick,
+            shape = CircleShape,
+            color = Color.Black.copy(alpha = 0.45f),
+            modifier = Modifier.size(46.dp)
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Icon(
+                    imageVector = Icons.Rounded.KeyboardArrowUp,
+                    contentDescription = null,
+                    tint = Color.White,
+                    modifier = Modifier
+                        .size(22.dp)
+                        .rotate(arrowRotation)
+                )
+            }
+        }
+        Text(
+            text = stringResource(
+                if (expanded) {
+                    R.string.video_player_hide_controls
+                } else {
+                    R.string.video_player_more_controls
+                }
+            ),
+            color = Color.White,
+            fontSize = 10.sp,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+            textAlign = TextAlign.Center
+        )
+    }
+}
 
 /** Which gesture the video-surface detector is currently tracking. */
 private enum class GestureMode {

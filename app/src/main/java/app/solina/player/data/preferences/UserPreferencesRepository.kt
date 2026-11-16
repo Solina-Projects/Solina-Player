@@ -15,6 +15,9 @@ import androidx.media3.common.Player
 import app.solina.player.data.diagnostics.AdvancedPerformanceDiagnostics
 import app.solina.player.data.model.PlaybackQueueSnapshot
 import app.solina.player.data.model.Playlist
+import app.solina.player.data.model.ExternalVideoSubtitle
+import app.solina.player.data.model.VideoBookmark
+import app.solina.player.data.model.VideoPlaylistEntry
 import app.solina.player.data.model.SortOption
 import app.solina.player.data.model.FolderSource
 import app.solina.player.data.model.LyricsSourcePreference
@@ -281,6 +284,20 @@ constructor(
         // round control buttons are shown (Customise Items). Stored as the
         // set of visible button ids; an empty set means "show all".
         val VIDEO_PLAYER_VISIBLE_BUTTONS = stringSetPreferencesKey("video_player_visible_buttons")
+
+        // Reference-player redesign (2026-11-16): bookmarks, favourites, a
+        // simple video playlist, external subtitle files and subtitle
+        // style. Bookmarks / playlist / external subtitles are JSON
+        // arrays; favourites are a plain set of video URIs.
+        val VIDEO_BOOKMARKS_JSON = stringPreferencesKey("video_bookmarks_json")
+        val VIDEO_FAVOURITE_URIS = stringSetPreferencesKey("video_favourite_uris")
+        val VIDEO_PLAYLIST_JSON = stringPreferencesKey("video_playlist_json")
+        val VIDEO_EXTERNAL_SUBTITLES_JSON =
+            stringPreferencesKey("video_external_subtitles_json")
+        val VIDEO_SUBTITLE_TEXT_SIZE =
+            androidx.datastore.preferences.core.floatPreferencesKey("video_subtitle_text_size_sp")
+        val VIDEO_SUBTITLE_TEXT_COLOR = intPreferencesKey("video_subtitle_text_color_argb")
+        val VIDEO_SUBTITLE_BACKGROUND = intPreferencesKey("video_subtitle_background_mode")
 
         val IS_ALBUMS_LIST_VIEW = booleanPreferencesKey("is_albums_list_view")
         val IS_PLAYLISTS_GRID_VIEW = booleanPreferencesKey("is_playlists_grid_view")
@@ -1027,6 +1044,159 @@ constructor(
     suspend fun setVideoPlayerVisibleButtons(buttonIds: Set<String>) {
         dataStore.edit { preferences ->
             preferences[PreferencesKeys.VIDEO_PLAYER_VISIBLE_BUTTONS] = buttonIds
+        }
+    }
+
+    // ---- Reference-player redesign (2026-11-16): video bookmarks,
+    // favourites, a simple video playlist, external subtitles and
+    // subtitle style. ----
+
+    /** All bookmarks, newest first. JSON array of [VideoBookmark]. */
+    val videoBookmarksFlow: Flow<List<VideoBookmark>> =
+        dataStore.data.map { preferences ->
+            val raw = preferences[PreferencesKeys.VIDEO_BOOKMARKS_JSON] ?: return@map emptyList()
+            runCatching {
+                json.decodeFromString<List<VideoBookmark>>(raw)
+            }.getOrElse { emptyList() }
+        }
+
+    suspend fun addVideoBookmark(bookmark: VideoBookmark) {
+        dataStore.edit { preferences ->
+            val current = runCatching {
+                json.decodeFromString<List<VideoBookmark>>(
+                    preferences[PreferencesKeys.VIDEO_BOOKMARKS_JSON] ?: "[]"
+                )
+            }.getOrElse { emptyList() }
+            // Same video + near-same position replaces the old bookmark.
+            val kept = current.filterNot {
+                it.uri == bookmark.uri &&
+                    kotlin.math.abs(it.positionMs - bookmark.positionMs) < 5_000L
+            }
+            preferences[PreferencesKeys.VIDEO_BOOKMARKS_JSON] =
+                json.encodeToString(listOf(bookmark) + kept)
+        }
+    }
+
+    suspend fun deleteVideoBookmark(uri: String, positionMs: Long) {
+        dataStore.edit { preferences ->
+            val current = runCatching {
+                json.decodeFromString<List<VideoBookmark>>(
+                    preferences[PreferencesKeys.VIDEO_BOOKMARKS_JSON] ?: "[]"
+                )
+            }.getOrElse { emptyList() }
+            preferences[PreferencesKeys.VIDEO_BOOKMARKS_JSON] =
+                json.encodeToString(
+                    current.filterNot {
+                        it.uri == uri && it.positionMs == positionMs
+                    }
+                )
+        }
+    }
+
+    /** Favourite videos, as a set of content URIs. */
+    val videoFavouriteUrisFlow: Flow<Set<String>> =
+        dataStore.data.map { preferences ->
+            preferences[PreferencesKeys.VIDEO_FAVOURITE_URIS] ?: emptySet()
+        }
+
+    suspend fun setVideoFavourite(uri: String, favourite: Boolean) {
+        dataStore.edit { preferences ->
+            val current =
+                preferences[PreferencesKeys.VIDEO_FAVOURITE_URIS] ?: emptySet()
+            preferences[PreferencesKeys.VIDEO_FAVOURITE_URIS] =
+                if (favourite) current + uri else current - uri
+        }
+    }
+
+    /**
+     * The one simple video playlist ("Videos"): a JSON array of
+     * [VideoPlaylistEntry]. Created on first use — there is no separate
+     * playlist store for video yet.
+     */
+    val videoPlaylistFlow: Flow<List<VideoPlaylistEntry>> =
+        dataStore.data.map { preferences ->
+            val raw = preferences[PreferencesKeys.VIDEO_PLAYLIST_JSON] ?: return@map emptyList()
+            runCatching {
+                json.decodeFromString<List<VideoPlaylistEntry>>(raw)
+            }.getOrElse { emptyList() }
+        }
+
+    /** Adds to the "Videos" playlist; returns false when already in it. */
+    suspend fun addToVideoPlaylist(entry: VideoPlaylistEntry): Boolean {
+        var added = false
+        dataStore.edit { preferences ->
+            val current = runCatching {
+                json.decodeFromString<List<VideoPlaylistEntry>>(
+                    preferences[PreferencesKeys.VIDEO_PLAYLIST_JSON] ?: "[]"
+                )
+            }.getOrElse { emptyList() }
+            if (current.none { it.uri == entry.uri }) {
+                preferences[PreferencesKeys.VIDEO_PLAYLIST_JSON] =
+                    json.encodeToString(current + entry)
+                added = true
+            }
+        }
+        return added
+    }
+
+    /** External subtitle files picked per video (persisted so they reload). */
+    val videoExternalSubtitlesFlow: Flow<List<ExternalVideoSubtitle>> =
+        dataStore.data.map { preferences ->
+            val raw = preferences[PreferencesKeys.VIDEO_EXTERNAL_SUBTITLES_JSON]
+                ?: return@map emptyList()
+            runCatching {
+                json.decodeFromString<List<ExternalVideoSubtitle>>(raw)
+            }.getOrElse { emptyList() }
+        }
+
+    suspend fun setExternalVideoSubtitle(entry: ExternalVideoSubtitle) {
+        dataStore.edit { preferences ->
+            val current = runCatching {
+                json.decodeFromString<List<ExternalVideoSubtitle>>(
+                    preferences[PreferencesKeys.VIDEO_EXTERNAL_SUBTITLES_JSON] ?: "[]"
+                )
+            }.getOrElse { emptyList() }
+            val kept = current.filterNot { it.videoUri == entry.videoUri }
+            preferences[PreferencesKeys.VIDEO_EXTERNAL_SUBTITLES_JSON] =
+                json.encodeToString(kept + entry)
+        }
+    }
+
+    /** Subtitle text size in sp (default 20). */
+    val videoSubtitleTextSizeFlow: Flow<Float> =
+        dataStore.data.map { preferences ->
+            preferences[PreferencesKeys.VIDEO_SUBTITLE_TEXT_SIZE] ?: 20f
+        }
+
+    suspend fun setVideoSubtitleTextSize(sizeSp: Float) {
+        dataStore.edit { preferences ->
+            preferences[PreferencesKeys.VIDEO_SUBTITLE_TEXT_SIZE] =
+                sizeSp.coerceIn(12f, 32f)
+        }
+    }
+
+    /** Subtitle text colour, ARGB (default white). */
+    val videoSubtitleTextColorFlow: Flow<Int> =
+        dataStore.data.map { preferences ->
+            preferences[PreferencesKeys.VIDEO_SUBTITLE_TEXT_COLOR] ?: -1
+        }
+
+    suspend fun setVideoSubtitleTextColor(argb: Int) {
+        dataStore.edit { preferences ->
+            preferences[PreferencesKeys.VIDEO_SUBTITLE_TEXT_COLOR] = argb
+        }
+    }
+
+    /** Subtitle background: 0 = none, 1 = dark translucent, 2 = solid black. */
+    val videoSubtitleBackgroundFlow: Flow<Int> =
+        dataStore.data.map { preferences ->
+            preferences[PreferencesKeys.VIDEO_SUBTITLE_BACKGROUND] ?: 1
+        }
+
+    suspend fun setVideoSubtitleBackground(mode: Int) {
+        dataStore.edit { preferences ->
+            preferences[PreferencesKeys.VIDEO_SUBTITLE_BACKGROUND] =
+                mode.coerceIn(0, 2)
         }
     }
 
