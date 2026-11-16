@@ -761,13 +761,17 @@ fun AppNavigation(
                 }
             }
             composable(
-                route = Screen.VideoPlayer.route + "?queue={queue}",
+                route = Screen.VideoPlayer.route + "?queue={queue}&startMs={startMs}",
                 arguments = listOf(
                     navArgument("videoUri") { type = NavType.StringType },
                     navArgument("queue") {
                         type = NavType.StringType
                         nullable = true
                         defaultValue = null
+                    },
+                    navArgument("startMs") {
+                        type = NavType.LongType
+                        defaultValue = 0L
                     }
                 ),
                 enterTransition = { enterTransition() },
@@ -784,11 +788,13 @@ fun AppNavigation(
                     ?.split("\n")
                     ?.filter { it.isNotBlank() }
                     .orEmpty()
+                val startMs = backStackEntry.arguments?.getLong("startMs") ?: 0L
                 ScreenWrapper(navController = navController, playerViewModel = playerViewModel) {
                     VideoPlayerScreen(
                         navController = navController,
                         videoUri = videoUri,
-                        videoQueue = videoQueue
+                        videoQueue = videoQueue,
+                        startPositionMs = startMs
                     )
                 }
             }
