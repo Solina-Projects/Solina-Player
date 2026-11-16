@@ -100,7 +100,30 @@ sealed class Screen(val route: String) {
     object VideoPlayer : Screen("video_player/{videoUri}") {
         fun createRoute(videoUri: String) =
             "video_player/${Uri.encode(videoUri)}"
+
+        /** Play a queue of videos: the player starts at [startUri] and the
+         *  PlayerView next/previous controls step through [queueUris]. The
+         *  queue is passed as one encoded route argument (URIs joined by
+         *  newline); empty queue = single-video playback as before. */
+        fun createRoute(startUri: String, queueUris: List<String>) =
+            if (queueUris.isEmpty()) {
+                createRoute(startUri)
+            } else {
+                "video_player/${Uri.encode(startUri)}?queue=${
+                    Uri.encode(queueUris.joinToString("\n"))
+                }"
+            }
     }
     object HomeCustomization : Screen("home_customization")
+
+    // Bottom-bar feedback (2026-11-16): the video section gets its own
+    // bottom bar — Home, video Search, Folders — instead of the music
+    // Home / Search / Library bar.
+    object VideoSearch : Screen("video_search")
+    object VideoFolders : Screen("video_folders")
+    object VideoFolderDetail : Screen("video_folder/{folderPath}") {
+        fun createRoute(folderPath: String) =
+            "video_folder/${Uri.encode(folderPath)}"
+    }
 
 }
