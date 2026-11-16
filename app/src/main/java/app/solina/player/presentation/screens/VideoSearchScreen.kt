@@ -1,14 +1,6 @@
 package app.solina.player.presentation.screens
 
-import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.SizeTransform
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
-import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -30,8 +22,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
@@ -83,29 +75,24 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import androidx.window.core.layout.WindowSizeClass
 import app.solina.player.R
-import app.solina.player.data.model.VideoFolder
 import app.solina.player.data.model.VideoItem
-import app.solina.player.data.model.groupVideosByFolder
 import app.solina.player.presentation.components.MiniPlayerHeight
 import app.solina.player.presentation.components.VideoThumbnail
-import app.solina.player.presentation.components.getNavigationBarHeight
-import app.solina.player.presentation.components.resolveNavBarOccupiedHeight
 import app.solina.player.presentation.navigation.Screen
 import app.solina.player.presentation.navigation.navigateSafely
-import app.solina.player.presentation.viewmodel.PlayerViewModel
 import app.solina.player.presentation.viewmodel.VideoViewModel
-import app.solina.player.presentation.viewmodel.sharedPlayerViewModel
 import app.solina.player.utils.formatDuration
 import kotlin.math.absoluteValue
-
-private enum class VideoBrowseMode { FOLDERS, FORMATS }
 
 /**
  * Video Search, rebuilt (Search feedback, 2026-11-16) to mirror the Music
  * Search screen exactly: the same top search bar + settings gear, the same
- * "Browse by …" header with the same grid/list toggle, the same card style,
- * and the same results list. Only the browse groups differ — videos have no
- * genre metadata, so browsing is by folder (primary) or by format.
+ * grid/list toggle, the same card style, and the same results list.
+ *
+ * Search + Player polish (2026-11-16): NO folder grouping here — all
+ * videos together in one place (empty query = all videos, newest first;
+ * typing filters by title/mime). Folders live on the Folders screen.
+ * A row of format chips filters the single list.
  *
  * The floating bottom bar is shown on this screen (video items
  * Home / Search / Folders, Search selected) — see MainActivity's hidden
@@ -116,24 +103,19 @@ private enum class VideoBrowseMode { FOLDERS, FORMATS }
 @Composable
 fun VideoSearchScreen(
     navController: NavController,
-    videoViewModel: VideoViewModel = hiltViewModel(),
-    playerViewModel: PlayerViewModel = sharedPlayerViewModel()
+    videoViewModel: VideoViewModel = hiltViewModel()
 ) {
     val allVideos by videoViewModel.videos.collectAsStateWithLifecycle()
     var query by rememberSaveable { mutableStateOf("") }
     var formatFilter by rememberSaveable { mutableStateOf<String?>(null) }
-    var browseMode by rememberSaveable { mutableStateOf(VideoBrowseMode.FOLDERS) }
     val focusManager = LocalFocusManager.current
     val keyboardController = LocalSoftwareKeyboardController.current
     val searchInputFocusRequester = remember { FocusRequester() }
     val statusBarTopInset = WindowInsets.systemBars.asPaddingValues().calculateTopPadding()
-    val localDensity = LocalDensity.current
-    val navBarCompactMode by playerViewModel.navBarCompactMode.collectAsStateWithLifecycle()
     val isGridView by videoViewModel.isVideoSearchGridView.collectAsStateWithLifecycle()
 
-    // Blank query with no format filter = browse mode; anything else = results.
-    val isBrowseMode = query.isBlank() && formatFilter == null
-
+    // All videos together in one list: empty query = every video, newest
+    // first; typing filters by title/mime; a format chip filters by type.
     val results = remember(query, formatFilter, allVideos) {
         val trimmed = query.trim()
         allVideos.filter { video ->
@@ -143,12 +125,9 @@ fun VideoSearchScreen(
                 video.displayTitle.contains(trimmed, ignoreCase = true) ||
                 (video.mimeType?.contains(trimmed, ignoreCase = true) == true)
             formatMatches && queryMatches
-        }.take(50)
+        }
     }
 
-    val folders = remember(allVideos) {
-        groupVideosByFolder(allVideos).sortedBy { it.name.lowercase() }
-    }
     val formats = remember(allVideos) {
         allVideos.groupBy { it.formatExtension.uppercase() }
             .map { (extension, videos) ->
@@ -268,155 +247,17 @@ fun VideoSearchScreen(
                 }
             }
 
-            AnimatedContent(
-                targetState = isBrowseMode,
-                transitionSpec = {
-                    val switchingToBrowse = targetState
-                    val enter = fadeIn(animationSpec = tween(durationMillis = 320, delayMillis = 70)) +
-                        slideInVertically(animationSpec = tween(durationMillis = 320)) { fullHeight ->
-                            if (switchingToBrowse) -fullHeight / 10 else fullHeight / 10
-                        }
-                    val exit = fadeOut(animationSpec = tween(durationMillis = 220)) +
-                        slideOutVertically(animationSpec = tween(durationMillis = 220)) { fullHeight ->
-                            if (switchingToBrowse) fullHeight / 12 else -fullHeight / 12
-                        }
-                    (enter togetherWith exit).using(SizeTransform(clip = false))
-                },
-                label = "video_search_mode_transition"
-            ) { browse ->
-                if (browse) {
-                    VideoBrowseGrid(
-                        folders = folders,
-                        formats = formats,
-                        browseMode = browseMode,
-                        onBrowseModeChange = { browseMode = it },
-                        isGridView = isGridView,
-                        onToggleViewMode = { videoViewModel.toggleVideoSearchViewMode() },
-                        navBarCompactMode = navBarCompactMode,
-                        onFolderClick = { folder ->
-                            navController.navigateSafely(
-                                Screen.VideoFolderDetail.createRoute(folder.path)
-                            )
-                        },
-                        onFormatClick = { format -> formatFilter = format.extension },
-                        modifier = Modifier.fillMaxSize()
-                    )
-                } else {
-                    VideoSearchResults(
-                        results = results,
-                        formatFilter = formatFilter,
-                        onClearFormatFilter = { formatFilter = null },
-                        onVideoClick = { video ->
-                            navController.navigateSafely(
-                                Screen.VideoPlayer.createRoute(video.contentUriString)
-                            )
-                        },
-                        onPlayAll = {
-                            navController.navigateSafely(
-                                Screen.VideoPlayer.createRoute(
-                                    startUri = results.first().contentUriString,
-                                    queueUris = results.map { it.contentUriString }
-                                )
-                            )
-                        },
-                        modifier = Modifier.fillMaxSize()
-                    )
-                }
-            }
-        }
-    }
-}
-
-/** A format group for the "Browse by format" mode. */
-private data class VideoFormatGroup(
-    val extension: String,
-    val videos: List<VideoItem>
-) {
-    val totalDurationMs: Long get() = videos.sumOf { it.durationMs }
-}
-
-/** Mime subtype, e.g. "mp4" for video/mp4, "x-matroska" for video/x-matroska. */
-private val VideoItem.formatExtension: String
-    get() = mimeType?.substringAfter('/')?.ifBlank { "?" } ?: "?"
-
-/**
- * Browse grid mirroring [GenreCategoriesGrid] from the Music Search screen:
- * the same "Browse by …" header with the same grid/list toggle, the same
- * card shape/spacing, and the same bottom padding for the floating bar.
- * Browse mode switches between folders and formats with chips.
- */
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
-@Composable
-private fun VideoBrowseGrid(
-    folders: List<VideoFolder>,
-    formats: List<VideoFormatGroup>,
-    browseMode: VideoBrowseMode,
-    onBrowseModeChange: (VideoBrowseMode) -> Unit,
-    isGridView: Boolean,
-    onToggleViewMode: () -> Unit,
-    navBarCompactMode: Boolean,
-    onFolderClick: (VideoFolder) -> Unit,
-    onFormatClick: (VideoFormatGroup) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    val systemNavBarHeight = getNavigationBarHeight()
-    val windowSizeClass = currentWindowAdaptiveInfo().windowSizeClass
-    val isMediumWidth = windowSizeClass.isWidthAtLeastBreakpoint(WindowSizeClass.WIDTH_DP_MEDIUM_LOWER_BOUND)
-    val isExpandedWidth = windowSizeClass.isWidthAtLeastBreakpoint(WindowSizeClass.WIDTH_DP_EXPANDED_LOWER_BOUND)
-    val columns = when {
-        isGridView && isExpandedWidth -> 4
-        isGridView && isMediumWidth -> 3
-        isGridView -> 2
-        isMediumWidth -> 2
-        else -> 1
-    }
-    val isEmpty = when (browseMode) {
-        VideoBrowseMode.FOLDERS -> folders.isEmpty()
-        VideoBrowseMode.FORMATS -> formats.isEmpty()
-    }
-
-    if (isEmpty) {
-        Box(
-            modifier = modifier.padding(16.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(
-                stringResource(R.string.video_no_videos_title),
-                style = MaterialTheme.typography.bodyLarge
-            )
-        }
-        return
-    }
-
-    LazyVerticalGrid(
-        columns = GridCells.Fixed(columns),
-        state = rememberLazyGridState(),
-        modifier = modifier
-            .fillMaxSize()
-            .padding(horizontal = 18.dp),
-        contentPadding = PaddingValues(
-            top = 8.dp,
-            bottom = 28.dp + resolveNavBarOccupiedHeight(systemNavBarHeight, navBarCompactMode, isMediumWidth) + MiniPlayerHeight
-        ),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        item(span = { GridItemSpan(maxLineSpan) }) {
+            // "All videos" header with the same grid/list toggle as Music
+            // Search — the list below is every video, in one place.
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(start = 6.dp, top = 6.dp, bottom = 6.dp, end = 0.dp),
+                    .padding(start = 24.dp, top = 8.dp, bottom = 4.dp, end = 24.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    text = stringResource(
-                        if (browseMode == VideoBrowseMode.FOLDERS) {
-                            R.string.video_browse_by_folder
-                        } else {
-                            R.string.video_browse_by_format
-                        }
-                    ),
+                    text = stringResource(R.string.video_all_videos),
                     style = MaterialTheme.typography.titleLarge
                 )
                 val shape = animateFloatAsState(
@@ -424,7 +265,7 @@ private fun VideoBrowseGrid(
                     label = "shapeAnimation"
                 )
                 androidx.compose.material3.FilledIconButton(
-                    onClick = onToggleViewMode,
+                    onClick = { videoViewModel.toggleVideoSearchViewMode() },
                     colors = androidx.compose.material3.IconButtonDefaults.filledIconButtonColors(
                         containerColor = MaterialTheme.colorScheme.secondaryContainer,
                         contentColor = MaterialTheme.colorScheme.onSecondaryContainer
@@ -437,58 +278,43 @@ private fun VideoBrowseGrid(
                     )
                 }
             }
-        }
-        item(span = { GridItemSpan(maxLineSpan) }) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(start = 6.dp, bottom = 6.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                FilterChip(
-                    selected = browseMode == VideoBrowseMode.FOLDERS,
-                    onClick = { onBrowseModeChange(VideoBrowseMode.FOLDERS) },
-                    label = { Text(stringResource(R.string.video_browse_folders)) }
-                )
-                FilterChip(
-                    selected = browseMode == VideoBrowseMode.FORMATS,
-                    onClick = { onBrowseModeChange(VideoBrowseMode.FORMATS) },
-                    label = { Text(stringResource(R.string.video_browse_formats)) }
-                )
-            }
-        }
-        when (browseMode) {
-            VideoBrowseMode.FOLDERS -> items(folders, key = { it.path }) { folder ->
-                VideoBrowseCard(
-                    title = folder.name.ifBlank { stringResource(R.string.video_folder_unknown) },
-                    subtitle = stringResource(
-                        R.string.video_folder_summary,
-                        folder.videos.size,
-                        formatDuration(folder.totalDurationMs)
-                    ),
-                    thumbnailVideo = folder.videos.firstOrNull(),
-                    isGridView = isGridView,
-                    colorSeed = folder.path,
-                    onClick = { onFolderClick(folder) }
-                )
-            }
-            VideoBrowseMode.FORMATS -> items(formats, key = { it.extension }) { format ->
-                VideoBrowseCard(
-                    title = format.extension.uppercase(),
-                    subtitle = stringResource(
-                        R.string.video_folder_summary,
-                        format.videos.size,
-                        formatDuration(format.totalDurationMs)
-                    ),
-                    thumbnailVideo = format.videos.firstOrNull(),
-                    isGridView = isGridView,
-                    colorSeed = format.extension,
-                    onClick = { onFormatClick(format) }
-                )
-            }
+            VideoSearchResults(
+                results = results,
+                formats = formats,
+                formatFilter = formatFilter,
+                onFormatClick = { formatFilter = it },
+                isGridView = isGridView,
+                onVideoClick = { video ->
+                    navController.navigateSafely(
+                        Screen.VideoPlayer.createRoute(video.contentUriString)
+                    )
+                },
+                onPlayAll = {
+                    navController.navigateSafely(
+                        Screen.VideoPlayer.createRoute(
+                            startUri = results.first().contentUriString,
+                            queueUris = results.map { it.contentUriString }
+                        )
+                    )
+                },
+                modifier = Modifier.fillMaxSize()
+            )
         }
     }
 }
+
+/** A format group for the format-chip filter row. */
+private data class VideoFormatGroup(
+    val extension: String,
+    val videos: List<VideoItem>
+) {
+    val totalDurationMs: Long get() = videos.sumOf { it.durationMs }
+}
+
+/** Mime subtype, e.g. "mp4" for video/mp4, "x-matroska" for video/x-matroska. */
+private val VideoItem.formatExtension: String
+    get() = mimeType?.substringAfter('/')?.ifBlank { "?" } ?: "?"
+
 
 /**
  * One browse card, same shape as the genre cards in Music Search:
@@ -585,8 +411,10 @@ private fun VideoBrowseCard(
 @Composable
 private fun VideoSearchResults(
     results: List<VideoItem>,
+    formats: List<VideoFormatGroup>,
     formatFilter: String?,
-    onClearFormatFilter: () -> Unit,
+    onFormatClick: (String?) -> Unit,
+    isGridView: Boolean,
     onVideoClick: (VideoItem) -> Unit,
     onPlayAll: () -> Unit,
     modifier: Modifier = Modifier
@@ -594,6 +422,19 @@ private fun VideoSearchResults(
     val localDensity = LocalDensity.current
     val systemNavBarInset = WindowInsets.systemBars.asPaddingValues().calculateBottomPadding()
     val imePadding = WindowInsets.ime.getBottom(localDensity).dp
+    val windowSizeClass = currentWindowAdaptiveInfo().windowSizeClass
+    val isMediumWidth = windowSizeClass.isWidthAtLeastBreakpoint(WindowSizeClass.WIDTH_DP_MEDIUM_LOWER_BOUND)
+    val isExpandedWidth = windowSizeClass.isWidthAtLeastBreakpoint(WindowSizeClass.WIDTH_DP_EXPANDED_LOWER_BOUND)
+    val gridColumns = when {
+        isExpandedWidth -> 4
+        isMediumWidth -> 3
+        else -> 2
+    }
+    val listBottomPadding = if (imePadding <= 8.dp) {
+        MiniPlayerHeight + systemNavBarInset + 94.dp
+    } else {
+        imePadding
+    }
 
     Column(
         modifier = modifier
@@ -620,21 +461,30 @@ private fun VideoSearchResults(
                 }
             }
         }
-        if (formatFilter != null) {
+        // Format filter: "All" + one chip per format, filtering the single
+        // list — not a browse section, and never grouped by folder.
+        if (formats.isNotEmpty()) {
             Spacer(Modifier.height(8.dp))
-            FilterChip(
-                selected = true,
-                onClick = onClearFormatFilter,
-                label = {
-                    Text(stringResource(R.string.video_search_browse_format, formatFilter.uppercase()))
-                },
-                trailingIcon = {
-                    Icon(
-                        imageVector = Icons.Rounded.Close,
-                        contentDescription = stringResource(R.string.video_search_clear_format)
+            LazyRow(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                contentPadding = PaddingValues(end = 8.dp)
+            ) {
+                item {
+                    FilterChip(
+                        selected = formatFilter == null,
+                        onClick = { onFormatClick(null) },
+                        label = { Text(stringResource(R.string.video_all_videos)) }
                     )
                 }
-            )
+                items(formats, key = { it.extension }) { format ->
+                    FilterChip(
+                        selected = formatFilter.equals(format.extension, ignoreCase = true),
+                        onClick = { onFormatClick(format.extension) },
+                        label = { Text(format.extension.uppercase()) }
+                    )
+                }
+            }
         }
         Spacer(Modifier.height(8.dp))
         if (results.isEmpty()) {
@@ -655,16 +505,30 @@ private fun VideoSearchResults(
                     )
                 }
             }
+        } else if (isGridView) {
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(gridColumns),
+                state = rememberLazyGridState(),
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(bottom = listBottomPadding),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                items(results, key = { it.id }) { video ->
+                    VideoBrowseCard(
+                        title = video.displayTitle,
+                        subtitle = formatDuration(video.durationMs),
+                        thumbnailVideo = video,
+                        isGridView = true,
+                        colorSeed = video.contentUriString,
+                        onClick = { onVideoClick(video) }
+                    )
+                }
+            }
         } else {
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(
-                    bottom = if (imePadding <= 8.dp) {
-                        MiniPlayerHeight + systemNavBarInset + 94.dp
-                    } else {
-                        imePadding
-                    }
-                ),
+                contentPadding = PaddingValues(bottom = listBottomPadding),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 items(results, key = { it.id }) { video ->
