@@ -49,6 +49,63 @@ class VideoViewModel @Inject constructor(
         }
     }
 
+    // ---- Video Folders + Player feedback (2026-11-16): the Folders
+    // settings dialog (view mode / layout / sort) and the floating
+    // Resume button. All persisted in the shared settings DataStore. ----
+
+    val isVideoFoldersGridView: StateFlow<Boolean> =
+        userPreferencesRepository.isVideoFoldersGridViewFlow
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
+
+    fun toggleVideoFoldersViewMode() {
+        viewModelScope.launch {
+            userPreferencesRepository.setVideoFoldersGridView(!isVideoFoldersGridView.value)
+        }
+    }
+
+    val videoFoldersViewMode: StateFlow<String> =
+        userPreferencesRepository.videoFoldersViewModeFlow
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), "FOLDERS")
+
+    fun setVideoFoldersViewMode(mode: String) {
+        viewModelScope.launch { userPreferencesRepository.setVideoFoldersViewMode(mode) }
+    }
+
+    val videoFoldersSort: StateFlow<String> =
+        userPreferencesRepository.videoFoldersSortFlow
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), "TITLE")
+
+    fun setVideoFoldersSort(sort: String) {
+        viewModelScope.launch { userPreferencesRepository.setVideoFoldersSort(sort) }
+    }
+
+    val videoFoldersSortAscending: StateFlow<Boolean> =
+        userPreferencesRepository.videoFoldersSortAscendingFlow
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), true)
+
+    fun setVideoFoldersSortAscending(ascending: Boolean) {
+        viewModelScope.launch {
+            userPreferencesRepository.setVideoFoldersSortAscending(ascending)
+        }
+    }
+
+    /** Last partially-watched video (URI / position / title), or null. */
+    val videoResumeUri: StateFlow<String?> =
+        userPreferencesRepository.videoResumeUriFlow
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
+    val videoResumePositionMs: StateFlow<Long> =
+        userPreferencesRepository.videoResumePositionMsFlow
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0L)
+
+    val videoResumeTitle: StateFlow<String?> =
+        userPreferencesRepository.videoResumeTitleFlow
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
+    fun clearVideoResume() {
+        viewModelScope.launch { userPreferencesRepository.clearVideoResume() }
+    }
+
     companion object {
         const val RECENT_VIDEOS_LIMIT = 12
     }
