@@ -44,7 +44,10 @@ Video uses its own ExoPlayer/Media3 player with its own library
 fullscreen, subtitle tracks when the file carries them), in the same
 Material 3 Expressive style as the music player. Home sections — new
 and existing — can be shown, hidden and reordered from
-Settings → Customise Home. Video formats are what ExoPlayer plus the
+Settings → Customise Home. The video section has its own bottom bar
+(Home / Search / Folders): Home always returns to the main Home page,
+video Search lists all videos and searches within them, and Folders
+groups videos by folder with sort and Play-all actions. Video formats are what ExoPlayer plus the
 bundled FFmpeg decoders support (common containers such as MP4, MKV,
 WebM, MOV, AVI, 3GP and FLV); the music player behaviour is unchanged.
 
