@@ -1,37 +1,63 @@
 package app.solina.player.presentation.screens
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.SizeTransform
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.automirrored.rounded.ViewList
+import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.GridView
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DockedSearchBar
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledIconButton
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SearchBarDefaults
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -40,158 +66,609 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
+import androidx.window.core.layout.WindowSizeClass
 import app.solina.player.R
+import app.solina.player.data.model.VideoFolder
 import app.solina.player.data.model.VideoItem
+import app.solina.player.data.model.groupVideosByFolder
+import app.solina.player.presentation.components.MiniPlayerHeight
 import app.solina.player.presentation.components.VideoThumbnail
+import app.solina.player.presentation.components.getNavigationBarHeight
+import app.solina.player.presentation.components.resolveNavBarOccupiedHeight
 import app.solina.player.presentation.navigation.Screen
 import app.solina.player.presentation.navigation.navigateSafely
+import app.solina.player.presentation.viewmodel.PlayerViewModel
 import app.solina.player.presentation.viewmodel.VideoViewModel
+import app.solina.player.presentation.viewmodel.sharedPlayerViewModel
 import app.solina.player.utils.formatDuration
+import kotlin.math.absoluteValue
+
+private enum class VideoBrowseMode { FOLDERS, FORMATS }
 
 /**
- * Video-only search (bottom-bar feedback, 2026-11-16): the Search button
- * of the video bottom bar. Unlike the unified Home search, this screen is
- * video-only — with an empty query it lists ALL videos together (newest
- * first, same order as the Video library); typing filters by title or
- * mime type. Tapping a video opens the video player; Play all plays the
- * currently listed videos as one queue.
+ * Video Search, rebuilt (Search feedback, 2026-11-16) to mirror the Music
+ * Search screen exactly: the same top search bar + settings gear, the same
+ * "Browse by …" header with the same grid/list toggle, the same card style,
+ * and the same results list. Only the browse groups differ — videos have no
+ * genre metadata, so browsing is by folder (primary) or by format.
+ *
+ * The floating bottom bar is shown on this screen (video items
+ * Home / Search / Folders, Search selected) — see MainActivity's hidden
+ * routes. The search bar itself is the same DockedSearchBar as music
+ * search; the gear opens the same Settings screen.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun VideoSearchScreen(
     navController: NavController,
-    videoViewModel: VideoViewModel = hiltViewModel()
+    videoViewModel: VideoViewModel = hiltViewModel(),
+    playerViewModel: PlayerViewModel = sharedPlayerViewModel()
 ) {
     val allVideos by videoViewModel.videos.collectAsStateWithLifecycle()
     var query by rememberSaveable { mutableStateOf("") }
+    var formatFilter by rememberSaveable { mutableStateOf<String?>(null) }
+    var browseMode by rememberSaveable { mutableStateOf(VideoBrowseMode.FOLDERS) }
     val focusManager = LocalFocusManager.current
+    val keyboardController = LocalSoftwareKeyboardController.current
+    val searchInputFocusRequester = remember { FocusRequester() }
+    val statusBarTopInset = WindowInsets.systemBars.asPaddingValues().calculateTopPadding()
+    val localDensity = LocalDensity.current
+    val navBarCompactMode by playerViewModel.navBarCompactMode.collectAsStateWithLifecycle()
+    val isGridView by videoViewModel.isVideoSearchGridView.collectAsStateWithLifecycle()
 
-    // Same filter as the unified search's Videos section: title / mime,
-    // case-insensitive, max 50 hits. Empty query = the whole library.
-    val results = remember(query, allVideos) {
+    // Blank query with no format filter = browse mode; anything else = results.
+    val isBrowseMode = query.isBlank() && formatFilter == null
+
+    val results = remember(query, formatFilter, allVideos) {
         val trimmed = query.trim()
-        if (trimmed.isBlank()) {
-            allVideos
-        } else {
-            allVideos.filter { video ->
+        allVideos.filter { video ->
+            val formatMatches = formatFilter == null ||
+                video.formatExtension.equals(formatFilter, ignoreCase = true)
+            val queryMatches = trimmed.isBlank() ||
                 video.displayTitle.contains(trimmed, ignoreCase = true) ||
-                    (video.mimeType?.contains(trimmed, ignoreCase = true) == true)
-            }.take(50)
-        }
+                (video.mimeType?.contains(trimmed, ignoreCase = true) == true)
+            formatMatches && queryMatches
+        }.take(50)
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text(text = stringResource(R.string.video_search_title)) },
-                navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
-                            contentDescription = null
-                        )
-                    }
-                }
-            )
-        }
-    ) { padding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .padding(horizontal = 16.dp)
-        ) {
-            OutlinedTextField(
-                value = query,
-                onValueChange = { query = it },
-                modifier = Modifier.fillMaxWidth(),
-                placeholder = { Text(text = stringResource(R.string.video_search_placeholder)) },
-                leadingIcon = {
-                    Icon(
-                        imageVector = Icons.Rounded.Search,
-                        contentDescription = null
-                    )
-                },
-                singleLine = true,
-                shape = RoundedCornerShape(28.dp),
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                keyboardActions = KeyboardActions(
-                    onSearch = { focusManager.clearFocus() }
-                )
-            )
-            Spacer(Modifier.height(12.dp))
+    val folders = remember(allVideos) {
+        groupVideosByFolder(allVideos).sortedBy { it.name.lowercase() }
+    }
+    val formats = remember(allVideos) {
+        allVideos.groupBy { it.formatExtension.uppercase() }
+            .map { (extension, videos) ->
+                VideoFormatGroup(extension = extension, videos = videos)
+            }
+            .sortedByDescending { it.videos.size }
+    }
+
+    val searchbarCornerRadius = 28.dp
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+    ) {
+        Column(modifier = Modifier.fillMaxSize()) {
+            // Same top row as the Music Search screen: full-width search bar
+            // plus the settings gear that opens the same Settings screen.
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 24.dp, top = statusBarTopInset + 12.dp, end = 24.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = stringResource(R.string.video_count_label, results.size),
-                    style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.weight(1f)
+                val searchBarInputFieldColors = SearchBarDefaults.inputFieldColors(
+                    focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                    unfocusedTextColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f),
+                    focusedContainerColor = Color.Transparent,
+                    unfocusedContainerColor = Color.Transparent,
+                    cursorColor = MaterialTheme.colorScheme.primary
                 )
-                if (results.isNotEmpty()) {
-                    Button(
-                        onClick = {
+                Box(
+                    Modifier
+                        .weight(1f)
+                        .background(color = Color.Transparent)
+                ) {
+                    DockedSearchBar(
+                        inputField = {
+                            SearchBarDefaults.InputField(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .focusRequester(searchInputFocusRequester),
+                                query = query,
+                                onQueryChange = {
+                                    query = it
+                                    if (it.isNotBlank()) formatFilter = null
+                                },
+                                onSearch = {
+                                    focusManager.clearFocus()
+                                    keyboardController?.hide()
+                                },
+                                expanded = false,
+                                onExpandedChange = {},
+                                placeholder = {
+                                    Text(
+                                        stringResource(R.string.video_search_placeholder),
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                },
+                                leadingIcon = {
+                                    Icon(
+                                        imageVector = Icons.Rounded.Search,
+                                        contentDescription = stringResource(R.string.cd_search_icon),
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(24.dp)
+                                    )
+                                },
+                                trailingIcon = {
+                                    if (query.isNotBlank()) {
+                                        IconButton(
+                                            onClick = { query = "" },
+                                            modifier = Modifier
+                                                .size(48.dp)
+                                                .clip(CircleShape)
+                                                .background(
+                                                    MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f)
+                                                )
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Rounded.Close,
+                                                contentDescription = stringResource(R.string.cd_clear_search_query),
+                                                tint = MaterialTheme.colorScheme.primary
+                                            )
+                                        }
+                                    }
+                                },
+                                colors = searchBarInputFieldColors
+                            )
+                        },
+                        expanded = false,
+                        onExpandedChange = {},
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(searchbarCornerRadius)),
+                        colors = SearchBarDefaults.colors(
+                            containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f),
+                            dividerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f),
+                            inputFieldColors = searchBarInputFieldColors
+                        ),
+                        content = {}
+                    )
+                }
+                FilledIconButton(
+                    modifier = Modifier.padding(bottom = 2.dp),
+                    colors = IconButtonDefaults.filledIconButtonColors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                    ),
+                    onClick = { navController.navigateSafely(Screen.Settings.route) }
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.rounded_settings_24),
+                        contentDescription = stringResource(R.string.presentation_batch_d_open_settings_cd)
+                    )
+                }
+            }
+
+            AnimatedContent(
+                targetState = isBrowseMode,
+                transitionSpec = {
+                    val switchingToBrowse = targetState
+                    val enter = fadeIn(animationSpec = tween(durationMillis = 320, delayMillis = 70)) +
+                        slideInVertically(animationSpec = tween(durationMillis = 320)) { fullHeight ->
+                            if (switchingToBrowse) -fullHeight / 10 else fullHeight / 10
+                        }
+                    val exit = fadeOut(animationSpec = tween(durationMillis = 220)) +
+                        slideOutVertically(animationSpec = tween(durationMillis = 220)) { fullHeight ->
+                            if (switchingToBrowse) fullHeight / 12 else -fullHeight / 12
+                        }
+                    (enter togetherWith exit).using(SizeTransform(clip = false))
+                },
+                label = "video_search_mode_transition"
+            ) { browse ->
+                if (browse) {
+                    VideoBrowseGrid(
+                        folders = folders,
+                        formats = formats,
+                        browseMode = browseMode,
+                        onBrowseModeChange = { browseMode = it },
+                        isGridView = isGridView,
+                        onToggleViewMode = { videoViewModel.toggleVideoSearchViewMode() },
+                        navBarCompactMode = navBarCompactMode,
+                        onFolderClick = { folder ->
+                            navController.navigateSafely(
+                                Screen.VideoFolderDetail.createRoute(folder.path)
+                            )
+                        },
+                        onFormatClick = { format -> formatFilter = format.extension },
+                        modifier = Modifier.fillMaxSize()
+                    )
+                } else {
+                    VideoSearchResults(
+                        results = results,
+                        formatFilter = formatFilter,
+                        onClearFormatFilter = { formatFilter = null },
+                        onVideoClick = { video ->
+                            navController.navigateSafely(
+                                Screen.VideoPlayer.createRoute(video.contentUriString)
+                            )
+                        },
+                        onPlayAll = {
                             navController.navigateSafely(
                                 Screen.VideoPlayer.createRoute(
                                     startUri = results.first().contentUriString,
                                     queueUris = results.map { it.contentUriString }
                                 )
                             )
-                        }
-                    ) {
-                        Icon(
-                            imageVector = Icons.Rounded.PlayArrow,
-                            contentDescription = null
-                        )
-                        Spacer(Modifier.width(4.dp))
-                        Text(text = stringResource(R.string.video_play_all))
-                    }
+                        },
+                        modifier = Modifier.fillMaxSize()
+                    )
                 }
             }
-            Spacer(Modifier.height(8.dp))
-            if (results.isEmpty()) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
+        }
+    }
+}
+
+/** A format group for the "Browse by format" mode. */
+private data class VideoFormatGroup(
+    val extension: String,
+    val videos: List<VideoItem>
+) {
+    val totalDurationMs: Long get() = videos.sumOf { it.durationMs }
+}
+
+/** Mime subtype, e.g. "mp4" for video/mp4, "x-matroska" for video/x-matroska. */
+private val VideoItem.formatExtension: String
+    get() = mimeType?.substringAfter('/')?.ifBlank { "?" } ?: "?"
+
+/**
+ * Browse grid mirroring [GenreCategoriesGrid] from the Music Search screen:
+ * the same "Browse by …" header with the same grid/list toggle, the same
+ * card shape/spacing, and the same bottom padding for the floating bar.
+ * Browse mode switches between folders and formats with chips.
+ */
+@Composable
+private fun VideoBrowseGrid(
+    folders: List<VideoFolder>,
+    formats: List<VideoFormatGroup>,
+    browseMode: VideoBrowseMode,
+    onBrowseModeChange: (VideoBrowseMode) -> Unit,
+    isGridView: Boolean,
+    onToggleViewMode: () -> Unit,
+    navBarCompactMode: Int,
+    onFolderClick: (VideoFolder) -> Unit,
+    onFormatClick: (VideoFormatGroup) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val systemNavBarHeight = getNavigationBarHeight()
+    val windowSizeClass = currentWindowAdaptiveInfo().windowSizeClass
+    val isMediumWidth = windowSizeClass.isWidthAtLeastBreakpoint(WindowSizeClass.WIDTH_DP_MEDIUM_LOWER_BOUND)
+    val isExpandedWidth = windowSizeClass.isWidthAtLeastBreakpoint(WindowSizeClass.WIDTH_DP_EXPANDED_LOWER_BOUND)
+    val columns = when {
+        isGridView && isExpandedWidth -> 4
+        isGridView && isMediumWidth -> 3
+        isGridView -> 2
+        isMediumWidth -> 2
+        else -> 1
+    }
+    val isEmpty = when (browseMode) {
+        VideoBrowseMode.FOLDERS -> folders.isEmpty()
+        VideoBrowseMode.FORMATS -> formats.isEmpty()
+    }
+
+    if (isEmpty) {
+        Box(
+            modifier = modifier.padding(16.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                stringResource(R.string.video_no_videos_title),
+                style = MaterialTheme.typography.bodyLarge
+            )
+        }
+        return
+    }
+
+    LazyVerticalGrid(
+        columns = GridCells.Fixed(columns),
+        state = rememberLazyGridState(),
+        modifier = modifier
+            .fillMaxSize()
+            .padding(horizontal = 18.dp),
+        contentPadding = PaddingValues(
+            top = 8.dp,
+            bottom = 28.dp + resolveNavBarOccupiedHeight(systemNavBarHeight, navBarCompactMode, isMediumWidth) + MiniPlayerHeight
+        ),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        item(span = { GridItemSpan(maxLineSpan) }) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 6.dp, top = 6.dp, bottom = 6.dp, end = 0.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = stringResource(
+                        if (browseMode == VideoBrowseMode.FOLDERS) {
+                            R.string.video_browse_by_folder
+                        } else {
+                            R.string.video_browse_by_format
+                        }
+                    ),
+                    style = MaterialTheme.typography.titleLarge
+                )
+                val shape = animateFloatAsState(
+                    targetValue = if (!isGridView) 12f else 50f,
+                    label = "shapeAnimation"
+                )
+                androidx.compose.material3.FilledIconButton(
+                    onClick = onToggleViewMode,
+                    colors = androidx.compose.material3.IconButtonDefaults.filledIconButtonColors(
+                        containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                    ),
+                    shape = RoundedCornerShape(shape.value.dp)
                 ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(
-                            text = stringResource(R.string.video_search_no_results),
-                            style = MaterialTheme.typography.titleLarge
-                        )
-                        Spacer(Modifier.height(8.dp))
-                        Text(
-                            text = stringResource(R.string.video_no_videos_subtitle),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
+                    androidx.compose.material3.Icon(
+                        imageVector = if (isGridView) Icons.AutoMirrored.Rounded.ViewList else Icons.Rounded.GridView,
+                        contentDescription = stringResource(R.string.cd_toggle_grid_list)
+                    )
                 }
-            } else {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(bottom = 16.dp),
-                    verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(12.dp)
+            }
+        }
+        item(span = { GridItemSpan(maxLineSpan) }) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 6.dp, bottom = 6.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                FilterChip(
+                    selected = browseMode == VideoBrowseMode.FOLDERS,
+                    onClick = { onBrowseModeChange(VideoBrowseMode.FOLDERS) },
+                    label = { Text(stringResource(R.string.video_browse_folders)) }
+                )
+                FilterChip(
+                    selected = browseMode == VideoBrowseMode.FORMATS,
+                    onClick = { onBrowseModeChange(VideoBrowseMode.FORMATS) },
+                    label = { Text(stringResource(R.string.video_browse_formats)) }
+                )
+            }
+        }
+        when (browseMode) {
+            VideoBrowseMode.FOLDERS -> items(folders, key = { it.path }) { folder ->
+                VideoBrowseCard(
+                    title = folder.name.ifBlank { stringResource(R.string.video_folder_unknown) },
+                    subtitle = stringResource(
+                        R.string.video_folder_summary,
+                        folder.videos.size,
+                        formatDuration(folder.totalDurationMs)
+                    ),
+                    thumbnailVideo = folder.videos.firstOrNull(),
+                    isGridView = isGridView,
+                    colorSeed = folder.path,
+                    onClick = { onFolderClick(folder) }
+                )
+            }
+            VideoBrowseMode.FORMATS -> items(formats, key = { it.extension }) { format ->
+                VideoBrowseCard(
+                    title = format.extension.uppercase(),
+                    subtitle = stringResource(
+                        R.string.video_folder_summary,
+                        format.videos.size,
+                        formatDuration(format.totalDurationMs)
+                    ),
+                    thumbnailVideo = format.videos.firstOrNull(),
+                    isGridView = isGridView,
+                    colorSeed = format.extension,
+                    onClick = { onFormatClick(format) }
+                )
+            }
+        }
+    }
+}
+
+/**
+ * One browse card, same shape as the genre cards in Music Search:
+ * 20 dp rounded corners, aspect 1.2 in grid mode / 100 dp high in list
+ * mode, pastel container colour, thumbnail bottom-end, title top-start.
+ */
+@Composable
+private fun VideoBrowseCard(
+    title: String,
+    subtitle: String,
+    thumbnailVideo: VideoItem?,
+    isGridView: Boolean,
+    colorSeed: String,
+    onClick: () -> Unit
+) {
+    val colorScheme = MaterialTheme.colorScheme
+    val palette = remember(colorScheme) {
+        listOf(
+            colorScheme.primaryContainer to colorScheme.onPrimaryContainer,
+            colorScheme.secondaryContainer to colorScheme.onSecondaryContainer,
+            colorScheme.tertiaryContainer to colorScheme.onTertiaryContainer,
+            colorScheme.surfaceContainerHigh to colorScheme.onSurface
+        )
+    }
+    val (backgroundColor, onBackgroundColor) = remember(colorSeed, palette) {
+        palette[(colorSeed.hashCode().absoluteValue) % palette.size]
+    }
+    val shape = RoundedCornerShape(20.dp)
+    val cardModifier = if (isGridView) {
+        Modifier.aspectRatio(1.2f)
+    } else {
+        Modifier.fillMaxWidth().height(100.dp)
+    }
+
+    Card(
+        modifier = cardModifier
+            .clip(shape)
+            .clickable(onClick = onClick),
+        shape = shape,
+        colors = CardDefaults.cardColors(containerColor = backgroundColor),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .clip(RoundedCornerShape(20.dp))
+                .background(backgroundColor)
+        ) {
+            if (thumbnailVideo != null) {
+                Box(
+                    modifier = Modifier
+                        .size(90.dp)
+                        .align(Alignment.BottomEnd)
+                        .offset(x = 16.dp, y = 16.dp)
                 ) {
-                    items(results, key = { it.id }) { video ->
-                        VideoSearchRow(
-                            video = video,
-                            onClick = {
-                                navController.navigateSafely(
-                                    Screen.VideoPlayer.createRoute(video.contentUriString)
-                                )
-                            }
-                        )
+                    VideoThumbnail(
+                        video = thumbnailVideo,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                }
+            }
+            Column(
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .fillMaxWidth()
+                    .padding(
+                        start = 14.dp,
+                        top = 14.dp,
+                        end = if (isGridView) 14.dp else 96.dp
+                    )
+            ) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = onBackgroundColor,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.labelLarge,
+                    color = onBackgroundColor.copy(alpha = 0.8f),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.padding(top = 4.dp)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun VideoSearchResults(
+    results: List<VideoItem>,
+    formatFilter: String?,
+    onClearFormatFilter: () -> Unit,
+    onVideoClick: (VideoItem) -> Unit,
+    onPlayAll: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val localDensity = LocalDensity.current
+    val systemNavBarInset = WindowInsets.systemBars.asPaddingValues().calculateBottomPadding()
+    val imePadding = WindowInsets.ime.getBottom(localDensity).dp
+
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .padding(horizontal = 16.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = stringResource(R.string.video_count_label, results.size),
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.weight(1f)
+            )
+            if (results.isNotEmpty()) {
+                Button(onClick = onPlayAll) {
+                    Icon(
+                        imageVector = Icons.Rounded.PlayArrow,
+                        contentDescription = null
+                    )
+                    Spacer(Modifier.width(4.dp))
+                    Text(text = stringResource(R.string.video_play_all))
+                }
+            }
+        }
+        if (formatFilter != null) {
+            Spacer(Modifier.height(8.dp))
+            FilterChip(
+                selected = true,
+                onClick = onClearFormatFilter,
+                label = {
+                    Text(stringResource(R.string.video_search_browse_format, formatFilter.uppercase()))
+                },
+                trailingIcon = {
+                    Icon(
+                        imageVector = Icons.Rounded.Close,
+                        contentDescription = stringResource(R.string.video_search_clear_format)
+                    )
+                }
+            )
+        }
+        Spacer(Modifier.height(8.dp))
+        if (results.isEmpty()) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = stringResource(R.string.video_search_no_results),
+                        style = MaterialTheme.typography.titleLarge
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        text = stringResource(R.string.video_no_videos_subtitle),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        } else {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(
+                    bottom = if (imePadding <= 8.dp) {
+                        MiniPlayerHeight + systemNavBarInset + 94.dp
+                    } else {
+                        imePadding
                     }
+                ),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                items(results, key = { it.id }) { video ->
+                    VideoSearchRow(
+                        video = video,
+                        onClick = { onVideoClick(video) }
+                    )
                 }
             }
         }
