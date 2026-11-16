@@ -256,6 +256,10 @@ constructor(
 
         val IS_GENRE_GRID_VIEW = booleanPreferencesKey("is_genre_grid_view")
 
+        // Search feedback (2026-11-16): the Video Search browse grid has its
+        // own persisted grid/list mode, mirroring the genre grid above.
+        val IS_VIDEO_SEARCH_GRID_VIEW = booleanPreferencesKey("is_video_search_grid_view")
+
         val IS_ALBUMS_LIST_VIEW = booleanPreferencesKey("is_albums_list_view")
         val IS_PLAYLISTS_GRID_VIEW = booleanPreferencesKey("is_playlists_grid_view")
         val SHOW_SCROLLBAR = booleanPreferencesKey("show_scrollbar")
@@ -831,6 +835,17 @@ constructor(
     suspend fun setGenreGridView(isGrid: Boolean) {
         dataStore.edit { preferences ->
             preferences[PreferencesKeys.IS_GENRE_GRID_VIEW] = isGrid
+        }
+    }
+
+    val isVideoSearchGridViewFlow: Flow<Boolean> =
+        dataStore.data.map { preferences ->
+            preferences[PreferencesKeys.IS_VIDEO_SEARCH_GRID_VIEW] ?: true
+        }
+
+    suspend fun setVideoSearchGridView(isGrid: Boolean) {
+        dataStore.edit { preferences ->
+            preferences[PreferencesKeys.IS_VIDEO_SEARCH_GRID_VIEW] = isGrid
         }
     }
 
