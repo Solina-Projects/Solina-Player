@@ -1,12 +1,19 @@
 package app.solina.player.presentation.selection
 
+import app.solina.player.data.cloud.CloudFeatures
+
 import app.solina.player.data.model.StorageFilter
 
 /** Mirrors the filter used by the visible library when local media is globally hidden. */
 internal fun effectiveLibraryStorageFilter(
     selected: StorageFilter,
     hideLocalMedia: Boolean,
-): StorageFilter = if (hideLocalMedia) StorageFilter.ONLINE else selected
+): StorageFilter =
+    // Cloud disabled (2026-11-16, user: fully offline for now): the
+    // ONLINE (cloud-only) mode is never forced, even if a
+    // hideLocalMedia=true preference was persisted earlier.
+    if (!CloudFeatures.ENABLED) selected
+    else if (hideLocalMedia) StorageFilter.ONLINE else selected
 
 /** Toggles one item while preserving the order in which categories were selected. */
 internal fun <T, K> toggleOrderedSelection(

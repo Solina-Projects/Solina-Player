@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="presentation_batch_d_library_title">کتابخانه</string>
+    <string name="presentation_batch_d_open_settings_cd">تنظیمات</string>
+    <string name="presentation_batch_d_edit_library_tabs_cd">ویرایش</string>
+    <string name="presentation_batch_d_reorder_tabs_cd">مرتب‌سازی برگه‌ها</string>
+    <string name="presentation_batch_d_sort_by">مرتب‌سازی بر اساس</string>
+    <string name="presentation_batch_d_view_section_view">نمایش</string>
+    <string name="presentation_batch_d_view_section_layout">چیدمان</string>
+    <string name="presentation_batch_d_playlist_view">نمای پلی‌لیست</string>
+    <string name="presentation_batch_d_view_grid">شبکه‌ای</string>
+    <string name="presentation_batch_d_view_list">لیستی</string>
+    <string name="presentation_batch_d_storage_internal">داخلی</string>
+    <string name="presentation_batch_d_storage_sd_card">کارت SD</string>
+    <string name="presentation_batch_d_sd_card_unavailable">کارت SD در حال حاضر در دسترس نیست.</string>
+    <string name="presentation_batch_d_cloud_sources_heading">ابری</string>
+    <string name="presentation_batch_d_cloud_only">فقط ابری</string>
+    <string name="presentation_batch_d_max_albums_selection">حداکثر می‌توانید %1$d آلبوم انتخاب کنید</string>
+    <string name="presentation_batch_d_folder_name_fallback">پوشه</string>
+    <string name="presentation_batch_d_library_tabs_sheet_title">برگه‌های کتابخانه</string>
+    <string name="presentation_batch_d_library_tabs_sheet_subtitle">مستقیم به هر برگه بروید یا ترتیب آن‌ها را عوض کنید.</string>
+    <string name="presentation_batch_d_reorder_tabs_label">مرتب‌سازی برگه‌ها</string>
+    <string name="presentation_batch_d_cd_folder">پوشه</string>
+
+
+    <string name="presentation_batch_d_merge_playlists_title">ادغام پلی‌لیست‌ها</string>
+    <string name="presentation_batch_d_merge_playlists_prompt">یک نام برای پلی‌لیست ادغام‌شده وارد کنید:</string>
+    <string name="presentation_batch_d_merge_playlists_placeholder">پلی‌لیست ادغام‌شده</string>
+    <string name="presentation_batch_d_merge_playlists_body">این کار %1$d پلی‌لیست انتخاب‌شده را در یکی ادغام می‌کند.</string>
+
+    <string name="presentation_batch_d_mashup_title">فضای دی‌جی</string>
+    <string name="presentation_batch_d_loading">در حال بارگذاری…</string>
+    <string name="presentation_batch_d_mashup_deck_n">دک %1$d</string>
+    <string name="presentation_batch_d_mashup_load_song_cd">بارگذاری آهنگ</string>
+    <string name="presentation_batch_d_mashup_no_song_loaded">آهنگی بارگذاری نشده است</string>
+    <string name="presentation_batch_d_mashup_artist_placeholder">…</string>
+    <string name="presentation_batch_d_mashup_stem_separation_unavailable">جداسازی استم هنوز در دسترس نیست.</string>
+    <string name="presentation_batch_d_mashup_volume">صدا</string>
+    <string name="presentation_batch_d_mashup_speed">سرعت</string>
+    <string name="presentation_batch_d_mashup_crossfader">کراس‌فیدر</string>
+    <string name="presentation_batch_d_mashup_deck_1">دک ۱</string>
+    <string name="presentation_batch_d_mashup_deck_2">دک ۲</string>
+    <string name="presentation_batch_d_mashup_select_song_title">انتخاب آهنگ</string>
+
+    <string name="presentation_batch_d_eq_change_view_mode_cd">تغییر حالت نمایش</string>
+    <string name="presentation_batch_d_eq_disable_cd">غیرفعال کردن اکولایزر</string>
+    <string name="presentation_batch_d_eq_enable_cd">فعال کردن اکولایزر</string>
+    <string name="presentation_batch_d_eq_edit_tab_title">ویرایش</string>
+    <string name="presentation_batch_d_eq_edit_presets_cd">ویرایش پیش‌تنظیم‌ها</string>
+    <string name="presentation_batch_d_eq_custom_preset_cd">پیش‌تنظیم سفارشی</string>
+    <string name="presentation_batch_d_eq_presets_cd">پیش‌تنظیم‌ها</string>
+    <string name="presentation_batch_d_action_update">به‌روزرسانی</string>
+    <string name="presentation_batch_d_eq_bass_boost">تقویت باس</string>
+    <string name="presentation_batch_d_eq_virtualizer">مجازی‌ساز</string>
+    <string name="presentation_batch_d_eq_loudness">بلندی صدا</string>
+    <string name="presentation_batch_d_eq_effect_not_supported">پشتیبانی نمی‌شود</string>
+    <string name="presentation_batch_d_eq_effect_not_supported_device">در این دستگاه پشتیبانی نمی‌شود</string>
+    <string name="presentation_batch_d_eq_volume">صدا</string>
+    <string name="presentation_batch_d_eq_frequency_response">پاسخ فرکانسی</string>
+    <string name="presentation_batch_d_eq_unit_hz">Hz</string>
+    <string name="presentation_batch_d_eq_band_bass">باس</string>
+    <string name="presentation_batch_d_eq_band_low_mids">میانی پایین</string>
+    <string name="presentation_batch_d_eq_band_high_mids">میانی بالا</string>
+    <string name="presentation_batch_d_eq_band_treble">تریبل</string>
+    <string name="presentation_batch_d_eq_band_bass_low">باس / پایین</string>
+    <string name="presentation_batch_d_eq_band_mid_high">میانی / بالا</string>
+    <string name="presentation_batch_d_eq_page_n">صفحه %1$d</string>
+
+    <string name="presentation_batch_d_transition_snackbar_using_global">استفاده از پیش‌فرض‌های سراسری</string>
+    <string name="presentation_batch_d_transition_snackbar_saved">تغییرات با موفقیت ذخیره شد</string>
+    <string name="presentation_batch_d_transition_title_playlist_rules">قوانین پلی‌لیست</string>
+    <string name="presentation_batch_d_transition_title_global">گذارهای سراسری</string>
+    <string name="presentation_batch_d_transition_save_cd">ذخیره</string>
+    <string name="presentation_batch_d_transition_intro_playlist">رفتار پیش‌فرض را برای این پلی‌لیست مشخص کنید.</string>
+    <string name="presentation_batch_d_transition_intro_global">این تنظیمات برای همه منابع پخش اعمال می‌شود، مگر اینکه جایگزین شود.</string>
+    <string name="presentation_batch_d_transition_active_status">وضعیت فعال</string>
+    <string name="presentation_batch_d_transition_status_global_default">پیش‌فرض سراسری</string>
+    <string name="presentation_batch_d_transition_status_following_global">دنبال‌کننده سراسری</string>
+    <string name="presentation_batch_d_transition_status_custom_override">جایگزینی سفارشی</string>
+    <string name="presentation_batch_d_transition_status_playlist_default">پیش‌فرض پلی‌لیست</string>
+    <string name="presentation_batch_d_transition_custom_override_title">جایگزینی سفارشی</string>
+    <string name="presentation_batch_d_transition_custom_override_body">فعال کنید تا قوانین مشخصی برای این پلی‌لیست تعیین شود.</string>
+    <string name="presentation_batch_d_transition_style_title">سبک گذار</string>
+    <string name="presentation_batch_d_transition_style_subtitle">آهنگ‌ها چگونه با هم ترکیب می‌شوند</string>
+    <string name="presentation_batch_d_transition_mode_crossfade">کراس‌فید</string>
+    <string name="presentation_batch_d_transition_mode_none">هیچ‌کدام</string>
+    <string name="presentation_batch_d_transition_duration_title">مدت گذار</string>
+    <string name="presentation_batch_d_transition_duration_subtitle_format">هم‌پوشانی کلی %1$d ثانیه</string>
+    <string name="presentation_batch_d_transition_reset_cd">بازنشانی</string>
+    <string name="presentation_batch_d_transition_visualizer_current">آهنگ فعلی</string>
+    <string name="presentation_batch_d_transition_visualizer_next">آهنگ بعدی</string>
+    <string name="presentation_batch_d_transition_overlap_explanation_format">آهنگ‌ها %1$d ثانیه هم‌پوشانی خواهند داشت</string>
+    <string name="presentation_batch_d_transition_curves_title">منحنی‌های صدا</string>
+    <string name="presentation_batch_d_transition_curves_subtitle">شیب صدا را دقیق تنظیم کنید</string>
+    <string name="presentation_batch_d_transition_fade_out">فید اوت</string>
+    <string name="presentation_batch_d_transition_fade_in">فید این</string>
+
+    <string name="presentation_batch_d_cd_play_title">پخش %1$s</string>
+    <string name="presentation_batch_d_cd_collapse_title">جمع کردن %1$s</string>
+    <string name="presentation_batch_d_cd_expand_title">باز کردن %1$s</string>
+    <string name="presentation_batch_d_edit_artist_image_cd">ویرایش تصویر هنرمند</string>
+    <string name="presentation_batch_d_change_photo">تغییر عکس</string>
+    <string name="presentation_batch_d_reset_to_default">بازنشانی به پیش‌فرض</string>
+    <string name="presentation_batch_d_cd_shuffle_play_artist">پخش تصادفی هنرمند</string>
+    <string name="presentation_batch_d_cd_artist">هنرمند</string>
+</resources>

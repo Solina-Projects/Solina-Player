@@ -1,0 +1,292 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name" translatable="false">Solina Player</string>
+    <string name="app_name_change_title">تغییر نام برنامه</string>
+    <string name="app_name_change_message">این برنامه حالا Solina Player است. به پخش ادامه دهید!</string>
+    <string name="do_not_show_again">دیگر نشان نده</string>
+    <string name="dismiss">رد کردن</string>
+    <string name="all_files_access_title">دسترسی ویژه لازم است</string>
+    <string name="all_files_access_description">برای ویرایش اطلاعات آهنگ‌ها (فایل‌های .mp3)، Solina Player به دسترسی ویژه به همهٔ فایل‌ها نیاز دارد. با این دسترسی می‌توانیم برچسب‌های آهنگ را مستقیم تغییر دهیم. لطفاً در صفحهٔ بعد این دسترسی را بدهید تا ویرایش اطلاعات فعال شود.</string>
+    <string name="grant_permission_button">دادن دسترسی</string>
+    <string name="error">خطا</string>
+    <string name="ok">باشه</string>
+    <string name="cancel">لغو</string>
+    <string name="accounts_listenbrainz_title">ListenBrainz</string>
+    <string name="accounts_listenbrainz_token_dialog_title">اتصال ListenBrainz</string>
+    <string name="accounts_listenbrainz_token_dialog_body">توکن کاربری‌تان را بچسبانید تا گوش دادن‌هایتان در ListenBrainz ثبت شود. آن را در تنظیمات‌تان در listenbrainz.org پیدا می‌کنید.</string>
+    <string name="accounts_listenbrainz_token_hint">توکن کاربر</string>
+    <string name="accounts_listenbrainz_connect">اتصال</string>
+    <string name="accounts_listenbrainz_connect_failed">اتصال ممکن نشد. توکن و آدرس سرور را بررسی کنید و دوباره تلاش کنید.</string>
+    <string name="accounts_listenbrainz_server_hint">آدرس سرور (اختیاری)</string>
+    <string name="accounts_listenbrainz_server_supporting">برای listenbrainz.org خالی بگذارید. با سرورهای شخصی که API برنامهٔ ListenBrainz را می‌فهمند، مثل Maloja، هم کار می‌کند.</string>
+    <string name="accounts_listenbrainz_invalid_url">یک آدرس سرور معتبر وارد کنید، مثل https://maloja.example.com/apis/listenbrainz</string>
+    <string name="accounts_listenbrainz_custom_server">ثبت گوش دادن در %1$s</string>
+    <string name="accounts_listenbrainz_get_token">باز کردن listenbrainz.org</string>
+    <string name="accounts_listenbrainz_needs_reauth">توکن شما دیگر معتبر نیست — برای ادامهٔ ثبت گوش دادن دوباره وصل شوید. موارد در صف نگه داشته شده‌اند.</string>
+    <string name="accounts_listenbrainz_reconnect">اتصال دوباره</string>
+    <string name="accounts_listenbrainz_scrobble_local">ثبت فایل‌های محلی</string>
+    <string name="accounts_listenbrainz_scrobble_navidrome">ثبت پخش Subsonic</string>
+    <string name="accounts_listenbrainz_scrobble_jellyfin">ثبت پخش Jellyfin</string>
+    <string name="accounts_listenbrainz_toggle_hint">اگر سرور شما خودش به ListenBrainz ثبت می‌کند، آن منبع را اینجا خاموش کنید تا گوش دادن‌ها دو بار ثبت نشوند.</string>
+    <string name="accounts_listenbrainz_stat_listens">کل گوش دادن‌ها</string>
+    <string name="accounts_listenbrainz_stat_queued">در صف</string>
+    <string name="accounts_listenbrainz_now_playing_label">در حال ثبت</string>
+    <string name="accounts_listenbrainz_now_playing_format">%1$s — %2$s</string>
+    <string name="accounts_listenbrainz_now_playing_idle">الان چیزی در حال پخش نیست</string>
+    <string name="accounts_available_services">سرویس‌های در دسترس</string>
+    <string name="import_file">وارد کردن</string>
+    <string name="search">جستجو</string>
+
+    <string name="lyrics">شعر</string>
+    <string name="loading_lyrics">در حال بارگذاری شعر…</string>
+    <string name="lyrics_provided_by">شعر از</string>
+    <string name="lrclib_uri" translatable="false">https://lrclib.net/</string>
+    <string name="lyrics_not_found">شعری پیدا نشد</string>
+    <string name="search_lyrics_online_prompt">می‌خواهید شعر را آنلاین جستجو کنید؟</string>
+    <string name="lyrics_custom_search_hint">نتوانستیم شعر را خودکار پیدا کنیم. می‌توانید عنوان یا خواننده را ویرایش کنید و دستی جستجو کنید.</string>
+    <string name="failed_to_search_for_lyrics">جستجوی شعر ناموفق بود</string>
+    <string name="failed_to_fetch_lyrics_from_remote">دریافت شعر از سرور ناموفق بود</string>
+    <string name="lyrics_fetch_timeout">اتصال قطع شد. لطفاً اتصال اینترنت‌تان را بررسی کنید.</string>
+    <string name="lyrics_network_error">خطای شبکه. لطفاً اتصال اینترنت‌تان را بررسی کنید.</string>
+    <string name="lyrics_server_error">خطای سرور (کد %d). لطفاً بعداً دوباره تلاش کنید.</string>
+    <string name="lyrics_remote_disabled">شعر آنلاین در تنظیمات خاموش است.</string>
+    <string name="found_n_matches_format">%d مورد پیدا شد</string>
+    <string name="searched_for_x_format">جستجو برای «%s»</string>
+    <string name="searching_lyrics">در حال جستجوی شعر…</string>
+    <string name="lyrics_already_available">شعر از قبل موجود است. دریافت آنلاین رد شد.</string>
+    <string name="lyrics_embedded_already_available">شعر داخل فایل از قبل پیدا شد. دریافت آنلاین رد شد.</string>
+    <string name="local_lrc_already_available">شعر محلی (.lrc) از قبل پیدا شد. دریافت آنلاین رد شد.</string>
+    <string name="fetch_lyrics_show_options_title">نمایش گزینه‌های شعر</string>
+    <string name="fetch_lyrics_show_options_subtitle">به‌جای اعمال خودکار اولین نتیجه، همیشه انتخاب‌کننده را باز کن</string>
+    <string name="save_lyrics_dialog_title">ذخیرهٔ شعر</string>
+    <string name="save_lyrics_dialog_message">انتخاب کنید کدام نسخه ذخیره شود:</string>
+    <string name="save_synced_lyrics">همگام (با زمان‌بندی)</string>
+    <string name="save_plain_lyrics">ساده (فقط متن)</string>
+    <string name="lyrics_saved_successfully">شعر با موفقیت ذخیره شد</string>
+    <string name="lyrics_save_failed">ذخیرهٔ شعر ناموفق بود</string>
+    <string name="no_lyrics_to_save">شعری برای ذخیره نیست</string>
+    <string name="reset_imported_lyrics">بازنشانی شعر واردشده</string>
+
+    <string name="sync_scanning">در حال اسکن فایل‌های موزیک…</string>
+    <string name="sync_processing">در حال پردازش فایل‌ها…</string>
+    <string name="sync_files_progress">%1$d از %2$d فایل</string>
+    <string name="sync_in_progress">در حال همگام‌سازی کتابخانه…</string>
+    <string name="sync_complete">همگام‌سازی تمام شد</string>
+    <string name="sync_pending">در انتظار…</string>
+    <string name="syncing_library">در حال همگام‌سازی کتابخانه…</string>
+    <string name="sync_preparing_library">در حال آماده‌سازی کتابخانه‌تان…</string>
+    <string name="sync_scanned_count">%1$d از %2$d آهنگ اسکن شد</string>
+    <string name="library_background_sync_lyrics">در حال اسکن شعرها…</string>
+    <string name="library_background_sync_cache">در حال پاک‌سازی حافظهٔ کاور آلبوم‌ها…</string>
+    <string name="library_background_sync_cloud">در حال همگام‌سازی منابع ابری…</string>
+    <string name="unknown_song_title">آهنگ ناشناخته</string>
+    <string name="unknown_artist">خوانندهٔ ناشناخته</string>
+    <string name="unknown_album">آلبوم ناشناخته</string>
+    <string name="artist_picker_title">انتخاب خواننده</string>
+    <string name="artist_picker_count_single">۱ خواننده</string>
+    <string name="artist_picker_count_multiple">%1$d خواننده</string>
+    <string name="artist_picker_primary_label">خوانندهٔ اصلی</string>
+    <string name="artist_picker_shortcut_label">صفحهٔ خواننده</string>
+    <string name="external_queue_label">پخش سریع</string>
+    <string name="external_playback_error">باز کردن آن فایل صوتی ممکن نشد.</string>
+    <string name="open_full_player">باز کردن پخش‌کنندهٔ کامل</string>
+    <string name="close_notification_player">بستن پخش‌کننده</string>
+    <string name="previous_track">آهنگ قبلی</string>
+    <string name="next_track">آهنگ بعدی</string>
+    <string name="play_playback">پخش</string>
+    <string name="playlist_not_found">پلی‌لیست پیدا نشد.</string>
+    <string name="disc_number_header">دیسک %d</string>
+
+
+
+    <string name="shortcut_shuffle_short">تصادفی</string>
+    <string name="shortcut_shuffle_long">پخش تصادفی همهٔ آهنگ‌ها</string>
+    <string name="shortcut_playlist_short">پلی‌لیست</string>
+
+    <string name="tile_shuffle_all">پخش تصادفی همه</string>
+    <string name="tile_last_playlist">آخرین پلی‌لیست</string>
+    <string name="tile_last_playlist_unavailable">پلی‌لیستی برای باز کردن نیست</string>
+
+    <string name="invalid_album_id">شناسهٔ آلبوم نامعتبر است</string>
+    <string name="album_id_not_found">شناسهٔ آلبوم پیدا نشد</string>
+    <string name="error_loading_album">خطا در بارگذاری اطلاعات آلبوم: %s</string>
+    <string name="album_not_found">آلبوم پیدا نشد</string>
+    <string name="invalid_artist_id">شناسهٔ خواننده نامعتبر است</string>
+    <string name="artist_id_not_found">شناسهٔ خواننده پیدا نشد</string>
+    <string name="error_loading_artist">خطا در بارگذاری اطلاعات خواننده: %s</string>
+    <string name="could_not_find_artist">خواننده پیدا نشد</string>
+    <string name="no_valid_songs">آهنگ معتبری برای پخش پیدا نشد</string>
+
+    <string name="glance_widget_description">ویجت واکنش‌گرا که با اندازه‌اش سازگار می‌شود</string>
+    <string name="widget_bar_4x1_desc">نوار پخش‌کنندهٔ فشرده</string>
+    <string name="widget_control_4x2_desc">کنترل کامل با تصادفی و تکرار</string>
+    <string name="widget_grid_2x2_desc">پخش‌کنندهٔ مربعی ساده</string>
+
+    <string name="playlist_none_to_share">پلی‌لیستی برای اشتراک‌گذاری نیست</string>
+    <string name="playlist_share_chooser_title">اشتراک‌گذاری پلی‌لیست‌ها</string>
+    <string name="playlist_share_failed">اشتراک‌گذاری ناموفق بود: %1$s</string>
+    <string name="playlist_none_to_export">پلی‌لیستی برای خروجی گرفتن نیست</string>
+    <string name="playlist_export_failed">خروجی گرفتن ناموفق بود: %1$s</string>
+    <string name="playlist_export_folder_display" translatable="false">Music/Solina Player Exports</string>
+    <string name="error_unknown">خطای ناشناخته</string>
+
+
+
+    <string name="backup_invalid_format">پشتیبان نامعتبر است: %1$s</string>
+    <string name="backup_progress_preparing_restore">در حال آماده‌سازی بازیابی</string>
+    <string name="backup_progress_starting_task">شروع کار بازیابی.</string>
+    <string name="backup_progress_preparing_backup">در حال آماده‌سازی پشتیبان</string>
+    <string name="backup_progress_starting_backup_task">شروع کار پشتیبان‌گیری.</string>
+    <string name="restore_completed_success">پشتیبان با موفقیت بازیابی شد</string>
+    <string name="restore_completed_partial_issues">بازیابی با چند مشکل حل‌نشده تمام شد.</string>
+    <string name="restore_could_not_complete">بازیابی کامل نشد: %1$s</string>
+    <string name="restore_failed_format">بازیابی ناموفق بود: %1$s</string>
+    <string name="data_exported_successfully">اطلاعات با موفقیت خروجی گرفته شد</string>
+    <string name="export_failed_format">خروجی گرفتن ناموفق بود: %1$s</string>
+    <string name="data_restored_successfully">اطلاعات با موفقیت بازیابی شد</string>
+    <string name="restore_partial_unresolved_format">بازیابی با مشکلات حل‌نشده تمام شد. ناموفق: %1$s</string>
+    <string name="dev_test_crash_message">خرابی آزمایشی از گزینه‌های توسعه‌دهنده فعال شد — این برای آزمایش سیستم گزارش خرابی عمدی است</string>
+
+    <string name="player_song_not_found_in_list">آهنگ در فهرست فعلی پیدا نشد</string>
+    <string name="player_could_not_locate_song">آهنگ پیدا نشد</string>
+    <string name="player_no_songs_in_library_toast">در کتابخانه آهنگی پیدا نشد</string>
+    <string name="player_playback_stopped_eot">پخش متوقف شد: %1$s تمام شد (پایان آهنگ).</string>
+    <string name="player_default_track_title">آهنگ</string>
+    <string name="player_audio_output_title">پخش در</string>
+    <string name="player_audio_output_this_phone">این گوشی</string>
+    <string name="player_audio_output_wired">هدفون سیمی</string>
+    <string name="player_audio_output_unknown_device">دستگاه صوتی</string>
+    <string name="player_audio_output_more_devices">دستگاه‌های بیشتر</string>
+    <string name="player_audio_output_more_devices_subtitle">با انتخاب‌کنندهٔ خروجی سیستم وصل شوید یا جابه‌جا شوید</string>
+    <string name="player_no_songs_to_shuffle">آهنگی برای پخش تصادفی نیست.</string>
+    <string name="player_queue_name_selected_albums">آلبوم‌های انتخاب‌شده</string>
+    <string name="player_no_playable_songs_in_albums">در آلبوم‌های انتخاب‌شده آهنگ قابل‌پخشی پیدا نشد</string>
+    <string name="player_no_playable_songs_in_genres">در ژانرهای انتخاب‌شده آهنگ قابل‌پخشی پیدا نشد</string>
+    <string name="player_queue_name_selected_genres">ژانرهای انتخاب‌شده</string>
+    <string name="player_could_not_queue_genres">ژانرهای انتخاب‌شده در صف قرار نگرفتند</string>
+    <string name="player_only_first_n_albums_queued">فقط %1$d آلبوم اول در صف قرار گرفت</string>
+    <string name="player_albums_queued_format">%1$d آلبوم در صف قرار گرفت (%2$d آهنگ)</string>
+    <string name="player_could_not_queue_albums">آلبوم‌های انتخاب‌شده در صف قرار نگرفتند</string>
+    <string name="player_only_first_n_albums_next">فقط %1$d آلبوم اول به‌عنوان بعدی اضافه شد</string>
+    <string name="player_albums_will_play_next_format">%1$d آلبوم در ادامه پخش می‌شود</string>
+    <string name="player_could_not_add_albums_next">آلبوم‌های انتخاب‌شده به‌عنوان بعدی اضافه نشدند</string>
+    <string name="player_only_first_n_albums_added_queue">فقط %1$d آلبوم اول به صف اضافه شد</string>
+    <string name="player_albums_added_to_queue_format">%1$d آلبوم به صف اضافه شد</string>
+    <string name="player_could_not_add_albums_queue">آلبوم‌های انتخاب‌شده به صف اضافه نشدند</string>
+    <string name="player_all_songs_already_in_favorites">همهٔ آهنگ‌ها از قبل در موردعلاقه‌ها هستند</string>
+    <string name="player_no_songs_were_in_favorites">هیچ آهنگی در موردعلاقه‌ها نبود</string>
+    <string name="player_creating_zip">در حال ساخت فایل ZIP…</string>
+    <string name="player_share_zip_failed_format">اشتراک‌گذاری ناموفق بود: %1$s</string>
+    <string name="player_cannot_delete_currently_playing">آهنگ در حال پخش را نمی‌توان حذف کرد</string>
+    <string name="player_batch_delete_files_deleted_skipped_format">%1$d فایل حذف شد (%2$d رد شد - در حال پخش)</string>
+    <string name="player_batch_delete_partial_format">%1$d از %2$d فایل حذف شد</string>
+    <string name="player_delete_files_failed">حذف فایل‌ها ناموفق بود</string>
+    <string name="player_file_deleted">فایل حذف شد</string>
+    <string name="player_delete_file_not_found">حذف فایل ممکن نیست یا فایل پیدا نشد</string>
+    <string name="player_deletion_cancelled">حذف لغو شد</string>
+    <string name="player_permission_denied_edit_files">دسترسی رد شد – ویرایش فایل‌ها ممکن نیست</string>
+    <string name="player_permission_denied_save_lyrics">دسترسی رد شد – ذخیرهٔ شعر ممکن نیست</string>
+    <string name="player_permission_denied_edit_this_file">دسترسی رد شد – ویرایش این فایل ممکن نیست</string>
+    <string name="metadata_updated_successfully">اطلاعات با موفقیت به‌روز شد</string>
+    <string name="metadata_edit_write_interrupted">ذخیره قطع شد. یک نسخهٔ کامل نگه داشته شد و آهنگ بعداً بازیابی می‌شود.</string>
+    <string name="metadata_edit_write_still_pending">ذخیره نشده: اول باید آهنگ بازیابی شود. دسترسی بدهید، فضا آزاد کنید، بعد دوباره تلاش کنید.</string>
+    <string name="metadata_restore_permission_prompt">برای بازیابی آهنگ‌هایی که ذخیرهٔ ناتمام آن‌ها را ناقص گذاشته، دسترسی بدهید.</string>
+    <string name="metadata_restore_done">آهنگ‌هایی که ذخیرهٔ ناتمام آن‌ها را ناقص گذاشته بود، بازیابی شدند</string>
+    <string name="metadata_restore_incomplete">بعضی آهنگ‌ها هنوز بازیابی نشدند. برنامه بعداً دوباره تلاش می‌کند.</string>
+    <string name="metadata_restore_permission_denied">آهنگ‌ها بازیابی نشدند. برنامه بعداً یا وقتی یکی را ویرایش کنید دوباره می‌پرسد.</string>
+    <string name="player_updating_n_songs">در حال به‌روزرسانی %1$d آهنگ…</string>
+    <string name="player_batch_genre_updated_all">%1$d آهنگ با موفقیت به‌روز شد!</string>
+    <string name="player_batch_genre_updated_partial">%1$d آهنگ به‌روز شد. ناموفق: %2$d</string>
+    <string name="playlist_restored_toast">پلی‌لیست بازیابی شد</string>
+    <string name="delete_songs_permanent_message">این آهنگ‌ها برای همیشه از دستگاه شما حذف می‌شوند و قابل بازیابی نیستند.</string>
+    <string name="delete_action">حذف</string>
+
+    <string name="sleep_timer_n_minutes_format">%1$d دقیقه</string>
+    <string name="sleep_timer_display_eot">پایان آهنگ</string>
+    <string name="sleep_timer_set_for_minutes_toast">تایمر برای %1$d دقیقه تنظیم شد.</string>
+    <string name="sleep_timer_cancelled_toast">تایمر لغو شد.</string>
+    <string name="sleep_timer_eot_no_song_toast">پایان آهنگ فعال نمی‌شود: آهنگ فعالی نیست.</string>
+    <string name="sleep_timer_eot_song_changed_toast">تایمر پایان آهنگ خاموش شد: آهنگ از %1$s به %2$s عوض شد.</string>
+    <string name="sleep_timer_eot_stop_at_end_toast">پخش در پایان آهنگ متوقف می‌شود.</string>
+    <string name="sleep_timer_label_previous_track">آهنگ قبلی</string>
+    <string name="sleep_timer_label_current_track">آهنگ فعلی</string>
+    <string name="sleep_timer_ui_title">تایمر خواب</string>
+    <string name="sleep_timer_ui_slider_label_timer">تایمر</string>
+    <string name="sleep_timer_ui_end_of_current_track">پایان آهنگ فعلی</string>
+    <string name="sleep_timer_ui_custom_time">زمان دلخواه</string>
+    <string name="sleep_timer_ui_cancel_timer">لغو تایمر</string>
+    <string name="sleep_timer_ui_set_custom_duration">تنظیم مدت دلخواه</string>
+    <string name="sleep_timer_ui_play_count_label">تعداد پخش: %1$s</string>
+    <string name="sleep_timer_ui_play_count_one_time">۱ بار</string>
+    <string name="cd_switch_on">روشن کردن</string>
+    <string name="ui_format_percent_d">%1$d%%</string>
+    <string name="backup_manifest_schema_v">نسخهٔ %1$d</string>
+    <string name="backup_manifest_device_line">%1$s %2$s</string>
+
+    <string name="batch_edit_toolbar_title">ویرایش %d آهنگ</string>
+    <string name="batch_edit_info_message">فقط فیلدهای تغییرکرده به‌روز می‌شوند. فیلدها را خالی بگذارید تا مقدار فعلی حفظ شود.</string>
+    <string name="batch_edit_mixed_values">(مقادیر متفاوت)</string>
+    <string name="batch_edit_optional">(اختیاری - برای رد کردن خالی بگذارید)</string>
+    <string name="batch_edit_success">%d آهنگ با موفقیت به‌روز شد</string>
+    <string name="batch_edit_partial_success">%1$d از %2$d آهنگ به‌روز شد. بعضی فایل‌ها ویرایش نشدند.</string>
+    <string name="batch_edit_failed">به‌روزرسانی آهنگ‌ها ناموفق بود</string>
+
+    <string name="batch_edit_cover_art_heading">کاور دسته‌ای</string>
+    <string name="batch_edit_cover_art_hint">این کار کاور همهٔ %d آهنگ انتخاب‌شده را جایگزین می‌کند</string>
+    <string name="batch_edit_set_cover_art">تنظیم کاور برای همه</string>
+    <string name="batch_edit_remove_all_art">حذف همهٔ کاورها</string>
+    <string name="batch_edit_multiple_covers">(چند کاور متفاوت)</string>
+
+    <string name="player_error_skipping">پخش این آهنگ ممکن نشد — رد می‌شود</string>
+    <string name="player_unsupported_format">پخش %1$s ممکن نیست: این دستگاه برای %2$s رمزگشا ندارد</string>
+    <string name="player_unsupported_format_unknown">این فرمت</string>
+    <string name="sync_failed_toast">همگام‌سازی کتابخانه ناموفق بود. برای تازه‌سازی به پایین بکشید و دوباره تلاش کنید.</string>
+
+    <string name="a11y_toggle_on">روشن</string>
+    <string name="a11y_toggle_off">خاموش</string>
+
+    <string name="setcat_playback_speed">سرعت پخش</string>
+
+    <string name="duplicates_title">آهنگ‌های تکراری</string>
+    <string name="duplicates_none">آهنگ تکراری‌ای پیدا نشد.</string>
+    <string name="duplicates_summary">%1$d گروه · %2$d آهنگ</string>
+    <string name="duplicates_group_count">%1$d نسخه</string>
+    <string name="duplicates_group_title_format">%1$s — %2$s</string>
+    <string name="setcat_find_duplicates_title">پیدا کردن آهنگ‌های تکراری</string>
+    <string name="setcat_find_duplicates_subtitle">کتابخانه‌تان را برای آهنگ‌هایی که بیش از یک بار آمده‌اند اسکن کنید.</string>
+
+    <string name="cloud_download_action">دانلود</string>
+    <string name="cloud_download_queued">در صف</string>
+    <string name="cloud_downloading">در حال دانلود…</string>
+    <string name="cloud_download_progress">%1$d%%</string>
+    <string name="cloud_remove_download">حذف دانلود</string>
+    <string name="cloud_download_retry">تلاش دوباره</string>
+    <string name="cloud_album_download">دانلود آلبوم</string>
+    <string name="cloud_playlist_download">دانلود پلی‌لیست</string>
+    <string name="cloud_album_remove_downloads">حذف دانلودها</string>
+    <string name="cloud_downloads_title">دانلودها</string>
+    <string name="cloud_downloads_settings_subtitle">مدیریت آهنگ‌های ابری آفلاین و فضای ذخیره‌سازی</string>
+    <string name="cloud_downloads_storage_used">فضای آفلاین استفاده‌شده</string>
+    <string name="cloud_downloads_storage_summary">%1$d کامل‌شده · %2$d کل</string>
+    <string name="cloud_downloads_active_section">در صف و در حال دانلود</string>
+    <string name="cloud_downloads_failed_section">ناموفق</string>
+    <string name="cloud_downloads_completed_section">کامل‌شده</string>
+    <string name="cloud_downloads_section_count">%1$s · %2$d</string>
+    <string name="cloud_downloads_unknown_track">آهنگ ناشناخته</string>
+    <string name="cloud_downloads_downloaded_size">دانلودشده · %1$s</string>
+    <string name="cloud_downloads_failed_fallback">دانلود ناموفق بود</string>
+    <string name="cloud_downloads_empty_title">دانلود آفلاینی نیست</string>
+    <string name="cloud_downloads_empty_subtitle">آهنگ‌های ابری که دانلود کنید اینجا نمایش داده می‌شوند.</string>
+    <string name="cloud_download_selected">دانلود آهنگ‌های ابری انتخاب‌شده</string>
+    <string name="cloud_download_selected_count">دانلود %1$d آهنگ ابری</string>
+    <string name="musicbrainz_lookup">یافتن در MusicBrainz</string>
+    <string name="musicbrainz_searching">در حال جستجوی تطابق‌های ضبط…</string>
+    <string name="musicbrainz_lookup_failed">جستجو در MusicBrainz ناموفق بود</string>
+    <string name="musicbrainz_search_failed_fallback">جستجو در MusicBrainz ناموفق بود</string>
+    <string name="musicbrainz_save_failed_fallback">ذخیرهٔ اطلاعات MusicBrainz ممکن نشد</string>
+    <string name="musicbrainz_choose_match">یک تطابق MusicBrainz انتخاب کنید</string>
+    <string name="musicbrainz_no_results">ضبط مناسبی پیدا نشد.</string>
+    <string name="musicbrainz_match_score">اطمینان تطابق: %1$d%%</string>
+    <string name="musicbrainz_applied">شناسه‌های MusicBrainz ذخیره شدند. سال گمشده و نام‌های جایگزین تکمیل شدند.</string>
+
+</resources>

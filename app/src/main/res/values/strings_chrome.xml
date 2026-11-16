@@ -5,6 +5,7 @@
     <string name="song_info_label_path">Path</string>
     <string name="cd_playlist_artwork">Playlist</string>
     <string name="home_your_mix_subtitle">Today\'s Mix for you</string>
+    <string name="home_your_mix_play">Play today\'s mix</string>
     <string name="home_your_mix_queue_name">Your Mix</string>
     <string name="queue_name_liked_songs">Liked Songs</string>
     <string name="queue_name_all_songs_shuffled">All Songs (Shuffled)</string>

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="lyrics_highlight_style_title">برجسته‌سازی کلمه</string>
+    <string name="lyrics_highlight_style_subtitle">نحوهٔ روشن‌شدن کلمات هم‌زمان با خوانده‌شدن آن‌ها</string>
+    <string name="lyrics_highlight_style_wipe">موج گرادیان</string>
+    <string name="lyrics_highlight_style_wipe_desc">لبه‌ای نرم هنگام خوانده‌شدن روی هر کلمه می‌لغزد</string>
+    <string name="lyrics_highlight_style_fade">محو</string>
+    <string name="lyrics_highlight_style_fade_desc">هر هجا هنگام خوانده‌شدن ظاهر می‌شود</string>
+    <string name="lyrics_highlight_style_classic">فوری</string>
+    <string name="lyrics_highlight_style_classic_desc">هر هجا همان لحظهٔ شروع روشن می‌شود</string>
+    <string name="lyrics_duet_layout_title">چیدمان دوخواننده</string>
+    <string name="lyrics_duet_layout_subtitle">وقتی متن آهنگ صداها را مشخص می‌کند (v1: ،v2:)، هر خواننده در سمت خودش قرار می‌گیرد</string>
+    <string name="lyrics_background_vocals_title">آواز پس‌زمینه</string>
+    <string name="lyrics_background_vocals_subtitle">آوازهای پشتیبان را با متن کوچک‌تر زیر خط اصلی نشان می‌دهد</string>
+</resources>

@@ -49,7 +49,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.Article
 import androidx.compose.material.icons.rounded.Category
-import androidx.compose.material.icons.rounded.ChevronRight
+import androidx.compose.material.icons.automirrored.rounded.ArrowForwardIos
 import androidx.compose.material.icons.rounded.Clear
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Code
@@ -578,7 +578,7 @@ private fun LicenseCardRow(
             Spacer(modifier = Modifier.width(6.dp))
 
             Icon(
-                imageVector = Icons.Rounded.ChevronRight,
+                imageVector = Icons.AutoMirrored.Rounded.ArrowForwardIos,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
                 modifier = Modifier.size(20.dp),

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Settings > Library > Artists, and the album list of an artist's page -->
+    <string name="artist_page_settings_section">صفحهٔ هنرمند</string>
+    <string name="artist_page_albums_collapsed_by_default">شروع با آلبوم‌های جمع‌شده</string>
+    <string name="artist_page_albums_collapsed_by_default_sub">وقتی هنرمند بیش از یک آلبوم دارد، ابتدا فقط سربرگ آلبوم‌ها نشان داده می‌شود. برای دیدن آهنگ‌ها روی یک آلبوم بزنید.</string>
+    <!-- Button above the album list of an artist's page -->
+    <string name="artist_page_collapse_all_albums">جمع‌کردن همه</string>
+    <string name="artist_page_expand_all_albums">بازکردن همه</string>
+</resources>

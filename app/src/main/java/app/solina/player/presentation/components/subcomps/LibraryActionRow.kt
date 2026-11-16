@@ -44,7 +44,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.PlaylistAdd
 import androidx.compose.material.icons.automirrored.rounded.Sort
-import androidx.compose.material.icons.rounded.ChevronRight
+import androidx.compose.material.icons.automirrored.rounded.ArrowForwardIos
 import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.MyLocation
 import androidx.compose.material.icons.rounded.Shuffle
@@ -209,7 +209,7 @@ private fun LibraryActionRowContent(
             .fillMaxWidth()
             .height(48.dp)
             .padding(start = 4.dp),
-        horizontalArrangement = Arrangement.Absolute.SpaceBetween,
+        horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
         Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.CenterStart) {
@@ -638,7 +638,7 @@ fun Breadcrumbs(
                 )
                 if (!isLast) {
                     Icon(
-                        imageVector = Icons.Rounded.ChevronRight,
+                        imageVector = Icons.AutoMirrored.Rounded.ArrowForwardIos,
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
                         modifier = Modifier.size(20.dp)

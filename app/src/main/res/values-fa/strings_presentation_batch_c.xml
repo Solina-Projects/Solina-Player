@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="library_tab_songs">آهنگ‌ها</string>
+    <string name="library_tab_albums">آلبوم‌ها</string>
+    <string name="library_tab_artists">خوانندگان</string>
+    <string name="library_tab_playlists">پلی‌لیست‌ها</string>
+    <string name="library_tab_folders">پوشه‌ها</string>
+    <string name="library_tab_liked">پسندیده‌ها</string>
+
+    <string name="library_error_loading_songs">خطا در بارگذاری آهنگ‌ها</string>
+    <string name="library_error_loading_albums">خطا در بارگذاری آلبوم‌ها</string>
+    <string name="library_error_loading_artists">خطا در بارگذاری خوانندگان</string>
+    <string name="library_retry">تلاش دوباره</string>
+
+    <string name="library_no_songs_in_library_message">آهنگی در کتابخانه‌تان پیدا نشد.</string>
+    <string name="library_no_songs_rescan_hint">اگر روی دستگاه موسیقی دارید، کتابخانه را از تنظیمات دوباره اسکن کنید.</string>
+    <string name="cd_no_songs_in_library">آهنگی پیدا نشد</string>
+
+    <string name="library_action_new">جدید</string>
+    <string name="cd_create_new_playlist">ساخت پلی‌لیست جدید</string>
+    <string name="cd_import_m3u_playlist">درون‌ریزی پلی‌لیست M3U</string>
+    <string name="cd_locate_current_song">پیدا کردن آهنگ در حال پخش</string>
+    <string name="library_storage_filter_all_songs">همهٔ آهنگ‌ها</string>
+    <string name="library_storage_filter_online">ابری</string>
+    <string name="library_storage_filter_offline">محلی</string>
+    <string name="cd_sort_options">گزینه‌های مرتب‌سازی</string>
+
+    <string name="lyrics_synced_badge">همگام‌شده</string>
+    <string name="song_field_artist_optional">خواننده (اختیاری)</string>
+
+    <string name="song_picker_title">افزودن آهنگ</string>
+    <string name="cd_confirm_add_songs">افزودن آهنگ‌های انتخاب‌شده</string>
+    <string name="song_picker_action_add">افزودن</string>
+    <string name="song_picker_search_label">جستجو یا فیلتر آهنگ‌ها…</string>
+    <string name="song_picker_filter_favorites">پسندیده‌ها</string>
+    <string name="song_picker_error_load_failed">بارگذاری آهنگ‌ها ناموفق بود</string>
+    <string name="song_picker_load_more">بارگذاری بیشتر</string>
+
+    <string name="lib_empty_songs_all_title">هنوز آهنگی نیست</string>
+    <string name="lib_empty_songs_all_subtitle">به دستگاه موسیقی اضافه کنید یا یک منبع ابری را همگام کنید تا گوش دادن را شروع کنید.</string>
+    <string name="lib_empty_songs_offline_title">آهنگ محلی پیدا نشد</string>
+    <string name="lib_empty_songs_offline_subtitle">فیلتر منبع دیگری را امتحان کنید یا کتابخانهٔ دستگاه را دوباره اسکن کنید.</string>
+    <string name="lib_empty_songs_online_title">آهنگ ابری پیدا نشد</string>
+    <string name="lib_empty_songs_online_subtitle">آهنگ‌های Navidrome یا Jellyfin را همگام کنید یا به منبع محلی برگردید.</string>
+    <string name="lib_empty_albums_all_title">آلبومی در دسترس نیست</string>
+    <string name="lib_empty_albums_all_subtitle">به‌محض اینکه آهنگ‌های کتابخانه گروه‌بندی شوند، آلبوم‌ها اینجا نمایش داده می‌شوند.</string>
+    <string name="lib_empty_albums_offline_title">آلبوم محلی پیدا نشد</string>
+    <string name="lib_empty_albums_offline_subtitle">برای ساخت گروه‌های آلبوم محلی به آهنگ‌های محلی نیاز است.</string>
+    <string name="lib_empty_albums_online_title">آلبوم ابری پیدا نشد</string>
+    <string name="lib_empty_albums_online_subtitle">آهنگ‌های ابری دارای اطلاعات آلبوم پس از همگام‌سازی اینجا نمایش داده می‌شوند.</string>
+    <string name="lib_empty_artists_all_title">خواننده‌ای در دسترس نیست</string>
+    <string name="lib_empty_artists_all_subtitle">خوانندگان پس از فهرست‌شدن آهنگ‌ها از هر منبعی نمایش داده می‌شوند.</string>
+    <string name="lib_empty_artists_offline_title">خوانندهٔ محلی پیدا نشد</string>
+    <string name="lib_empty_artists_offline_subtitle">در حال حاضر هیچ اطلاعات خواننده‌ای برای آهنگ‌های محلی در دسترس نیست.</string>
+    <string name="lib_empty_artists_online_title">خوانندهٔ ابری پیدا نشد</string>
+    <string name="lib_empty_artists_online_subtitle">خوانندگان ابری وقتی آهنگ‌های راه‌دور همگام شوند نمایش داده می‌شوند.</string>
+    <string name="lib_empty_liked_all_title">هنوز آهنگ پسندیده‌ای نیست</string>
+    <string name="lib_empty_liked_all_subtitle">هنگام پخش آهنگ روی آیکون قلب بزنید تا اینجا ذخیره شود.</string>
+    <string name="lib_empty_liked_offline_title">آهنگ محلی پسندیده‌ای نیست</string>
+    <string name="lib_empty_liked_offline_subtitle">فیلتر منبع را عوض کنید یا آهنگ‌های دستگاه را پسند کنید.</string>
+    <string name="lib_empty_liked_online_title">آهنگ ابری پسندیده‌ای نیست</string>
+    <string name="lib_empty_liked_online_subtitle">آهنگ‌های Navidrome یا Jellyfin را پسند کنید تا در این نما ببینیدشان.</string>
+    <string name="lib_empty_folders_title">پوشه‌ای پیدا نشد</string>
+    <string name="lib_empty_folders_subtitle">پوشه‌های حافظهٔ داخلی دارای موسیقی اینجا نمایش داده می‌شوند.</string>
+    <string name="lib_empty_playlists_title">هنوز پلی‌لیستی نیست</string>
+    <string name="lib_empty_playlists_subtitle">اولین پلی‌لیست خود را بسازید تا کتابخانه را مرتب کنید.</string>
+</resources>

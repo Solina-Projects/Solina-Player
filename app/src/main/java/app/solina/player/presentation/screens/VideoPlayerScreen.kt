@@ -754,17 +754,12 @@ fun VideoPlayerScreen(
         else allButtons.filter { visibleButtons.contains(it.id) }
     }
 
-    // The quick row's buttons (reference-player redesign): in
-    // landscape it shows the five reference buttons + the arrow when
-    // collapsed, every button when expanded; in portrait it shows
-    // every button once the arrow opens it.
-    val quickRowPriorityIds =
-        listOf("equalizer", "screenshot", "audiofx", "aspect", "speed")
-    val quickRowButtons = remember(shownButtons, controlsExpanded, isLandscape) {
-        if (!isLandscape || controlsExpanded) shownButtons
-        else shownButtons.filter { quickRowPriorityIds.contains(it.id) }
-            .sortedBy { quickRowPriorityIds.indexOf(it.id) }
-    }
+    // The quick row's buttons (Home feedback, 2026-11-16): the bar is
+    // COMPLETELY hidden while closed — only the arrow handle shows — so
+    // the row only ever renders once the arrow opens it, and then it
+    // shows every visible button. (It used to show five priority
+    // buttons + the arrow while collapsed.)
+    val quickRowButtons = shownButtons
 
     /** One place for every round control button's action. */
     fun onControlButtonClick(button: VideoControlButton) {
@@ -1295,13 +1290,13 @@ fun VideoPlayerScreen(
                     // Quick-action row (reference-player redesign):
                     // in landscape it sits under the top bar, left
                     // aligned — equalizer, screenshot, audio,
-                    // aspect, speed circle, then the arrow. Collapsed
-                    // it shows just those five + the arrow; the arrow
-                    // expands it to every control button (it scrolls).
-                    // In portrait the row is hidden until the arrow
-                    // handle (below) opens it.
+                    // aspect, speed circle, then the arrow. Home
+                    // feedback (2026-11-16): while closed the bar is
+                    // COMPLETELY hidden — no peeking row, no partial
+                    // buttons — only the arrow handle below shows, and
+                    // tapping it opens the full row (it scrolls).
                     AnimatedVisibility(
-                        visible = barsVisible && (isLandscape || controlsExpanded),
+                        visible = controlsExpanded,
                         enter = slideInHorizontally(
                             initialOffsetX = { it },
                             animationSpec = spring(
@@ -1429,21 +1424,21 @@ fun VideoPlayerScreen(
                                         onClick = { onControlButtonClick(button) }
                                     )
                                 }
-                                // The arrow handle, last in the row in
-                                // landscape: closed it points LEFT,
-                                // open it points RIGHT (mini-player
-                                // feedback, 2026-11-16).
-                                if (isLandscape) {
-                                    item(key = "arrow") {
-                                        VideoRowArrowButton(
-                                            expanded = controlsExpanded,
-                                            arrowRotation = arrowRotation,
-                                            onClick = {
-                                                controlsExpanded = !controlsExpanded
-                                                poke()
-                                            }
-                                        )
-                                    }
+                                // Arrow handle, last in the row: points
+                                // RIGHT while open (LEFT while closed);
+                                // tapping it closes the row. In the row
+                                // in both orientations now — the
+                                // standalone handle outside only shows
+                                // while the row is closed.
+                                item(key = "arrow") {
+                                    VideoRowArrowButton(
+                                        expanded = controlsExpanded,
+                                        arrowRotation = arrowRotation,
+                                        onClick = {
+                                            controlsExpanded = !controlsExpanded
+                                            poke()
+                                        }
+                                    )
                                 }
                             }
                             // Speed menu, anchored to the speed round button.
@@ -1469,11 +1464,13 @@ fun VideoPlayerScreen(
                             }
                         }
                     }
-                    // Portrait arrow handle (reference-player redesign):
-                    // in portrait the quick row is hidden, so the
-                    // handle stays as its own transparent circle under
-                    // the three-dot menu and opens the row.
-                    if (!isLandscape) {
+                    // Arrow handle (Home feedback, 2026-11-16):
+                    // while the bar is closed this is the ONLY thing
+                    // visible of it — a single transparent circle under
+                    // the three-dot menu, in both orientations. Tapping
+                    // it opens the full row. (It used to be
+                    // portrait-only; landscape showed a collapsed row.)
+                    if (!controlsExpanded) {
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()

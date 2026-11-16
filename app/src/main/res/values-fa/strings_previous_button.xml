@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="setcat_previous_button_title">دکمهٔ قبلی</string>
+    <string name="setcat_previous_button_description">انتخاب کنید دکمهٔ قبلی آهنگ فعلی را از اول پخش کند یا مستقیم به آهنگ قبلی برود.</string>
+    <string name="setcat_previous_button_restart_track">پخش دوبارهٔ آهنگ</string>
+    <string name="setcat_previous_button_restart_track_description">بعد از چند ثانیهٔ اول، دکمهٔ قبلی آهنگ را از اول پخش می‌کند. یک بار دیگر بزنید تا به عقب برگردید.</string>
+    <string name="setcat_previous_button_previous_track">آهنگ قبلی</string>
+    <string name="setcat_previous_button_previous_track_description">دکمهٔ قبلی همیشه یک آهنگ به عقب می‌رود، هر کجای آهنگ فعلی که باشید.</string>
+</resources>

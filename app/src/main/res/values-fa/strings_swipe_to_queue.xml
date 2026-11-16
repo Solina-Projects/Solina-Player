@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="setcat_song_lists">فهرست آهنگ‌ها</string>
+    <string name="setcat_swipe_to_queue_title">کشیدن آهنگ</string>
+    <string name="setcat_swipe_to_queue_description">در فهرست‌های پخش، آلبوم‌ها، هنرمندان، ژانرها و میکس‌ها، ردیف آهنگ را به سمت انتهای صفحه بکشید.</string>
+    <string name="setcat_swipe_to_queue_add">افزودن به صف</string>
+    <string name="setcat_swipe_to_queue_add_description">آهنگ را به انتهای صف اضافه می‌کند.</string>
+    <string name="setcat_swipe_to_queue_next">پخش بعدی</string>
+    <string name="setcat_swipe_to_queue_next_description">آهنگ را دقیقاً بعد از آهنگ در حال پخش اضافه می‌کند.</string>
+    <string name="setcat_swipe_to_queue_off">خاموش</string>
+    <string name="setcat_swipe_to_queue_off_description">کشیدن آهنگ هیچ کاری نمی‌کند.</string>
+</resources>

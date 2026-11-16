@@ -14,6 +14,7 @@ import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import app.solina.player.R
+import app.solina.player.data.cloud.CloudFeatures
 import app.solina.player.presentation.model.SettingsCategory
 import app.solina.player.presentation.navigation.Screen
 
@@ -131,10 +132,14 @@ internal val mainSettingsEntries: List<MainSettingsEntry> = buildList {
             add(MainSettingsEntry.Category(category))
             if (category == SettingsCategory.PLAYBACK) add(MainSettingsEntry.Destination.LYRICS)
         }
-    add(MainSettingsEntry.Destination.DOWNLOADS)
+    // Cloud disabled (2026-11-16, user: fully offline for now):
+    // the Cloud Downloads and Accounts (Navidrome / Jellyfin) rows
+    // are not shown. The destinations themselves stay defined above,
+    // so re-enabling is a one-line change here.
+    if (CloudFeatures.ENABLED) add(MainSettingsEntry.Destination.DOWNLOADS)
     add(MainSettingsEntry.Destination.HOME_CUSTOMIZATION)
     add(MainSettingsEntry.Category(SettingsCategory.DEVICE_CAPABILITIES))
-    add(MainSettingsEntry.Destination.ACCOUNTS)
+    if (CloudFeatures.ENABLED) add(MainSettingsEntry.Destination.ACCOUNTS)
     add(MainSettingsEntry.Destination.UPDATES)
     add(MainSettingsEntry.Category(SettingsCategory.ABOUT))
 }

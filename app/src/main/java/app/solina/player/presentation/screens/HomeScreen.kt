@@ -6,9 +6,13 @@ import app.solina.player.presentation.navigation.navigateSafelyReplacing
 import android.content.Intent
 import androidx.activity.compose.ReportDrawnWhen
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.DragInteraction
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -24,6 +28,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.MusicNote
@@ -33,9 +38,9 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.LargeExtendedFloatingActionButton
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
@@ -85,17 +90,18 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.currentStateAsState
 import app.solina.player.R
 import app.solina.player.data.model.Song
-import app.solina.player.data.preferences.CollagePattern
 import app.solina.player.data.preferences.HomeSectionId
-import app.solina.player.presentation.components.AlbumArtCollage
 import app.solina.player.presentation.components.BetaInfoBottomSheet
 import app.solina.player.presentation.components.ChangelogBottomSheet
 import app.solina.player.presentation.components.DailyMixSection
+import app.solina.player.data.cloud.CloudFeatures
+import app.solina.player.presentation.components.EqBars
 import app.solina.player.presentation.components.HomeGradientTopBar
+import app.solina.player.presentation.components.HomeMusicPlaybackBar
+import app.solina.player.presentation.components.VideoMiniPlayerBar
 import app.solina.player.presentation.components.HomeOptionsBottomSheet
 import app.solina.player.presentation.components.MediaCountsRow
 import app.solina.player.presentation.components.MediaEntryCards
-import app.solina.player.presentation.components.MiniPlayerHeight
 import app.solina.player.presentation.components.RecentlyPlayedSection
 import app.solina.player.presentation.components.RecentlyPlayedSectionMinSongsToShow
 import app.solina.player.presentation.components.RecentlyPlayedSongOptionsSheet
@@ -110,6 +116,7 @@ import app.solina.player.presentation.model.withoutSong
 import app.solina.player.presentation.components.subcomps.PlayingEqIcon
 import app.solina.player.presentation.navigation.Screen
 import app.solina.player.presentation.components.StreamingProviderSheet
+import app.solina.player.utils.formatDuration
 import app.solina.player.presentation.recap.RecapHomeCard
 import app.solina.player.presentation.viewmodel.HomeCustomizationViewModel
 import app.solina.player.presentation.viewmodel.HomeMediaViewModel
@@ -165,7 +172,13 @@ private fun HomeSearchBar(
             .padding(horizontal = 16.dp, vertical = 8.dp)
             .height(52.dp),
         shape = RoundedCornerShape(28.dp),
+        // Home feedback (2026-11-16): this bar used to be
+        // primaryContainer at 0.3 alpha, so the counts row scrolling
+        // underneath ("301 songs / 44 videos") showed straight through
+        // it. Same pale look, now fully opaque: the old colour
+        // composited over the background, so nothing can bleed through.
         color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
+            .compositeOver(MaterialTheme.colorScheme.background)
     ) {
         Row(
             modifier = Modifier
@@ -219,7 +232,6 @@ fun HomeScreen(
     val isSectionVisible: (HomeSectionId) -> Boolean = { id ->
         homeSections.firstOrNull { it.id == id.name }?.visible ?: true
     }
-    val settingsUiState by settingsViewModel.uiState.collectAsStateWithLifecycle()
     val dailyMixSongs by playerViewModel.dailyMixSongs.collectAsStateWithLifecycle()
     val curatedYourMixSongs by playerViewModel.yourMixSongs.collectAsStateWithLifecycle()
     val homeMixPreviewSongs by playerViewModel.homeMixPreviewSongs.collectAsStateWithLifecycle()
@@ -327,13 +339,23 @@ fun HomeScreen(
             .distinctUntilChanged()
     }.collectAsStateWithLifecycle(initialValue = false)
 
-    val bottomPadding = if (currentSong != null) MiniPlayerHeight else 0.dp
+    val isPlaying by remember(playerViewModel.stablePlayerState) {
+        playerViewModel.stablePlayerState
+            .map { it.isPlaying }
+            .distinctUntilChanged()
+    }.collectAsStateWithLifecycle(initialValue = false)
+
+    // Home feedback (2026-11-16): the floating music mini player no
+    // longer shows on Home, so no bottom space is reserved for it any
+    // more — the fixed playback bars (item 5) are list items in the
+    // flow, not overlays.
+    val bottomPadding = 0.dp
     val windowSizeClass = currentWindowAdaptiveInfo().windowSizeClass
     val useNavigationRail = windowSizeClass.isWidthAtLeastBreakpoint(WindowSizeClass.WIDTH_DP_MEDIUM_LOWER_BOUND)
-    // The floating bottom bar is hidden on Home, so the bottom fade only needs
-    // to cover the mini player (when a song is playing) — otherwise the last
-    // Home row would fade under a bar that is not there.
-    val bottomGradientHeight = if (currentSong != null) MiniPlayerHeight + 16.dp else 0.dp
+    // The floating bottom bar is hidden on Home, and the floating mini
+    // player is disabled there too (Home feedback, 2026-11-16), so there
+    // is no overlay left for the bottom fade to cover.
+    val bottomGradientHeight = 0.dp
 
     var showOptionsBottomSheet by remember { mutableStateOf(false) }
     var showChangelogBottomSheet by remember { mutableStateOf(false) }
@@ -506,42 +528,81 @@ fun HomeScreen(
                             }
                         }
                         HomeSectionId.RECENT_MUSIC.name -> {
-                            if (isSectionVisible(HomeSectionId.RECENT_MUSIC) && recentMusic.isNotEmpty()) {
-                                item(
-                                    key = "recent_music_section",
-                                    contentType = "recent_music_section"
-                                ) {
-                                    RecentlyAddedMusicRow(
-                                        songs = recentMusic,
-                                        onSongClick = { song ->
-                                            playerViewModel.showAndPlaySongFromLibrary(
-                                                song,
-                                                queueName = yourMixQueueName
-                                            )
-                                        },
-                                        onOpenAllClick = {
-                                            navController.navigateSafely(Screen.Library.route)
-                                        }
-                                    )
+                            if (isSectionVisible(HomeSectionId.RECENT_MUSIC)) {
+                                if (recentMusic.isNotEmpty()) {
+                                    item(
+                                        key = "recent_music_section",
+                                        contentType = "recent_music_section"
+                                    ) {
+                                        RecentlyAddedMusicRow(
+                                            songs = recentMusic,
+                                            onSongClick = { song ->
+                                                playerViewModel.showAndPlaySongFromLibrary(
+                                                    song,
+                                                    queueName = yourMixQueueName
+                                                )
+                                            },
+                                            onOpenAllClick = {
+                                                navController.navigateSafely(Screen.Library.route)
+                                            }
+                                        )
+                                    }
+                                }
+                                // Home feedback (2026-11-16): a FIXED
+                                // full-width recent-playback bar under
+                                // the row — the same pill as the music
+                                // mini player, but a list item in the
+                                // flow (not floating), in portrait and
+                                // landscape, so playback can continue
+                                // from Home. Hidden when nothing has
+                                // ever been played.
+                                if (currentSong != null) {
+                                    item(
+                                        key = "home_music_playback_bar",
+                                        contentType = "home_music_playback_bar"
+                                    ) {
+                                        HomeMusicPlaybackBar(
+                                            playerViewModel = playerViewModel,
+                                            modifier = Modifier.padding(horizontal = 16.dp)
+                                        )
+                                    }
                                 }
                             }
                         }
                         HomeSectionId.RECENT_VIDEOS.name -> {
-                            if (isSectionVisible(HomeSectionId.RECENT_VIDEOS) && recentVideos.isNotEmpty()) {
+                            if (isSectionVisible(HomeSectionId.RECENT_VIDEOS)) {
+                                if (recentVideos.isNotEmpty()) {
+                                    item(
+                                        key = "recent_videos_section",
+                                        contentType = "recent_videos_section"
+                                    ) {
+                                        RecentlyAddedVideosRow(
+                                            videos = recentVideos,
+                                            onVideoClick = { video ->
+                                                navController.navigateSafely(
+                                                    Screen.VideoPlayer.createRoute(video.contentUriString)
+                                                )
+                                            },
+                                            onOpenAllClick = {
+                                                navController.navigateSafely(Screen.VideoFolders.route)
+                                            }
+                                        )
+                                    }
+                                }
+                                // Home feedback (2026-11-16): a FIXED
+                                // full-width recent-playback bar under
+                                // the row — the restyled video mini
+                                // player pill, a list item in the flow
+                                // (not floating), in portrait and
+                                // landscape. It hides itself when no
+                                // video was ever played.
                                 item(
-                                    key = "recent_videos_section",
-                                    contentType = "recent_videos_section"
+                                    key = "home_video_playback_bar",
+                                    contentType = "home_video_playback_bar"
                                 ) {
-                                    RecentlyAddedVideosRow(
-                                        videos = recentVideos,
-                                        onVideoClick = { video ->
-                                            navController.navigateSafely(
-                                                Screen.VideoPlayer.createRoute(video.contentUriString)
-                                            )
-                                        },
-                                        onOpenAllClick = {
-                                            navController.navigateSafely(Screen.VideoFolders.route)
-                                        }
+                                    VideoMiniPlayerBar(
+                                        navController = navController,
+                                        modifier = Modifier.padding(horizontal = 16.dp)
                                     )
                                 }
                             }
@@ -565,79 +626,25 @@ fun HomeScreen(
                                             )
                                         }
                                     }
-                                } else if (useNavigationRail) {
-                                    item(
-                                        key = "your_mix_hero_wide",
-                                        contentType = "your_mix_hero_wide"
-                                    ) {
-                                        val basePattern = settingsUiState.collagePattern
-                                        val isAutoRotate = settingsUiState.collageAutoRotate
-                                        val patterns = remember { CollagePattern.entries }
-
-                                        val activePattern = if (isAutoRotate) {
-                                            var rotationIndex by rememberSaveable { mutableIntStateOf(-1) }
-                                            LaunchedEffect(Unit) { rotationIndex++ }
-                                            remember(rotationIndex) {
-                                                patterns[rotationIndex.coerceAtLeast(0) % patterns.size]
-                                            }
-                                        } else {
-                                            basePattern
-                                        }
-
-                                        Row(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .padding(horizontal = 8.dp),
-                                            verticalAlignment = Alignment.CenterVertically
-                                        ) {
-                                            Box(modifier = Modifier.weight(0.46f)) {
-                                                YourMixHeader(
-                                                    song = yourMixSubtitle,
-                                                    isShuffleEnabled = isShuffleEnabled,
-                                                    onPlayShuffled = {
-                                                        if (usesFallbackHomeMix) {
-                                                            playerViewModel.shuffleAllSongs(queueName = yourMixQueueName)
-                                                        } else {
-                                                            playerViewModel.playSongsShuffled(
-                                                                songsToPlay = yourMixSongs,
-                                                                queueName = yourMixQueueName,
-                                                                startAtZero = true,
-                                                            )
-                                                        }
-                                                    }
-                                                )
-                                            }
-                                            Box(modifier = Modifier.weight(0.54f)) {
-                                                AlbumArtCollage(
-                                                    modifier = Modifier.fillMaxWidth(),
-                                                    songs = yourMixSongs,
-                                                    padding = 12.dp,
-                                                    height = 290.dp,
-                                                    pattern = activePattern,
-                                                    onSongLongClick = { song ->
-                                                        songForOptions = HomeSongOptions(
-                                                            song, yourMixSongs, yourMixQueueName, playFromLibrary = usesFallbackHomeMix
-                                                        )
-                                                    },
-                                                    onSongClick = { song ->
-                                                        if (usesFallbackHomeMix) {
-                                                            playerViewModel.showAndPlaySongFromLibrary(song, queueName = yourMixQueueName)
-                                                        } else {
-                                                            playerViewModel.showAndPlaySong(song, yourMixSongs, yourMixQueueName)
-                                                        }
-                                                    }
-                                                )
-                                            }
-                                        }
-                                    }
                                 } else {
+                                    // Your Mix, redesigned (Home feedback,
+                                    // 2026-11-16): one hero card instead of
+                                    // the huge title + separate collage —
+                                    // gradient, overlapping artwork, live
+                                    // EQ, mix stats and a big play button,
+                                    // plus a three-song preview. The wide
+                                    // layout just rearranges the same card.
                                     item(
-                                        key = "your_mix_header",
-                                        contentType = "your_mix_header"
+                                        key = "your_mix_hero",
+                                        contentType = "your_mix_hero"
                                     ) {
-                                        YourMixHeader(
-                                            song = yourMixSubtitle,
+                                        YourMixHeroCard(
+                                            songs = yourMixSongs,
+                                            subtitle = yourMixSubtitle,
+                                            wide = useNavigationRail,
                                             isShuffleEnabled = isShuffleEnabled,
+                                            currentSongId = currentSong?.id,
+                                            isPlaying = isPlaying,
                                             onPlayShuffled = {
                                                 if (usesFallbackHomeMix) {
                                                     playerViewModel.shuffleAllSongs(queueName = yourMixQueueName)
@@ -648,37 +655,6 @@ fun HomeScreen(
                                                         startAtZero = true,
                                                     )
                                                 }
-                                            }
-                                        )
-                                    }
-                                    item(
-                                        key = "album_art_collage",
-                                        contentType = "album_art_collage"
-                                    ) {
-                                        val basePattern = settingsUiState.collagePattern
-                                        val isAutoRotate = settingsUiState.collageAutoRotate
-                                        val patterns = remember { CollagePattern.entries }
-
-                                        val activePattern = if (isAutoRotate) {
-                                            var rotationIndex by rememberSaveable { mutableIntStateOf(-1) }
-                                            LaunchedEffect(Unit) { rotationIndex++ }
-                                            remember(rotationIndex) {
-                                                patterns[rotationIndex.coerceAtLeast(0) % patterns.size]
-                                            }
-                                        } else {
-                                            basePattern
-                                        }
-
-                                        AlbumArtCollage(
-                                            modifier = Modifier.fillMaxWidth(),
-                                            songs = yourMixSongs,
-                                            padding = 14.dp,
-                                            height = 400.dp,
-                                            pattern = activePattern,
-                                            onSongLongClick = { song ->
-                                                songForOptions = HomeSongOptions(
-                                                    song, yourMixSongs, yourMixQueueName, playFromLibrary = usesFallbackHomeMix
-                                                )
                                             },
                                             onSongClick = { song ->
                                                 if (usesFallbackHomeMix) {
@@ -686,6 +662,11 @@ fun HomeScreen(
                                                 } else {
                                                     playerViewModel.showAndPlaySong(song, yourMixSongs, yourMixQueueName)
                                                 }
+                                            },
+                                            onSongLongClick = { song ->
+                                                songForOptions = HomeSongOptions(
+                                                    song, yourMixSongs, yourMixQueueName, playFromLibrary = usesFallbackHomeMix
+                                                )
                                             }
                                         )
                                     }
@@ -956,7 +937,9 @@ fun HomeScreen(
             BetaInfoBottomSheet()
         }
     }
-    if (showStreamingProviderSheet) {
+    // Cloud disabled (2026-11-16): the streaming sheet (Navidrome /
+    // Jellyfin login) has no entry point left, so it can never open.
+    if (showStreamingProviderSheet && CloudFeatures.ENABLED) {
         val isNavidromeLoggedIn by streamingLoginViewModel.isNavidromeLoggedIn.collectAsStateWithLifecycle()
         val isJellyfinLoggedIn by streamingLoginViewModel.isJellyfinLoggedIn.collectAsStateWithLifecycle()
         StreamingProviderSheet(
@@ -1097,71 +1080,190 @@ private fun YourMixEmptyPlaceholder(
     }
 }
 
+/**
+ * "Your Mix", redesigned (Home feedback, 2026-11-16): one hero card
+ * instead of the huge title + a separate 400 dp collage. A diagonal
+ * Expressive gradient, the title + "Today's Mix for you" subtitle,
+ * overlapping artwork circles with live EQ bars, mix stats (song
+ * count + total duration), a big "Play today's mix" button that keeps
+ * the exact same shuffle-play behaviour, and a three-song preview
+ * (tap plays, long-press opens the song options). In the wide layout
+ * the same card rearranges into two columns.
+ */
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-fun YourMixHeader(
-    song: String,
-    isShuffleEnabled: Boolean = false,
-    onPlayShuffled: () -> Unit
+private fun YourMixHeroCard(
+    songs: List<Song>,
+    subtitle: String,
+    wide: Boolean,
+    isShuffleEnabled: Boolean,
+    currentSongId: String?,
+    isPlaying: Boolean,
+    onPlayShuffled: () -> Unit,
+    onSongClick: (Song) -> Unit,
+    onSongLongClick: (Song) -> Unit,
+    modifier: Modifier = Modifier
 ) {
-    val buttonCorners = 68.dp
     val colors = MaterialTheme.colorScheme
+    val titleStyle = rememberYourMixTitleStyle().copy(fontSize = 40.sp, lineHeight = 40.sp)
+    val totalDurationMs = remember(songs) { songs.sumOf { it.duration } }
+    val previewSongs = remember(songs) { songs.take(3) }
+    val artSongs = remember(songs) { songs.take(5) }
 
-    val titleStyle = rememberYourMixTitleStyle()
-
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(256.dp)
-            .padding(16.dp)
-    ) {
-        Column(
-            modifier = Modifier
-                .align(Alignment.TopStart)
-                .padding(top = 48.dp, start = 12.dp)
-        ) {
+    val titleBlock: @Composable () -> Unit = {
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(
                 text = stringResource(R.string.home_your_mix_title),
                 style = titleStyle,
-                color = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier
+                color = colors.onSurface
             )
-
             Text(
-                text = song,
+                text = subtitle,
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
-                modifier = Modifier.padding(start = 8.dp)
+                color = colors.onSurface.copy(alpha = 0.7f)
             )
         }
-        LargeExtendedFloatingActionButton(
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(end = 12.dp),
+    }
+    val statsRow: @Composable () -> Unit = {
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            MixStatChip(text = stringResource(R.string.home_music_count_label, songs.size))
+            MixStatChip(text = formatDuration(totalDurationMs))
+        }
+    }
+    val playButton: @Composable () -> Unit = {
+        FilledTonalButton(
             onClick = onPlayShuffled,
-            containerColor = if (isShuffleEnabled) colors.primary else colors.tertiaryContainer,
-            contentColor = if (isShuffleEnabled) colors.onPrimary else colors.onTertiaryContainer,
-            shape = AbsoluteSmoothCornerShape(
-                cornerRadiusTL = buttonCorners,
-                smoothnessAsPercentTR = 60,
-                cornerRadiusBR = buttonCorners,
-                smoothnessAsPercentTL = 60,
-                cornerRadiusBL = buttonCorners,
-                smoothnessAsPercentBR = 60,
-                cornerRadiusTR = buttonCorners,
-                smoothnessAsPercentBL = 60,
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(20.dp),
+            colors = ButtonDefaults.filledTonalButtonColors(
+                containerColor = if (isShuffleEnabled) colors.primary else colors.tertiaryContainer,
+                contentColor = if (isShuffleEnabled) colors.onPrimary else colors.onTertiaryContainer
             )
         ) {
             Icon(
                 painter = painterResource(R.drawable.rounded_shuffle_24),
-                contentDescription = stringResource(R.string.cd_shuffle_play),
-                modifier = Modifier.size(36.dp)
+                contentDescription = null,
+                modifier = Modifier.size(22.dp)
             )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = stringResource(R.string.home_your_mix_play),
+                style = MaterialTheme.typography.titleMedium
+            )
+        }
+    }
+    val artStrip: @Composable () -> Unit = {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                modifier = Modifier
+                    .height(40.dp)
+                    .width((40 + 28 * (artSongs.size - 1).coerceAtLeast(0)).dp)
+            ) {
+                artSongs.forEachIndexed { index, song ->
+                    SmartImage(
+                        model = song.albumArtUriString,
+                        contentDescription = null,
+                        contentScale = ContentScale.Crop,
+                        shape = CircleShape,
+                        modifier = Modifier
+                            .size(40.dp)
+                            .align(Alignment.CenterStart)
+                            .offset(x = (28 * index).dp)
+                            .border(2.dp, colors.surface, CircleShape)
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.width(10.dp))
+            EqBars(
+                isPlaying = isPlaying,
+                color = colors.primary,
+                modifier = Modifier.size(width = 24.dp, height = 22.dp)
+            )
+        }
+    }
+    val previewList: @Composable () -> Unit = {
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            previewSongs.forEach { song ->
+                SongListItemFavs(
+                    cardCorners = 16.dp,
+                    title = song.title,
+                    artist = song.displayArtist,
+                    albumArtUrl = song.albumArtUriString,
+                    isPlaying = isPlaying,
+                    isCurrentSong = song.id == currentSongId,
+                    onClick = { onSongClick(song) },
+                    onLongClick = { onSongLongClick(song) }
+                )
+            }
+        }
+    }
+
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp)
+            .background(
+                brush = Brush.linearGradient(
+                    listOf(
+                        colors.primaryContainer,
+                        colors.secondaryContainer,
+                        colors.tertiaryContainer
+                    )
+                ),
+                shape = RoundedCornerShape(28.dp)
+            )
+            .padding(20.dp)
+    ) {
+        if (wide) {
+            Row(horizontalArrangement = Arrangement.spacedBy(20.dp)) {
+                Column(
+                    modifier = Modifier.weight(0.45f),
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                    titleBlock()
+                    statsRow()
+                    playButton()
+                }
+                Column(
+                    modifier = Modifier.weight(0.55f),
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                    artStrip()
+                    previewList()
+                }
+            }
+        } else {
+            Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(modifier = Modifier.weight(1f)) { titleBlock() }
+                    artStrip()
+                }
+                statsRow()
+                playButton()
+                previewList()
+            }
         }
     }
 }
 
+@Composable
+private fun MixStatChip(text: String) {
+    Surface(
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.55f),
+        contentColor = MaterialTheme.colorScheme.onSurface
+    ) {
+        Text(
+            text = text,
+            style = MaterialTheme.typography.labelLarge,
+            maxLines = 1,
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+        )
+    }
+}
 
+
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun SongListItemFavs(
     modifier: Modifier = Modifier,
@@ -1171,7 +1273,8 @@ fun SongListItemFavs(
     albumArtUrl: String?,
     isPlaying: Boolean,
     isCurrentSong: Boolean,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onLongClick: (() -> Unit)? = null
 ) {
     val colors = MaterialTheme.colorScheme
     val containerColor = if (isCurrentSong) colors.primaryContainer.copy(alpha = 0.46f) else colors.surfaceContainer
@@ -1180,7 +1283,13 @@ fun SongListItemFavs(
     Card(
         modifier = modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick),
+            .then(
+                if (onLongClick != null) {
+                    Modifier.combinedClickable(onClick = onClick, onLongClick = onLongClick)
+                } else {
+                    Modifier.clickable(onClick = onClick)
+                }
+            ),
         shape = RoundedCornerShape(cardCorners),
         colors = CardDefaults.cardColors(containerColor = containerColor),
         elevation = CardDefaults.cardElevation(0.dp)

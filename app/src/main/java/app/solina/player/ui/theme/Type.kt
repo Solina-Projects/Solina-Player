@@ -13,6 +13,51 @@ import androidx.compose.ui.unit.sp
 import app.solina.player.R
 
 
+// Vazirmatn (Persian/Arabic UI face, SIL OFL 1.1, v33.003 — see
+// app/src/main/assets/licenses/vazirmatn-OFL.txt). Variable font,
+// weight axis 100-900. Used as the Persian glyph fallback inside
+// RoundedSans / MontserratFamily below, so Persian text renders in
+// Vazirmatn automatically wherever those families are used, with no
+// call-site changes. Also usable directly as VazirmatnFamily.
+@OptIn(ExperimentalTextApi::class)
+val VazirmatnFamily = FontFamily(
+    androidx.compose.ui.text.font.Font(
+        resId = R.font.vazirmatn_variable,
+        weight = FontWeight.Light,
+        variationSettings = FontVariation.Settings(FontVariation.weight(FontWeight.Light.weight))
+    ),
+    androidx.compose.ui.text.font.Font(
+        resId = R.font.vazirmatn_variable,
+        weight = FontWeight.Normal,
+        variationSettings = FontVariation.Settings(FontVariation.weight(FontWeight.Normal.weight))
+    ),
+    androidx.compose.ui.text.font.Font(
+        resId = R.font.vazirmatn_variable,
+        weight = FontWeight.Medium,
+        variationSettings = FontVariation.Settings(FontVariation.weight(FontWeight.Medium.weight))
+    ),
+    androidx.compose.ui.text.font.Font(
+        resId = R.font.vazirmatn_variable,
+        weight = FontWeight.SemiBold,
+        variationSettings = FontVariation.Settings(FontVariation.weight(FontWeight.SemiBold.weight))
+    ),
+    androidx.compose.ui.text.font.Font(
+        resId = R.font.vazirmatn_variable,
+        weight = FontWeight.Bold,
+        variationSettings = FontVariation.Settings(FontVariation.weight(FontWeight.Bold.weight))
+    ),
+    androidx.compose.ui.text.font.Font(
+        resId = R.font.vazirmatn_variable,
+        weight = FontWeight.ExtraBold,
+        variationSettings = FontVariation.Settings(FontVariation.weight(FontWeight.ExtraBold.weight))
+    ),
+    androidx.compose.ui.text.font.Font(
+        resId = R.font.vazirmatn_variable,
+        weight = FontWeight.Black,
+        variationSettings = FontVariation.Settings(FontVariation.weight(FontWeight.Black.weight))
+    ),
+)
+
 @OptIn(ExperimentalTextApi::class)
 val MontserratFamily = FontFamily(
     androidx.compose.ui.text.font.Font(
@@ -49,6 +94,44 @@ val MontserratFamily = FontFamily(
         resId = R.font.gflex_variable,
         weight = FontWeight.Light,
         variationSettings = FontVariation.Settings(FontVariation.weight(FontWeight.Light.weight))
+    ),
+    // Persian glyph fallback: GFlex has no Persian glyphs, so Persian
+    // text falls through to Vazirmatn at the same weight (see note on
+    // VazirmatnFamily above).
+    androidx.compose.ui.text.font.Font(
+        resId = R.font.vazirmatn_variable,
+        weight = FontWeight.Light,
+        variationSettings = FontVariation.Settings(FontVariation.weight(FontWeight.Light.weight))
+    ),
+    androidx.compose.ui.text.font.Font(
+        resId = R.font.vazirmatn_variable,
+        weight = FontWeight.Normal,
+        variationSettings = FontVariation.Settings(FontVariation.weight(FontWeight.Normal.weight))
+    ),
+    androidx.compose.ui.text.font.Font(
+        resId = R.font.vazirmatn_variable,
+        weight = FontWeight.Medium,
+        variationSettings = FontVariation.Settings(FontVariation.weight(FontWeight.Medium.weight))
+    ),
+    androidx.compose.ui.text.font.Font(
+        resId = R.font.vazirmatn_variable,
+        weight = FontWeight.SemiBold,
+        variationSettings = FontVariation.Settings(FontVariation.weight(FontWeight.SemiBold.weight))
+    ),
+    androidx.compose.ui.text.font.Font(
+        resId = R.font.vazirmatn_variable,
+        weight = FontWeight.Bold,
+        variationSettings = FontVariation.Settings(FontVariation.weight(FontWeight.Bold.weight))
+    ),
+    androidx.compose.ui.text.font.Font(
+        resId = R.font.vazirmatn_variable,
+        weight = FontWeight.ExtraBold,
+        variationSettings = FontVariation.Settings(FontVariation.weight(FontWeight.ExtraBold.weight))
+    ),
+    androidx.compose.ui.text.font.Font(
+        resId = R.font.vazirmatn_variable,
+        weight = FontWeight.Black,
+        variationSettings = FontVariation.Settings(FontVariation.weight(FontWeight.Black.weight))
     ),
 )
 
@@ -124,6 +207,35 @@ val RoundedSans = FontFamily(
             FontVariation.weight(FontWeight.Bold.weight),
             FontVariation.Setting("ROND", RoundedSansFlexRond)
         )
+    ),
+    // Persian glyph fallback: GFlex has no Persian glyphs, so Persian
+    // text falls through to Vazirmatn at the same weight (see note on
+    // VazirmatnFamily above). This covers every direct RoundedSans use
+    // in the app (200+ call sites) with no further changes.
+    androidx.compose.ui.text.font.Font(
+        resId = R.font.vazirmatn_variable,
+        weight = FontWeight.Light,
+        variationSettings = FontVariation.Settings(FontVariation.weight(FontWeight.Light.weight))
+    ),
+    androidx.compose.ui.text.font.Font(
+        resId = R.font.vazirmatn_variable,
+        weight = FontWeight.Normal,
+        variationSettings = FontVariation.Settings(FontVariation.weight(FontWeight.Normal.weight))
+    ),
+    androidx.compose.ui.text.font.Font(
+        resId = R.font.vazirmatn_variable,
+        weight = FontWeight.Medium,
+        variationSettings = FontVariation.Settings(FontVariation.weight(FontWeight.Medium.weight))
+    ),
+    androidx.compose.ui.text.font.Font(
+        resId = R.font.vazirmatn_variable,
+        weight = FontWeight.SemiBold,
+        variationSettings = FontVariation.Settings(FontVariation.weight(FontWeight.SemiBold.weight))
+    ),
+    androidx.compose.ui.text.font.Font(
+        resId = R.font.vazirmatn_variable,
+        weight = FontWeight.Bold,
+        variationSettings = FontVariation.Settings(FontVariation.weight(FontWeight.Bold.weight))
     ),
 )
 

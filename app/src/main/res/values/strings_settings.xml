@@ -94,6 +94,7 @@
     <string name="setcat_app_language_desc">Choose the language used across the app interface.</string>
     <string name="setcat_language_system">System default</string>
     <string name="setcat_language_english" translatable="false">English</string>
+    <string name="setcat_language_persian" translatable="false">فارسی</string>
     <string name="setcat_language_arabic" translatable="false">العربية</string>
     <string name="setcat_language_german" translatable="false">Deutsch</string>
     <string name="setcat_language_spanish" translatable="false">Español</string>

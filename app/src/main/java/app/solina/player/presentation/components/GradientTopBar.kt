@@ -40,6 +40,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import app.solina.player.BuildConfig
 import app.solina.player.R
+import app.solina.player.data.cloud.CloudFeatures
 import app.solina.player.ui.theme.RoundedSans
 import app.solina.player.ui.theme.SolinaPlayerStatusBarStyle
 import androidx.compose.ui.res.stringResource
@@ -165,17 +166,23 @@ fun HomeGradientTopBar(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.padding(end = 14.dp)
             ) {
-                FilledIconButton(
-                    colors = IconButtonDefaults.filledIconButtonColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                        contentColor = MaterialTheme.colorScheme.onSurface
-                    ),
-                    onClick = onStreamingClick
-                ) {
-                    Icon(
-                          imageVector = Icons.Rounded.Cloud,
-                          contentDescription = stringResource(R.string.presentation_batch_g_streaming_title)
-                    )
+                // Cloud disabled (2026-11-16, user: fully offline for
+                // now): the streaming button (Navidrome / Jellyfin login)
+                // is not shown. onStreamingClick stays as a parameter so
+                // re-enabling is a one-line change here.
+                if (CloudFeatures.ENABLED) {
+                    FilledIconButton(
+                        colors = IconButtonDefaults.filledIconButtonColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                            contentColor = MaterialTheme.colorScheme.onSurface
+                        ),
+                        onClick = onStreamingClick
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.Cloud,
+                            contentDescription = stringResource(R.string.presentation_batch_g_streaming_title)
+                        )
+                    }
                 }
                 FilledIconButton(
                     colors = IconButtonDefaults.filledIconButtonColors(

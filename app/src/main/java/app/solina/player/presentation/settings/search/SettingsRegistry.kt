@@ -1,6 +1,7 @@
 package app.solina.player.presentation.settings.search
 
 import app.solina.player.R
+import app.solina.player.data.cloud.CloudFeatures
 import app.solina.player.presentation.model.SettingsCategory
 import app.solina.player.presentation.navigation.Screen
 import app.solina.player.presentation.navigation.navigateSafely
@@ -954,5 +955,16 @@ object SettingsRegistry {
                 keywordsStatic = listOf("licenses", "open source", "third party", "notices", "attribution", "fonts")
             )
         )
+            // Cloud disabled (2026-11-16, user: fully offline for now):
+            // the Accounts / Cloud Downloads / ListenBrainz search
+            // entries must not surface cloud screens that have no entry
+            // point left. Re-enable by removing this filter.
+            .filter { spec ->
+                CloudFeatures.ENABLED || spec.id !in setOf(
+                    "accounts_hub",
+                    "cloud_downloads",
+                    "accounts_listenbrainz"
+                )
+            }
     }
 }

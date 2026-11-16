@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="presentation_batch_b_accounts_linked_services">سرویس‌های متصل</string>
+    <string name="presentation_batch_b_accounts_status_connected">متصل</string>
+    <string name="presentation_batch_b_accounts_open_service">باز کردن سرویس</string>
+    <string name="presentation_batch_b_accounts_logging_out">در حال خروج…</string>
+    <string name="presentation_batch_b_accounts_no_linked_title">هنوز حسابی متصل نیست</string>
+    <string name="presentation_batch_b_accounts_no_linked_body">یک ارائه‌دهنده را متصل کنید تا از این صفحه مدیریت شود.</string>
+    <string name="presentation_batch_b_accounts_connect_service">اتصال %1$s</string>
+
+    <string name="presentation_batch_b_sort_songs">مرتب‌سازی آهنگ‌ها</string>
+    <string name="presentation_batch_b_more_options">گزینه‌های بیشتر</string>
+    <string name="presentation_batch_b_play_it">پخش کن</string>
+    <string name="presentation_batch_b_add_songs">افزودن آهنگ</string>
+    <string name="presentation_batch_b_add">افزودن</string>
+    <string name="presentation_batch_b_remove_songs">حذف آهنگ‌ها</string>
+    <string name="presentation_batch_b_reorder_songs">تغییر ترتیب آهنگ‌ها</string>
+    <string name="presentation_batch_b_reorder">تغییر ترتیب</string>
+    <string name="presentation_batch_b_reorder_song">تغییر ترتیب آهنگ</string>
+    <string name="presentation_batch_b_playlist_empty_title">این پلی‌لیست خالی است.</string>
+    <string name="presentation_batch_b_playlist_empty_folder_body">این پوشه آهنگی ندارد.</string>
+    <string name="presentation_batch_b_playlist_empty_add_hint">روی «افزودن آهنگ» بزنید تا شروع کنید.</string>
+    <string name="presentation_batch_b_playlist_empty_smart_body">هنوز آهنگی با این قانون هوشمند مطابقت ندارد.</string>
+    <string name="presentation_batch_b_playlist_options_title">گزینه‌های پلی‌لیست</string>
+    <string name="presentation_batch_b_edit_playlist">ویرایش پلی‌لیست</string>
+    <string name="presentation_batch_b_delete_playlist">حذف پلی‌لیست</string>
+    <string name="presentation_batch_b_set_default_transition">تنظیم گذار پیش‌فرض</string>
+    <string name="presentation_batch_b_export_playlist">خروجی پلی‌لیست</string>
+    <string name="presentation_batch_b_delete_playlist_confirm_title">پلی‌لیست حذف شود؟</string>
+    <string name="presentation_batch_b_delete_playlist_confirm_body">مطمئنید می‌خواهید این پلی‌لیست را حذف کنید؟</string>
+    <string name="presentation_batch_b_rename_playlist_dialog_title">تغییر نام پلی‌لیست</string>
+    <string name="presentation_batch_b_new_name">نام جدید</string>
+
+    <string name="presentation_batch_b_daily_mix_title">میکس روزانه</string>
+
+    <string name="presentation_batch_b_quick_fill_select_songs">انتخاب آهنگ‌ها</string>
+    <string name="presentation_batch_b_quick_fill_choose_genre">انتخاب ژانر</string>
+    <string name="presentation_batch_b_search_songs_label">جستجوی آهنگ‌ها</string>
+    <string name="presentation_batch_b_select_all">انتخاب همه</string>
+    <string name="presentation_batch_b_clear">پاک کردن</string>
+    <string name="presentation_batch_b_genre_label_format">ژانر: %1$s</string>
+    <string name="presentation_batch_b_select_a_genre">یک ژانر انتخاب کنید</string>
+    <string name="presentation_batch_b_quick_fill">پر کردن سریع</string>
+    <string name="presentation_batch_b_add_custom_genre">افزودن دلخواه</string>
+    <string name="presentation_batch_b_new_genre">ژانر جدید</string>
+    <string name="presentation_batch_b_add_custom_genre_title">افزودن ژانر دلخواه</string>
+    <string name="presentation_batch_b_genre_name_label">نام ژانر</string>
+    <string name="presentation_batch_b_select_icon">انتخاب آیکون</string>
+
+    <string name="presentation_batch_b_recently_played_title">اخیراً پخش‌شده</string>
+    <string name="presentation_batch_b_play_latest">پخش آخرین</string>
+    <string name="presentation_batch_b_recent_empty_title">در %1$s پخش اخیری نیست</string>
+    <string name="presentation_batch_b_recent_empty_subtitle">بازه را عوض کنید یا آهنگ‌های بیشتری پخش کنید تا این خط زمانی پر شود.</string>
+    <string name="presentation_batch_b_queue_recently_played">اخیراً پخش‌شده</string>
+    <string name="presentation_batch_b_date_today">امروز</string>
+    <string name="presentation_batch_b_date_yesterday">دیروز</string>
+
+    <string name="presentation_batch_b_navbar_adjust_title">تنظیم شعاع گوشه</string>
+    <string name="presentation_batch_b_navbar_adjust_subtitle">گوشه‌های نوار ناوبری را با گوشه‌های فیزیکی دستگاه هماهنگ کنید تا ظاهر یکدست شود.</string>
+    <string name="presentation_batch_b_corner_radius_label">شعاع گوشه</string>
+    <string name="presentation_batch_b_corner_dp_format">%1$d dp</string>
+
+    <string name="presentation_batch_b_genre_shuffle_label">پخش تصادفی %1$s</string>
+
+    <plurals name="presentation_batch_b_songs_dot_duration">
+        <item quantity="one">%1$d آهنگ • %2$s</item>
+        <item quantity="other">%1$d آهنگ • %2$s</item>
+    </plurals>
+</resources>

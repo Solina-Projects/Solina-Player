@@ -43,6 +43,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import app.solina.player.R
 import app.solina.player.data.model.Song
 import app.solina.player.data.model.VideoItem
@@ -300,7 +301,13 @@ private fun MediaCountCard(
     }
 }
 
-/** Horizontal row of recently added music (newest audio files first). */
+/**
+ * Horizontal row of recently added music (newest audio files first).
+ * Home feedback (2026-11-16): 30% smaller on Home — cards 148→104 dp,
+ * artwork 120→84 dp — and fonts 20% smaller (title 14→11 sp,
+ * artist 12→10 sp, header 22→18 sp). Home only: the Library rows
+ * keep their old sizes.
+ */
 @Composable
 fun RecentlyAddedMusicRow(
     songs: List<Song>,
@@ -319,49 +326,52 @@ fun RecentlyAddedMusicRow(
         ) {
             Text(
                 text = stringResource(R.string.home_recent_music_title),
-                style = MaterialTheme.typography.titleLarge,
+                style = MaterialTheme.typography.titleLarge.copy(fontSize = 18.sp),
                 color = MaterialTheme.colorScheme.onSurface
             )
             TextButton(onClick = onOpenAllClick) {
-                Text(text = stringResource(R.string.home_see_all))
+                Text(
+                    text = stringResource(R.string.home_see_all),
+                    style = MaterialTheme.typography.labelLarge.copy(fontSize = 11.sp)
+                )
             }
         }
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(6.dp))
         LazyRow(
             contentPadding = PaddingValues(horizontal = 16.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             items(songs, key = { it.id }) { song ->
                 Card(
                     modifier = Modifier
-                        .width(148.dp)
+                        .width(104.dp)
                         .clickable { onSongClick(song) },
-                    shape = RoundedCornerShape(20.dp),
+                    shape = RoundedCornerShape(14.dp),
                     colors = CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.surfaceContainer
                     ),
                     elevation = CardDefaults.cardElevation(0.dp)
                 ) {
-                    Column(modifier = Modifier.padding(8.dp)) {
+                    Column(modifier = Modifier.padding(6.dp)) {
                         SmartImage(
                             model = song.albumArtUriString,
                             contentDescription = null,
                             contentScale = ContentScale.Crop,
-                            shape = RoundedCornerShape(14.dp),
+                            shape = RoundedCornerShape(10.dp),
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(120.dp)
+                                .height(84.dp)
                         )
-                        Spacer(Modifier.height(8.dp))
+                        Spacer(Modifier.height(6.dp))
                         Text(
                             text = song.title,
-                            style = MaterialTheme.typography.titleSmall,
+                            style = MaterialTheme.typography.titleSmall.copy(fontSize = 11.sp),
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
                         Text(
                             text = song.displayArtist,
-                            style = MaterialTheme.typography.bodySmall,
+                            style = MaterialTheme.typography.bodySmall.copy(fontSize = 10.sp),
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
@@ -373,7 +383,13 @@ fun RecentlyAddedMusicRow(
     }
 }
 
-/** Horizontal row of recently added videos (newest video files first). */
+/**
+ * Horizontal row of recently added videos (newest video files first).
+ * Home feedback (2026-11-16): 30% smaller on Home — cards 168→118 dp,
+ * thumbnails 96→67 dp, play icon 36→25 dp — and fonts 20% smaller
+ * (title 14→11 sp, subtitle 12→10 sp, header 22→18 sp, duration
+ * 11→9 sp). Home only: the Library rows keep their old sizes.
+ */
 @Composable
 fun RecentlyAddedVideosRow(
     videos: List<VideoItem>,
@@ -392,51 +408,54 @@ fun RecentlyAddedVideosRow(
         ) {
             Text(
                 text = stringResource(R.string.home_recent_videos_title),
-                style = MaterialTheme.typography.titleLarge,
+                style = MaterialTheme.typography.titleLarge.copy(fontSize = 18.sp),
                 color = MaterialTheme.colorScheme.onSurface
             )
             TextButton(onClick = onOpenAllClick) {
-                Text(text = stringResource(R.string.home_see_all))
+                Text(
+                    text = stringResource(R.string.home_see_all),
+                    style = MaterialTheme.typography.labelLarge.copy(fontSize = 11.sp)
+                )
             }
         }
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(6.dp))
         LazyRow(
             contentPadding = PaddingValues(horizontal = 16.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             items(videos, key = { it.id }) { video ->
                 Card(
                     modifier = Modifier
-                        .width(168.dp)
+                        .width(118.dp)
                         .clickable { onVideoClick(video) },
-                    shape = RoundedCornerShape(20.dp),
+                    shape = RoundedCornerShape(14.dp),
                     colors = CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.surfaceContainer
                     ),
                     elevation = CardDefaults.cardElevation(0.dp)
                 ) {
-                    Column(modifier = Modifier.padding(8.dp)) {
+                    Column(modifier = Modifier.padding(6.dp)) {
                         Box {
                             VideoThumbnail(
                                 video = video,
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .height(96.dp)
-                                    .clip(RoundedCornerShape(14.dp))
+                                    .height(67.dp)
+                                    .clip(RoundedCornerShape(10.dp))
                             )
                             Box(
                                 modifier = Modifier
                                     .align(Alignment.BottomEnd)
-                                    .padding(6.dp)
+                                    .padding(4.dp)
                                     .background(
                                         MaterialTheme.colorScheme.scrim.copy(alpha = 0.65f),
-                                        RoundedCornerShape(8.dp)
+                                        RoundedCornerShape(6.dp)
                                     )
-                                    .padding(horizontal = 6.dp, vertical = 2.dp)
+                                    .padding(horizontal = 5.dp, vertical = 2.dp)
                             ) {
                                 Text(
                                     text = formatDuration(video.durationMs),
-                                    style = MaterialTheme.typography.labelSmall,
+                                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
                                     color = MaterialTheme.colorScheme.surface
                                 )
                             }
@@ -446,19 +465,19 @@ fun RecentlyAddedVideosRow(
                                 tint = MaterialTheme.colorScheme.surface,
                                 modifier = Modifier
                                     .align(Alignment.Center)
-                                    .size(36.dp)
+                                    .size(25.dp)
                             )
                         }
-                        Spacer(Modifier.height(8.dp))
+                        Spacer(Modifier.height(6.dp))
                         Text(
                             text = video.displayTitle,
-                            style = MaterialTheme.typography.titleSmall,
+                            style = MaterialTheme.typography.titleSmall.copy(fontSize = 11.sp),
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
                         Text(
                             text = video.mimeType ?: stringResource(R.string.video_title),
-                            style = MaterialTheme.typography.bodySmall,
+                            style = MaterialTheme.typography.bodySmall.copy(fontSize = 10.sp),
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis

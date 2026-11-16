@@ -23,7 +23,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Check
-import androidx.compose.material.icons.rounded.ChevronRight
+import androidx.compose.material.icons.automirrored.rounded.ArrowForwardIos
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.SearchOff
 import androidx.compose.material3.Icon
@@ -304,7 +304,7 @@ fun SearchResultNavigableItem(
             }
 
             Icon(
-                imageVector = Icons.Rounded.ChevronRight,
+                imageVector = Icons.AutoMirrored.Rounded.ArrowForwardIos,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(20.dp)

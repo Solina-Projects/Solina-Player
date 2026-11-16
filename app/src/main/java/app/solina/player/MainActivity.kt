@@ -1089,11 +1089,31 @@ class MainActivity : ComponentActivity() {
                         }.collectAsStateWithLifecycle(initialValue = false)
                         // The recap story is full screen; its own Play button closes it so the
                         // player shows up again.
+                        // Home + mini-player feedback (2026-11-16): the floating music
+                        // mini player must NOT show on Home, and must NOT show on any
+                        // video screen (library / folders / search / folder detail /
+                        // player) — Home gets fixed in-flow playback bars instead,
+                        // and the Video section has its own video mini bar. It
+                        // stays visible in the Music section (Library / Search).
+                        // Video routes carry "{...}" placeholders, so prefix-match
+                        // them like routesWithHiddenNavigationBar does.
                         val routesWithHiddenMiniPlayer = remember {
-                            setOf(Screen.NavBarCrRad.route, Screen.Recap.route)
+                            setOf(
+                                Screen.NavBarCrRad.route,
+                                Screen.Recap.route,
+                                Screen.Home.route,
+                                Screen.VideoLibrary.route,
+                                Screen.VideoSearch.route,
+                                Screen.VideoFolders.route
+                            )
                         }
                         val shouldHideMiniPlayer by remember(currentRoute) {
-                            derivedStateOf { currentRoute in routesWithHiddenMiniPlayer }
+                            derivedStateOf {
+                                val route = currentRoute.orEmpty()
+                                route in routesWithHiddenMiniPlayer ||
+                                    route.startsWith("video_player") ||
+                                    route.startsWith("video_folder")
+                            }
                         }
 
                         val miniPlayerH = with(density) { MiniPlayerHeight.toPx() }

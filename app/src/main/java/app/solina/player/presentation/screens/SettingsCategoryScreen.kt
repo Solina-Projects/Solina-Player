@@ -78,7 +78,7 @@ import androidx.compose.material.icons.outlined.Style
 import androidx.compose.material.icons.outlined.Warning
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Check
-import androidx.compose.material.icons.rounded.ChevronRight
+import androidx.compose.material.icons.automirrored.rounded.ArrowForwardIos
 import androidx.compose.material.icons.rounded.SystemUpdate
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Delete
@@ -463,7 +463,7 @@ fun SettingsCategoryScreen(
                                     title = stringResource(R.string.setcat_excluded_directories_title),
                                     subtitle = stringResource(R.string.setcat_excluded_directories_subtitle),
                                     leadingIcon = { Icon(Icons.Outlined.Folder, null, tint = MaterialTheme.colorScheme.secondary) },
-                                    trailingIcon = { Icon(Icons.Rounded.ChevronRight, stringResource(R.string.cd_open), tint = MaterialTheme.colorScheme.onSurfaceVariant) },
+                                    trailingIcon = { Icon(Icons.AutoMirrored.Rounded.ArrowForwardIos, stringResource(R.string.cd_open), tint = MaterialTheme.colorScheme.onSurfaceVariant) },
                                     modifier = Modifier.settingHighlight("item_library_excluded_directories", highlightKey),
                                     onClick = { navController.navigateSafely(Screen.ExcludedDirectories.route) }
                                 )
@@ -471,7 +471,7 @@ fun SettingsCategoryScreen(
                                     title = stringResource(R.string.setcat_artists_title),
                                     subtitle = stringResource(R.string.setcat_artists_subtitle),
                                     leadingIcon = { Icon(Icons.Outlined.Person, null, tint = MaterialTheme.colorScheme.secondary) },
-                                    trailingIcon = { Icon(Icons.Rounded.ChevronRight, stringResource(R.string.cd_open), tint = MaterialTheme.colorScheme.onSurfaceVariant) },
+                                    trailingIcon = { Icon(Icons.AutoMirrored.Rounded.ArrowForwardIos, stringResource(R.string.cd_open), tint = MaterialTheme.colorScheme.onSurfaceVariant) },
                                     modifier = Modifier.settingHighlight("item_library_artists", highlightKey),
                                     onClick = { navController.navigateSafely(Screen.ArtistSettings.createRoute()) }
                                 )
@@ -565,7 +565,7 @@ fun SettingsCategoryScreen(
                                     title = stringResource(R.string.setcat_find_duplicates_title),
                                     subtitle = stringResource(R.string.setcat_find_duplicates_subtitle),
                                     leadingIcon = { Icon(Icons.Outlined.Folder, null, tint = MaterialTheme.colorScheme.secondary) },
-                                    trailingIcon = { Icon(Icons.Rounded.ChevronRight, stringResource(R.string.cd_open), tint = MaterialTheme.colorScheme.onSurfaceVariant) },
+                                    trailingIcon = { Icon(Icons.AutoMirrored.Rounded.ArrowForwardIos, stringResource(R.string.cd_open), tint = MaterialTheme.colorScheme.onSurfaceVariant) },
                                     modifier = Modifier.settingHighlight("item_library_find_duplicates", highlightKey),
                                     onClick = { navController.navigateSafely(Screen.Duplicates.createRoute()) }
                                 )
@@ -772,7 +772,7 @@ fun SettingsCategoryScreen(
                                     title = stringResource(R.string.setcat_album_art_palette_title),
                                     subtitle = stringResource(R.string.setcat_album_art_palette_subtitle, uiState.albumArtPaletteStyle.label),
                                     leadingIcon = { Icon(Icons.Outlined.Style, null, tint = MaterialTheme.colorScheme.secondary) },
-                                    trailingIcon = { Icon(Icons.Rounded.ChevronRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant) },
+                                    trailingIcon = { Icon(Icons.AutoMirrored.Rounded.ArrowForwardIos, null, tint = MaterialTheme.colorScheme.onSurfaceVariant) },
                                     onClick = { navController.navigateSafely(Screen.PaletteStyle.createRoute()) }
                                 )
                                 ThemeSelectorItem(
@@ -842,7 +842,7 @@ fun SettingsCategoryScreen(
                                     title = stringResource(R.string.setcat_navbar_corner_title),
                                     subtitle = stringResource(R.string.setcat_navbar_corner_subtitle),
                                     leadingIcon = { Icon(painterResource(R.drawable.rounded_rounded_corner_24), null, tint = MaterialTheme.colorScheme.secondary) },
-                                    trailingIcon = { Icon(Icons.Rounded.ChevronRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant) },
+                                    trailingIcon = { Icon(Icons.AutoMirrored.Rounded.ArrowForwardIos, null, tint = MaterialTheme.colorScheme.onSurfaceVariant) },
                                     onClick = { navController.navigateSafely(Screen.NavBarCrRad.createRoute()) }
                                 )
                             }
@@ -1269,7 +1269,7 @@ fun SettingsCategoryScreen(
                                     title = stringResource(R.string.setcat_experimental_title),
                                     subtitle = stringResource(R.string.setcat_experimental_subtitle),
                                     leadingIcon = { Icon(Icons.Rounded.Science, null, tint = MaterialTheme.colorScheme.secondary) },
-                                    trailingIcon = { Icon(Icons.Rounded.ChevronRight, stringResource(R.string.cd_open), tint = MaterialTheme.colorScheme.onSurfaceVariant) },
+                                    trailingIcon = { Icon(Icons.AutoMirrored.Rounded.ArrowForwardIos, stringResource(R.string.cd_open), tint = MaterialTheme.colorScheme.onSurfaceVariant) },
                                     onClick = { navController.navigateSafely(Screen.Experimental.createRoute()) }
                                 )
                                 SettingsItem(
@@ -1339,7 +1339,7 @@ fun SettingsCategoryScreen(
                                     title = stringResource(R.string.setcat_about_solina_title),
                                     subtitle = stringResource(R.string.setcat_about_solina_subtitle),
                                     leadingIcon = { Icon(Icons.Outlined.Info, null, tint = MaterialTheme.colorScheme.secondary) },
-                                    trailingIcon = { Icon(Icons.Rounded.ChevronRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant) },
+                                    trailingIcon = { Icon(Icons.AutoMirrored.Rounded.ArrowForwardIos, null, tint = MaterialTheme.colorScheme.onSurfaceVariant) },
                                     modifier = Modifier.settingHighlight("item_about_app", highlightKey),
                                     onClick = { navController.navigateSafely("about") }
                                 )
@@ -1347,7 +1347,7 @@ fun SettingsCategoryScreen(
                                     title = stringResource(R.string.updates_check_row_title),
                                     subtitle = stringResource(R.string.updates_settings_subtitle),
                                     leadingIcon = { Icon(Icons.Rounded.SystemUpdate, null, tint = MaterialTheme.colorScheme.secondary) },
-                                    trailingIcon = { Icon(Icons.Rounded.ChevronRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant) },
+                                    trailingIcon = { Icon(Icons.AutoMirrored.Rounded.ArrowForwardIos, null, tint = MaterialTheme.colorScheme.onSurfaceVariant) },
                                     modifier = Modifier.settingHighlight("item_updates", highlightKey),
                                     onClick = { navController.navigateSafely(Screen.Updates.route) }
                                 )
@@ -1884,7 +1884,7 @@ private fun BackupSectionSelectionDialog(
                             ) {
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.Absolute.SpaceBetween,
+                                    horizontalArrangement = Arrangement.SpaceBetween,
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Row(

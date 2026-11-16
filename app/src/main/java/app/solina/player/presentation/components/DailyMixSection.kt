@@ -270,7 +270,7 @@ fun DailyMixHeader(thumbnails: ImmutableList<Song>) {
                 .fillMaxWidth()
                 .padding(start = 22.dp, end = 16.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Absolute.SpaceBetween
+            horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(

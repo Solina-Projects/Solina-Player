@@ -102,7 +102,7 @@ fun SelectionActionRow(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 4.dp),
-        horizontalArrangement = Arrangement.Absolute.SpaceBetween,
+        horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
         Row(

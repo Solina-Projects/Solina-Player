@@ -44,7 +44,7 @@ import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.Warning
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Album
-import androidx.compose.material.icons.rounded.ChevronRight
+import androidx.compose.material.icons.automirrored.rounded.ArrowForwardIos
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.LibraryMusic
 import androidx.compose.material.icons.rounded.RestartAlt
@@ -247,7 +247,7 @@ fun ArtistSettingsScreen(
                             },
                             trailingIcon = {
                                 Icon(
-                                    imageVector = Icons.Rounded.ChevronRight,
+                                    imageVector = Icons.AutoMirrored.Rounded.ArrowForwardIos,
                                     contentDescription = stringResource(R.string.presentation_batch_g_artist_cd_configure),
                                     tint = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -279,7 +279,7 @@ fun ArtistSettingsScreen(
                             },
                             trailingIcon = {
                                 Icon(
-                                    imageVector = Icons.Rounded.ChevronRight,
+                                    imageVector = Icons.AutoMirrored.Rounded.ArrowForwardIos,
                                     contentDescription = stringResource(R.string.presentation_batch_g_artist_cd_configure),
                                     tint = MaterialTheme.colorScheme.onSurfaceVariant
                                 )

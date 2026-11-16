@@ -1,0 +1,505 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <string name="presentation_batch_g_stats_range_today">امروز</string>
+    <string name="presentation_batch_g_stats_range_week_to_date">هفته تا امروز</string>
+    <string name="presentation_batch_g_stats_week_label">هفته %1$d</string>
+    <string name="presentation_batch_g_stats_range_month_to_date">ماه تا امروز</string>
+    <string name="presentation_batch_g_stats_range_year_to_date">سال تا امروز</string>
+    <string name="presentation_batch_g_stats_range_all_time">همه زمان‌ها</string>
+    <string name="presentation_batch_g_stats_title">آمار گوش دادن</string>
+    <string name="presentation_batch_g_stats_cd_refresh">به‌روزرسانی آمار گوش دادن</string>
+    <string name="presentation_batch_g_stats_hero_listening">گوش دادن</string>
+    <string name="presentation_batch_g_stats_hero_plays">پخش‌ها</string>
+    <string name="presentation_batch_g_stats_em_dash">—</string>
+    <string name="presentation_batch_g_stats_section_listening_habits">عادت‌های گوش دادن</string>
+    <string name="presentation_batch_g_stats_habit_avg_session">میانگین جلسه</string>
+    <string name="presentation_batch_g_stats_habit_longest_session">طولانی‌ترین جلسه</string>
+    <string name="presentation_batch_g_stats_habit_sessions_per_day">جلسه در روز</string>
+    <string name="presentation_batch_g_stats_habit_most_active_day">فعال‌ترین روز</string>
+    <string name="presentation_batch_g_stats_habit_no_playback_yet">هنوز چیزی پخش نشده</string>
+    <string name="presentation_batch_g_stats_timeline_metric_listening_time">زمان گوش دادن</string>
+    <string name="presentation_batch_g_stats_timeline_metric_listening_time_desc">کل زمان گوش دادن ثبت‌شده در بازه انتخاب‌شده.</string>
+    <string name="presentation_batch_g_stats_timeline_metric_play_count">تعداد پخش</string>
+    <string name="presentation_batch_g_stats_timeline_metric_play_count_desc">در هر بخش چند جلسه را کامل کرده‌اید.</string>
+    <string name="presentation_batch_g_stats_timeline_metric_avg_session">میانگین جلسه</string>
+    <string name="presentation_batch_g_stats_timeline_metric_avg_session_desc">میانگین طول گوش دادن برای هر بخش.</string>
+    <string name="presentation_batch_g_stats_n_plays">%1$d پخش</string>
+    <string name="presentation_batch_g_stats_section_listening_timeline">خط زمانی گوش دادن</string>
+    <string name="presentation_batch_g_stats_empty_no_timeline_title">هنوز داده‌ای از گوش دادن نیست</string>
+    <string name="presentation_batch_g_stats_empty_no_timeline_subtitle">پخش را بزنید تا خط زمانی گوش دادن شما ساخته شود</string>
+    <string name="presentation_batch_g_stats_rhythm_daily">ریتم روزانه</string>
+    <string name="presentation_batch_g_stats_rhythm_weekly">ریتم هفتگی</string>
+    <string name="presentation_batch_g_stats_rhythm_monthly">ریتم ماهانه</string>
+    <string name="presentation_batch_g_stats_rhythm_year">سال در یک نگاه</string>
+    <string name="presentation_batch_g_stats_rhythm_all_time">پیشرفت همه‌زمانه</string>
+    <string name="presentation_batch_g_stats_grouped_4h">گروه‌بندی در بازه‌های ۴ ساعته</string>
+    <string name="presentation_batch_g_stats_grouped_dow">گروه‌بندی بر اساس روز هفته</string>
+    <string name="presentation_batch_g_stats_grouped_week_of_month">گروه‌بندی بر اساس هفته ماه</string>
+    <string name="presentation_batch_g_stats_grouped_by_month">گروه‌بندی بر اساس ماه</string>
+    <string name="presentation_batch_g_stats_grouped_by_year">گروه‌بندی بر اساس سال</string>
+    <string name="presentation_batch_g_stats_peak_segment">اوج بخش</string>
+    <string name="presentation_batch_g_stats_timeline_support_day">به پنجره‌های ۴ ساعته تقسیم می‌شود تا ریتم روزانه شما آشکار شود.</string>
+    <string name="presentation_batch_g_stats_timeline_support_week">میله‌های روزانه مقایسه عادت‌های هفته‌به‌هفته را آسان می‌کنند.</string>
+    <string name="presentation_batch_g_stats_timeline_support_month">میله‌های هفتگی نشان می‌دهند ماه چگونه پیش می‌رود.</string>
+    <string name="presentation_batch_g_stats_timeline_support_year">میله‌های ماهانه فصلی بودن را در طول سال نشان می‌دهند.</string>
+    <string name="presentation_batch_g_stats_timeline_support_all">میله‌های سالانه کل سابقه شما را خلاصه می‌کنند.</string>
+    <string name="presentation_batch_g_stats_empty_no_category_title">هنوز داده‌ای از دسته‌بندی نیست</string>
+    <string name="presentation_batch_g_stats_empty_no_category_subtitle">پخش را بزنید تا نکات برجسته گوش دادن شما نمایان شود</string>
+    <string name="presentation_batch_g_stats_empty_no_artists_title">هنرمند برتری نیست</string>
+    <string name="presentation_batch_g_stats_empty_no_artists_subtitle">به گوش دادن ادامه دهید تا هنرمندان موردعلاقه شما اینجا ظاهر شوند.</string>
+    <string name="presentation_batch_g_stats_empty_no_albums_title">آلبوم برتری نیست</string>
+    <string name="presentation_batch_g_stats_empty_no_albums_subtitle">آلبوم‌هایی که زیاد به آن‌ها برمی‌گردید اینجا ظاهر می‌شوند.</string>
+    <string name="presentation_batch_g_stats_empty_no_tracks_title">آهنگ برتری نیست</string>
+    <string name="presentation_batch_g_stats_empty_no_tracks_subtitle">به آهنگ‌های موردعلاقه خود گوش دهید تا اینجا برجسته شوند.</string>
+    <string name="presentation_batch_g_stats_track_concentration_subtitle">زمان گوش دادن شما چگونه میان آهنگ‌های برترتان توزیع شده است.</string>
+    <string name="presentation_batch_g_stats_empty_no_concentration_title">هنوز داده‌ای از تمرکز نیست</string>
+    <string name="presentation_batch_g_stats_empty_no_concentration_subtitle">آهنگ‌های بیشتری پخش کنید تا ببینید گوش دادن شما چقدر متمرکز است.</string>
+    <string name="presentation_batch_g_stats_slice_top_1">برتر ۱</string>
+    <string name="presentation_batch_g_stats_slice_top_2_3">برتر ۲-۳</string>
+    <string name="presentation_batch_g_stats_slice_others">دیگران</string>
+    <string name="presentation_batch_g_stats_percent">%1$d%%</string>
+    <string name="presentation_batch_g_stats_avg_plays_per_track">میانگین پخش/آهنگ</string>
+    <string name="presentation_batch_g_stats_top_three_share_label">سهم ۳ برتر</string>
+    <string name="presentation_batch_g_stats_avatar_placeholder">\?</string>
+    <string name="presentation_batch_g_stats_hero_per_day">%1$s در روز</string>
+    <string name="presentation_batch_g_stats_section_heavy_rotation">چرخش سنگین</string>
+    <string name="presentation_batch_g_stats_heavy_rotation_subtitle">چیزهایی که در این بازه مدام به آن‌ها برگشتید.</string>
+    <string name="presentation_batch_g_stats_tab_tracks">آهنگ‌ها</string>
+    <string name="presentation_batch_g_stats_tab_artists">هنرمندان</string>
+    <string name="presentation_batch_g_stats_tab_albums">آلبوم‌ها</string>
+    <string name="presentation_batch_g_stats_tab_genres">سبک‌ها</string>
+    <string name="presentation_batch_g_stats_top_pick">انتخاب برتر</string>
+    <string name="presentation_batch_g_stats_section_listening_variety">تنوع گوش دادن</string>
+    <string name="presentation_batch_g_stats_habit_longest_streak">طولانی‌ترین روند</string>
+    <string name="presentation_batch_g_device_info_title">اطلاعات دستگاه</string>
+    <string name="presentation_batch_g_device_section_exoplayer">موتور ExoPlayer</string>
+    <string name="presentation_batch_g_device_label_sample_rate">نرخ نمونه‌برداری</string>
+    <string name="presentation_batch_g_device_label_low_latency">پشتیبانی از تأخیر کم</string>
+    <string name="presentation_batch_g_device_label_pro_audio">پشتیبانی از صدای حرفه‌ای</string>
+    <string name="presentation_batch_g_device_value_hz">%1$d هرتز</string>
+    <string name="presentation_batch_g_yes">بله</string>
+    <string name="presentation_batch_g_no">خیر</string>
+    <string name="presentation_batch_g_device_key_manufacturer">سازنده</string>
+    <string name="presentation_batch_g_device_key_model">مدل</string>
+    <string name="presentation_batch_g_device_key_brand">برند</string>
+    <string name="presentation_batch_g_device_key_device">دستگاه</string>
+    <string name="presentation_batch_g_device_key_android_version">نسخه اندروید</string>
+    <string name="presentation_batch_g_device_key_sdk_version">نسخه SDK</string>
+    <string name="presentation_batch_g_device_key_hardware">سخت‌افزار</string>
+    <string name="device_capabilities_unknown_short">--</string>
+    <string name="device_capabilities_ready_title">آماده پخش</string>
+    <string name="device_capabilities_review_title">پخش نیاز به بررسی دارد</string>
+    <string name="device_capabilities_metric_formats">قالب‌ها</string>
+    <string name="device_capabilities_metric_hw_decoders">دیکودرهای سخت‌افزاری</string>
+    <string name="device_capabilities_metric_local_music">آهنگ‌های محلی</string>
+    <string name="device_capabilities_storage_title">فضای ذخیره‌سازی موسیقی محلی</string>
+    <string name="device_capabilities_storage_music_size">حجم موسیقی</string>
+    <string name="device_capabilities_storage_music_count">%1$d آهنگ محلی</string>
+    <string name="device_capabilities_storage_available">در دسترس</string>
+    <string name="device_capabilities_storage_total">مجموع %1$s</string>
+    <string name="device_capabilities_storage_music_footprint">ردپای موسیقی</string>
+    <string name="device_capabilities_storage_device_used">استفاده‌شده دستگاه</string>
+    <string name="device_capabilities_storage_percent">%1$d%%</string>
+    <string name="device_capabilities_storage_less_than_one_percent">&lt;1%</string>
+    <string name="device_capabilities_storage_cloud_count">%1$d آهنگ ابری</string>
+    <string name="device_capabilities_storage_unavailable_count">%1$d فایل خوانا نیست</string>
+    <string name="device_capabilities_playback_path_title">مسیر پخش</string>
+    <string name="device_capabilities_buffer_frames">%1$d فریم در هر بافر</string>
+    <string name="device_capabilities_hifi_pcm_float">Hi-Fi PCM Float</string>
+    <string name="device_capabilities_hifi_pcm_float_supporting">مسیر خروجی float ۳۲ بیتی</string>
+    <string name="device_capabilities_memory_title">حافظه</string>
+    <string name="device_capabilities_memory_available_of">در دسترس از %1$s</string>
+    <string name="device_capabilities_offload_title">قالب‌های آماده آف‌لود</string>
+    <string name="device_capabilities_offload_empty">هیچ قالب فشرده‌ای پشتیبانی از آف‌لود سخت‌افزاری را گزارش نکرد.</string>
+    <string name="device_capabilities_outputs_title">خروجی‌های شناسایی‌شده</string>
+    <string name="device_capabilities_outputs_empty">اندروید هیچ مسیر خروجی گزارش نکرد.</string>
+    <string name="device_capabilities_renderers_count">%1$s رندرر</string>
+    <string name="device_capabilities_formats_title">سازگاری قالب‌ها</string>
+    <string name="device_capabilities_formats_supported_count">%1$d آهنگ پشتیبانی‌شده</string>
+    <string name="device_capabilities_formats_unknown_count">%1$d قالب ناشناخته</string>
+    <string name="device_capabilities_format_unsupported">دیکودری گزارش نشد</string>
+    <string name="device_capabilities_format_hardware">دیکودر سخت‌افزاری</string>
+    <string name="device_capabilities_format_software">دیکودر نرم‌افزاری</string>
+    <string name="device_capabilities_format_offload">آف‌لود</string>
+    <string name="device_capabilities_format_library_count">%1$d در کتابخانه</string>
+    <string name="device_capabilities_findings_title">یافته‌های سازگاری</string>
+    <string name="device_capabilities_finding_clear_title">ناسازگاری عمده‌ای نیست</string>
+    <string name="device_capabilities_finding_clear_body">آهنگ‌های فهرست‌شده شما با دیکودرهایی که اندروید در این دستگاه گزارش می‌کند مطابقت دارند.</string>
+    <string name="device_capabilities_finding_unsupported_title">%1$d آهنگ ممکن است به‌صورت بومی دیکود نشوند</string>
+    <string name="device_capabilities_finding_unsupported_body">قالب‌های قابل بررسی: %1$s.</string>
+    <string name="device_capabilities_finding_resample_title">%1$d آهنگ محلی ممکن است دوباره نمونه‌برداری شوند</string>
+    <string name="device_capabilities_finding_resample_body">کتابخانه به %1$d هرتز می‌رسد که بالاتر از نرخ نمونه‌برداری خروجی فعلی است.</string>
+    <string name="device_capabilities_finding_unknown_title">%1$d آهنگ فراداده ناشناخته دارند</string>
+    <string name="device_capabilities_finding_unknown_body">اسکن کامل کتابخانه می‌تواند داده‌های گمشده MIME، بیت‌ریت و نرخ نمونه‌برداری را پر کند.</string>
+    <string name="device_capabilities_more_count">+%1$d بیشتر</string>
+    <string name="device_capabilities_output_builtin">خروجی داخلی</string>
+    <string name="device_capabilities_output_bluetooth">صدای بلوتوث</string>
+    <string name="device_capabilities_output_usb">صدای USB</string>
+    <string name="device_capabilities_output_wired">صدای سیمی</string>
+    <string name="device_capabilities_output_digital">خروجی دیجیتال</string>
+    <string name="device_capabilities_output_other">خروجی دیگر</string>
+    <string name="device_capabilities_report_title">گزارش عملکرد</string>
+    <string name="device_capabilities_report_description">یک گزارش تشخیصی قابل اشتراک‌گذاری بسازید تا به ما کمک کند تأخیر پخش یا اسکن را دسته‌بندی کنیم. این گزارش فقط داده‌های دستگاه، کتابخانه و زمان‌بندی دارد — بدون مسیر فایل، عنوان یا هنرمند.</string>
+    <string name="device_capabilities_report_generate">ساخت گزارش</string>
+    <string name="device_capabilities_report_regenerate">بازسازی</string>
+    <string name="device_capabilities_report_copy">کپی</string>
+    <string name="device_capabilities_report_share">اشتراک‌گذاری</string>
+    <string name="device_capabilities_report_copied">گزارش در حافظه موقت کپی شد</string>
+    <string name="device_capabilities_report_share_title">گزارش عملکرد Solina Player</string>
+    <string name="device_capabilities_advanced_diagnostics_title">تشخیص‌های پیشرفته عملکرد</string>
+    <string name="device_capabilities_advanced_diagnostics_description">به‌صورت پیش‌فرض خاموش است. یک خط زمانی کوتاه از تأخیر را برای عیب‌یابی بتا ثبت می‌کند.</string>
+    <string name="device_capabilities_advanced_diagnostics_expires">فعال تا %1$s</string>
+    <string name="device_capabilities_advanced_diagnostics_mark_lag">علامت‌گذاری تأخیر اکنون</string>
+    <string name="device_capabilities_advanced_diagnostics_marked">لحظه تأخیر علامت‌گذاری شد</string>
+    <string name="presentation_batch_g_artist_section_multi_parsing">تجزیه چند هنرمند</string>
+    <string name="presentation_batch_g_artist_item_char_delimiters">جداکننده‌های کاراکتری</string>
+    <string name="presentation_batch_g_artist_item_char_delimiters_current">فعلی: %1$s</string>
+    <string name="presentation_batch_g_artist_item_word_delimiters">جداکننده‌های کلمه‌ای</string>
+    <string name="presentation_batch_g_artist_word_none">هیچ‌کدام</string>
+    <string name="presentation_batch_g_artist_word_current_prefix">فعلی: %1$s</string>
+    <string name="presentation_batch_g_artist_cd_configure">پیکربندی</string>
+    <string name="presentation_batch_g_artist_extract_from_title">استخراج هنرمندان از عنوان</string>
+    <string name="presentation_batch_g_artist_extract_from_title_sub">feat.، ft. و with را در عنوان آهنگ‌ها تشخیص می‌دهد</string>
+    <string name="presentation_batch_g_artist_section_library_org">سازماندهی کتابخانه</string>
+    <string name="presentation_batch_g_artist_group_by_album_artist">گروه‌بندی بر اساس هنرمند آلبوم</string>
+    <string name="presentation_batch_g_artist_group_by_album_artist_sub">برگه هنرمندان و آلبوم‌ها را بر اساس هنرمند آلبوم گروه‌بندی کنید تا هنرمندان مهمان و گردآوری فهرست را شلوغ نکنند</string>
+    <string name="presentation_batch_g_artist_info_title">درباره تجزیه چند هنرمند</string>
+    <string name="presentation_batch_g_artist_info_body">Solina Player برچسب‌های هنرمند را با جداکننده‌های کاراکتری (/, ;, &amp;) و جداکننده‌های کلمه‌ای (feat.، ft.، vs.، x) تقسیم می‌کند. جداکننده‌های کلمه‌ای بدون توجه به بزرگی و کوچکی حروف تطبیق داده می‌شوند.
+
+«استخراج هنرمندان از عنوان» الگوهایی مانند (feat. Artist) را در عنوان آهنگ‌ها تشخیص می‌دهد.
+
+از بک‌اسلش (\) می‌توان برای فرار از جداکننده‌های کاراکتری استفاده کرد.</string>
+    <string name="presentation_batch_g_artist_example_arrow"> → </string>
+    <string name="presentation_batch_g_artist_examples_title">مثال‌ها</string>
+    <string name="presentation_batch_g_artist_ex_1_in">«Artist1/Artist2»</string>
+    <string name="presentation_batch_g_artist_ex_1_out">Artist1، Artist2</string>
+    <string name="presentation_batch_g_artist_ex_2_in">«Drake feat. Rihanna»</string>
+    <string name="presentation_batch_g_artist_ex_2_out">Drake، Rihanna</string>
+    <string name="presentation_batch_g_artist_ex_3_in">«Marshmello x Bastille»</string>
+    <string name="presentation_batch_g_artist_ex_3_out">Marshmello، Bastille</string>
+    <string name="presentation_batch_g_artist_ex_4_in">«Song (ft. B)» از A</string>
+    <string name="presentation_batch_g_artist_ex_4_out">A، B</string>
+    <string name="presentation_batch_g_artist_ex_5_in">«AC\\DC»</string>
+    <string name="presentation_batch_g_artist_ex_5_out">AC/DC (فرار شده)</string>
+    <string name="presentation_batch_g_artist_rescan_banner_title">اسکن مجدد لازم است</string>
+    <string name="presentation_batch_g_artist_rescan_banner_body">تنظیمات هنرمند تغییر کرده است. برای اعمال، کتابخانه خود را دوباره اسکن کنید.</string>
+    <string name="presentation_batch_g_artist_rescan_scanning">در حال اسکن…</string>
+    <string name="presentation_batch_g_artist_rescan">اسکن مجدد</string>
+    <string name="presentation_batch_g_topbar_build_stable">پایدار</string>
+    <string name="presentation_batch_g_topbar_build_debug">دیباگ</string>
+    <string name="presentation_batch_g_topbar_cd_changelog">تغییرات نسخه</string>
+    <string name="presentation_batch_g_lyrics_mode_synced">همگام‌شده</string>
+    <string name="presentation_batch_g_lyrics_mode_static">ثابت</string>
+    <string name="presentation_batch_g_lyrics_cd_options">گزینه‌های متن آهنگ</string>
+    <string name="presentation_batch_g_streaming_title">پخش ابری</string>
+    <string name="presentation_batch_g_streaming_subtitle">موسیقی را از حساب‌های ابری خود پخش کنید</string>
+    <string name="presentation_batch_g_sort_source">منبع</string>
+    <string name="presentation_batch_g_sort_order">ترتیب</string>
+    <string name="presentation_batch_g_sort_descending">نزولی</string>
+    <string name="presentation_batch_g_sort_ascending">صعودی</string>
+    <string name="presentation_batch_g_sort_original_order">ترتیب اصلی</string>
+    <string name="presentation_batch_g_cd_switch_on">کلید روشن است</string>
+    <string name="presentation_batch_g_file_explorer_cd_close">بستن</string>
+    <string name="presentation_batch_g_file_explorer_cd_refresh">به‌روزرسانی</string>
+    <string name="presentation_batch_g_file_explorer_cd_done">انجام شد</string>
+    <string name="presentation_batch_g_file_explorer_done">انجام شد</string>
+    <string name="presentation_batch_g_file_explorer_hint">همه‌چیز به‌صورت پیش‌فرض شامل می‌شود. برای رد کردن، یک پوشه را حذف کنید یا یک پوشه حذف‌شده را باز کنید و یک پوشه فرزند را به‌عنوان جایگزین شامل کنید.</string>
+    <string name="presentation_batch_g_file_explorer_empty_folders">اینجا زیرپوشه‌ای نیست</string>
+    <string name="presentation_batch_g_file_explorer_cd_navigate_up">رفتن به بالا</string>
+    <string name="presentation_batch_g_file_explorer_cd_go_root">رفتن به ریشه</string>
+    <string name="presentation_batch_g_file_explorer_mode_folders">پوشه‌ها</string>
+    <string name="presentation_batch_g_file_explorer_mode_all_subfolders">همه زیرپوشه‌ها</string>
+    <string name="presentation_batch_g_file_explorer_loading_all_subfolders">در حال جمع‌آوری همه پوشه‌های موسیقی…</string>
+    <string name="presentation_batch_g_daily_mix_queue_name">میکس روزانه</string>
+    <string name="presentation_batch_g_daily_mix_heading">میکس روزانه</string>
+    <string name="presentation_batch_g_daily_mix_based_on_history">بر اساس سابقه</string>
+    <string name="presentation_batch_g_daily_mix_see_all">مشاهده همه میکس روزانه</string>
+    <string name="presentation_batch_g_selection_one_song">آهنگ انتخاب شد</string>
+    <string name="presentation_batch_g_selection_n_songs">آهنگ انتخاب شد</string>
+    <string name="presentation_batch_g_selection_cd_share">اشتراک‌گذاری انتخاب‌شده‌ها</string>
+    <string name="presentation_batch_g_selection_cd_like">پسندیدن انتخاب‌شده‌ها</string>
+    <string name="presentation_batch_g_selection_play">پخش</string>
+    <string name="presentation_batch_g_selection_all">همه</string>
+    <string name="presentation_batch_g_selection_deselect">لغو انتخاب</string>
+    <string name="presentation_batch_g_selection_cd_more">گزینه‌های بیشتر</string>
+    <string name="presentation_batch_g_selection_overflow_count">+%1$d</string>
+    <string name="presentation_batch_g_list_song_artist_album">%1$s • %2$s</string>
+    <string name="presentation_batch_g_list_cd_selected">انتخاب شد</string>
+    <string name="presentation_batch_g_list_cd_more_for_title">گزینه‌های بیشتر برای %1$s</string>
+    <string name="presentation_batch_g_list_cd_album_art_for">جلد آلبوم برای %1$s</string>
+    <string name="presentation_batch_g_list_cd_playing">در حال پخش</string>
+    <string name="presentation_batch_g_sync_percent">%1$d%%</string>
+    <string name="presentation_batch_g_stats_overview_title">آمار گوش دادن</string>
+    <string name="presentation_batch_g_stats_overview_total_plays">کل پخش‌ها</string>
+    <string name="presentation_batch_g_stats_overview_avg_per_day">میانگین در روز</string>
+    <string name="presentation_batch_g_stats_overview_top_track">آهنگ برتر</string>
+    <string name="presentation_batch_g_stats_overview_top_track_line">%1$s • %2$d پخش</string>
+    <string name="presentation_batch_g_recently_played_title">اخیراً پخش‌شده‌ها</string>
+    <string name="presentation_batch_g_lyrics_offset_minus_half">−.5</string>
+    <string name="presentation_batch_g_lyrics_offset_minus_point_one">−.1</string>
+    <string name="presentation_batch_g_lyrics_offset_plus_point_one">+.1</string>
+    <string name="presentation_batch_g_lyrics_offset_plus_half">+.5</string>
+    <string name="presentation_batch_g_lyrics_offset_zero">۰ ث</string>
+    <string name="presentation_batch_g_lyrics_offset_seconds_fmt">%1$+.1fs</string>
+    <string name="presentation_batch_g_genre_sort_title">مرتب‌سازی و پخش</string>
+    <string name="presentation_batch_g_genre_sort_shuffle">تصادفی</string>
+    <string name="presentation_batch_g_genre_sort_by">مرتب‌سازی بر اساس</string>
+    <string name="presentation_batch_g_genre_sort_artist">هنرمند</string>
+    <string name="presentation_batch_g_genre_sort_album">آلبوم</string>
+    <string name="presentation_batch_g_genre_sort_title_opt">عنوان</string>
+    <string name="presentation_batch_g_cd_selected">انتخاب شد</string>
+    <string name="presentation_batch_g_changelog_title">تغییرات نسخه</string>
+    <string name="presentation_batch_g_changelog_view_github">مشاهده در GitHub</string>
+    <string name="presentation_batch_g_presets_saved_title">پیش‌تنظیم‌های ذخیره‌شده</string>
+    <string name="presentation_batch_g_presets_empty">هنوز پیش‌تنظیم سفارشی ذخیره نشده است.</string>
+    <string name="presentation_batch_g_presets_cd_unpin">برداشتن سنجاق</string>
+    <string name="presentation_batch_g_presets_cd_pin">سنجاق کردن</string>
+    <string name="presentation_batch_g_presets_cd_rename">تغییر نام</string>
+    <string name="presentation_batch_g_presets_cd_delete">حذف</string>
+    <string name="presentation_batch_g_beta_sheet_welcome_title">به Solina Player %1$s خوش آمدید</string>
+    <string name="presentation_batch_g_beta_sheet_welcome_body">شما از یک نسخه بتا استفاده می‌کنید که ممکن است باگ، خرابی یا قابلیت‌های آزمایشی داشته باشد. با گزارش مشکلات به ما در بهبود کمک کنید.</string>
+    <string name="presentation_batch_g_beta_sheet_welcome_body_stable">شما نسخه پایدار را اجرا می‌کنید. برای دیدن موارد جدید، تغییرات نسخه را بررسی کنید و هر چیزی که درست کار نمی‌کند را گزارش دهید.</string>
+    <string name="presentation_batch_g_beta_sheet_expect_title">چه انتظاری داشته باشید</string>
+    <string name="presentation_batch_g_beta_sheet_expect_1">ممکن است باگ، خرابی یا قابلیت‌های ناقص به‌طور غیرمنتظره رخ دهد.</string>
+    <string name="presentation_batch_g_beta_sheet_expect_2">برخی قابلیت‌ها ممکن است بدون اطلاع تغییر کنند یا حذف شوند.</string>
+    <string name="presentation_batch_g_beta_sheet_expect_3">نسخه‌های بتا ممکن است ناپایدارتر از نسخه‌های انتشار باشند.</string>
+    <string name="presentation_batch_g_beta_sheet_expect_4">پیش از گزارش یک مشکل شناخته‌شده، همیشه به‌روزرسانی‌ها را بررسی کنید.</string>
+    <string name="presentation_batch_g_beta_sheet_expect_summary">نسخه‌های بتا در حین آزمایش چه چیزی را می‌توانند تغییر دهند، خراب کنند یا بهبود بخشند.</string>
+    <string name="presentation_batch_g_beta_sheet_github_title">میانبر مسئله GitHub</string>
+    <string name="presentation_batch_g_beta_sheet_github_body">اول جستجو کنید، سپس یک گزارش متمرکز برای باگ‌ها، خرابی‌ها، درخواست‌ها یا سؤال‌ها باز کنید.</string>
+    <string name="presentation_batch_g_beta_sheet_open_issues">مشاهده مسائل موجود</string>
+    <string name="presentation_batch_g_beta_sheet_report_bug">گزارش مسئله یا خرابی</string>
+    <string name="presentation_batch_g_beta_sheet_report_title">نحوه گزارش</string>
+    <string name="presentation_batch_g_beta_sheet_report_summary">یک چک‌لیست سریع پیش از باز کردن مسئله جدید.</string>
+    <string name="presentation_batch_g_beta_sheet_before_title">پیش از باز کردن مسئله</string>
+    <string name="presentation_batch_g_beta_sheet_before_1">مسائل باز و بسته موجود را جستجو کنید تا از تکرار جلوگیری شود.</string>
+    <string name="presentation_batch_g_beta_sheet_before_2">به آخرین نسخه Solina Player به‌روزرسانی کنید و تأیید کنید مشکل هنوز رخ می‌دهد.</string>
+    <string name="presentation_batch_g_beta_sheet_before_3">برنامه را دوباره راه‌اندازی کنید و تأیید کنید مشکل همچنان وجود دارد.</string>
+    <string name="presentation_batch_g_beta_sheet_before_4">سعی کنید آن را بازتولید کنید و مراحل دقیق را بنویسید.</string>
+    <string name="presentation_batch_g_beta_sheet_issue_type_title">چه نوع مسئله‌ای؟</string>
+    <string name="presentation_batch_g_beta_sheet_issue_type_bug">گزارش باگ: چیزی نادرست رفتار می‌کند.</string>
+    <string name="presentation_batch_g_beta_sheet_issue_type_feature">درخواست قابلیت: افزودن یک قابلیت یا بهبود جدید.</string>
+    <string name="presentation_batch_g_beta_sheet_issue_type_question">سؤال: اگر فعال است از Discussions استفاده کنید یا مسئله‌ای با برچسب سؤال باز کنید.</string>
+    <string name="presentation_batch_g_beta_sheet_bug_title">گزارش باگ</string>
+    <string name="presentation_batch_g_beta_sheet_bug_summary_text">وقتی چیزی نادرست رفتار می‌کند یا خراب می‌شود، این فیلدها را کپی کنید.</string>
+    <string name="presentation_batch_g_beta_sheet_bug_template_title">گزارش باگ</string>
+    <string name="presentation_batch_g_beta_sheet_bug_summary">خلاصه کوتاه:</string>
+    <string name="presentation_batch_g_beta_sheet_bug_expected">رفتار مورد انتظار:</string>
+    <string name="presentation_batch_g_beta_sheet_bug_actual">رفتار فعلی:</string>
+    <string name="presentation_batch_g_beta_sheet_bug_steps">مراحل پخش/بازتولید: ۱. ۲. ۳.</string>
+    <string name="presentation_batch_g_beta_sheet_bug_frequency">هر چند وقت رخ می‌دهد؟ همیشه / گاهی / به‌ندرت.</string>
+    <string name="presentation_batch_g_beta_sheet_bug_screenshot">اسکرین‌شات / ویدیو: در صورت موجود بودن.</string>
+    <string name="presentation_batch_g_beta_sheet_bug_logs">لاگ‌ها / ردیابی پشته: در صورت موجود بودن.</string>
+    <string name="presentation_batch_g_beta_sheet_env_title">محیط</string>
+    <string name="presentation_batch_g_beta_sheet_env_version">نسخه Solina Player:</string>
+    <string name="presentation_batch_g_beta_sheet_env_source">منبع نصب: انتشار GitHub، بیلد دیباگ، بیلد شبانه و غیره.</string>
+    <string name="presentation_batch_g_beta_sheet_env_android">نسخه اندروید:</string>
+    <string name="presentation_batch_g_beta_sheet_env_device">مدل دستگاه:</string>
+    <string name="presentation_batch_g_beta_sheet_env_extra">زمینه اضافی: استفاده از کارت SD، تنظیمات خاص، مجوزها و غیره.</string>
+    <string name="presentation_batch_g_beta_sheet_feature_title">درخواست قابلیت</string>
+    <string name="presentation_batch_g_beta_sheet_feature_summary">وقتی یک قابلیت یا بهبود جدید می‌خواهید، این فیلدها را کپی کنید.</string>
+    <string name="presentation_batch_g_beta_sheet_feature_problem">بیان مسئله: چه مشکلی را می‌خواهید حل کنید؟</string>
+    <string name="presentation_batch_g_beta_sheet_feature_solution">راه‌حل پیشنهادی: چگونه باید کار کند؟</string>
+    <string name="presentation_batch_g_beta_sheet_feature_alternatives">جایگزین‌های در نظر گرفته‌شده: رویکرد دیگری وجود دارد؟</string>
+    <string name="presentation_batch_g_beta_sheet_feature_scope">دامنه: کدام صفحه‌ها یا جریان‌ها تحت تأثیر قرار می‌گیرند؟</string>
+    <string name="presentation_batch_g_beta_sheet_feature_mockup">ماکاپ یا تصویر مرجع در صورت موجود بودن.</string>
+    <string name="presentation_batch_g_beta_sheet_quality_title">عنوان‌ها، حریم خصوصی و دامنه</string>
+    <string name="presentation_batch_g_beta_sheet_quality_summary">گزارش را برای بررسی آسان و اشتراک‌گذاری امن کنید.</string>
+    <string name="presentation_batch_g_beta_sheet_title_examples_title">عنوان‌های خوب برای مسئله</string>
+    <string name="presentation_batch_g_beta_sheet_title_example_1">اکولایزر: نشانگر هنگام جابه‌جایی بین برگه‌های پیش‌تنظیم جابه‌جا می‌شود</string>
+    <string name="presentation_batch_g_beta_sheet_title_example_2">جستجو: فهرست سابقه برای پرس‌وجوی خالی ظاهر نمی‌شود</string>
+    <string name="presentation_batch_g_beta_sheet_title_example_3">قابلیت: افزودن گزینه مرتب‌سازی پلی‌لیست «اخیراً اضافه‌شده»</string>
+    <string name="presentation_batch_g_beta_sheet_avoid_title">لطفاً از این موارد خودداری کنید</string>
+    <string name="presentation_batch_g_beta_sheet_avoid_1">گزارش‌های کلی مانند «کار نمی‌کند».</string>
+    <string name="presentation_batch_g_beta_sheet_avoid_2">چند مشکل نامرتبط در یک مسئله.</string>
+    <string name="presentation_batch_g_beta_sheet_avoid_3">لاگ‌ها یا اسکرین‌شات‌های بدون سانسور با داده‌های خصوصی.</string>
+    <string name="presentation_batch_g_beta_sheet_privacy_title">نکته حریم خصوصی</string>
+    <string name="presentation_batch_g_beta_sheet_privacy_body">پیش از ارسال لاگ‌ها، اسکرین‌شات‌ها یا ویدیوها، اطلاعات شخصی یا خصوصی را حذف کنید.</string>
+    <string name="presentation_batch_g_beta_sheet_nightly_title">بیلدهای شبانه</string>
+    <string name="presentation_batch_g_beta_sheet_nightly_summary">بیلدهای شبانه چگونه با انتشارها متفاوت‌اند و وقتی خراب می‌شوند چه چیزی را باید شامل کنید.</string>
+    <string name="presentation_batch_g_beta_sheet_nightly_body">بیلدهای شبانه از آخرین کامیت ساخته می‌شوند و ممکن است تغییرات ناتمام، باگ‌های موقت یا پسرفت داشته باشند. آن‌ها آزمایشی‌تر از انتشارهای رسمی هستند.</string>
+    <string name="presentation_batch_g_beta_sheet_nightly_access">در صورت موجود بودن، از مصنوعات گردش‌کار GitHub Actions مخزن به آن‌ها دسترسی پیدا کنید.</string>
+    <string name="presentation_batch_g_beta_sheet_nightly_report_title">گزارش مسائل بیلد شبانه</string>
+    <string name="presentation_batch_g_beta_sheet_nightly_report_body">هنگام گزارش مسئله از یک بیلد شبانه، همیشه ذکر کنید که در بیلد شبانه رخ داده است، نه در انتشار رسمی. در صورت امکان، تاریخ بیلد، نام یا شماره اجرای گردش‌کار یا SHA کامیت را شامل کنید. همچنین بررسی کنید که آیا همان مشکل در آخرین انتشار رسمی هم رخ می‌دهد.</string>
+    <string name="presentation_batch_g_album_sel_count">%1$d آلبوم</string>
+    <string name="presentation_batch_g_album_sel_selected">انتخاب‌شده</string>
+    <string name="presentation_batch_g_album_sel_queue_hint">صف و پخش به ترتیب انتخاب شما احترام می‌گذارند.</string>
+    <string name="presentation_batch_g_album_sel_limit">محدودیت: %1$d آلبوم در هر انتخاب.</string>
+    <string name="presentation_batch_g_app_name" translatable="false">Solina Player</string>
+    <string name="presentation_batch_g_app_tagline">پخش‌کننده موسیقی</string>
+    <string name="sidebar_edit_shortcuts">ویرایش میانبرها</string>
+    <string name="sidebar_shortcuts_dialog_title">میانبرهای نوار کناری</string>
+    <string name="sidebar_open">باز کردن منو</string>
+    <string name="presentation_batch_g_brick_high">رکورد %1$d</string>
+    <string name="presentation_batch_g_brick_cd_close">بستن</string>
+    <string name="presentation_batch_g_brick_stat_score">امتیاز</string>
+    <string name="presentation_batch_g_brick_stat_lvl">مرحله %1$d</string>
+    <string name="presentation_batch_g_brick_stat_lives">جان‌ها</string>
+    <string name="presentation_batch_g_brick_level_complete">مرحله کامل شد!</string>
+    <string name="presentation_batch_g_brick_game_over">پایان بازی</string>
+    <string name="presentation_batch_g_brick_score_line">امتیاز: %1$d</string>
+    <string name="presentation_batch_g_brick_try_again">دوباره تلاش می‌کنید؟</string>
+    <string name="presentation_batch_g_brick_next_level">مرحله بعد</string>
+    <string name="presentation_batch_g_brick_restart">شروع دوباره بازی</string>
+    <string name="presentation_batch_g_brick_tap_relaunch">برای شروع دوباره بزنید</string>
+    <string name="presentation_batch_g_brick_play_random">پخش موسیقی تصادفی</string>
+    <string name="presentation_batch_g_brick_title">آجرشکن</string>
+    <string name="presentation_batch_g_brick_high_score">رکورد  %1$d</string>
+    <string name="presentation_batch_g_brick_play">پخش</string>
+    <string name="presentation_batch_g_brick_drag_paddle">برای حرکت دادن دستگیره بکشید</string>
+    <string name="presentation_batch_g_backup_restore_modules">بازیابی ماژول‌ها</string>
+    <string name="presentation_batch_g_backup_restoring">در حال بازیابی</string>
+    <string name="presentation_batch_g_backup_restore_selected">بازیابی انتخاب‌شده‌ها</string>
+    <string name="presentation_batch_g_backup_details">جزئیات پشتیبان</string>
+    <string name="presentation_batch_g_backup_created">ساخته شد</string>
+    <string name="presentation_batch_g_backup_app_version">نسخه برنامه</string>
+    <string name="presentation_batch_g_backup_schema">اسکیما</string>
+    <string name="presentation_batch_g_backup_device">دستگاه</string>
+    <string name="presentation_batch_g_backup_unknown">ناشناخته</string>
+    <string name="presentation_batch_g_backup_modules_selected">%1$d از %2$d ماژول انتخاب شد</string>
+    <string name="presentation_batch_g_backup_transfer_progress">انتقال در حال انجام است…</string>
+    <string name="presentation_batch_g_backup_cd_select_all">انتخاب همه</string>
+    <string name="presentation_batch_g_backup_cd_clear_selection">پاک کردن انتخاب</string>
+    <string name="presentation_batch_g_backup_entries_will_replace">%1$d ورودی · داده‌های فعلی را جایگزین می‌کند</string>
+    <string name="presentation_batch_g_player_cd_cloud_stream">جریان ابری</string>
+    <string name="presentation_batch_g_player_cd_collapse">جمع کردن پخش‌کننده</string>
+    <string name="presentation_batch_g_player_cd_queue">صف</string>
+    <string name="presentation_batch_g_player_cd_lyrics">متن آهنگ</string>
+
+    <string name="presentation_batch_g_changelog_sec_initial_release">انتشار اولیه</string>
+    <string name="presentation_batch_g_changelog_sec_removed_for_foss">حذف‌شده برای FOSS</string>
+    <string name="presentation_batch_g_changelog_sec_release_readiness">آمادگی انتشار</string>
+    <string name="presentation_batch_g_changelog_sec_security_privacy">امنیت و حریم خصوصی</string>
+    <string-array name="presentation_batch_g_changelog_060_whats_new">
+        <item>«اخیراً پخش‌شده‌ها» و بازیابی صف پایدار، جلسه گوش دادن شما را آماده نگه می‌دارند.</item>
+        <item>پشتیبان‌گیری و بازیابی نسخه ۳ و ابزارهای مدیریت حساب اکنون شامل شده‌اند.</item>
+        <item>متن آهنگ با جستجوی دستی جایگزین و بهبودهای ذخیره‌سازی هوشمندتر شد.</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_060_improvements">
+        <item>بهبود بزرگ عملکرد در راه‌اندازی، کتابخانه، صف و تعامل‌های پخش‌کننده.</item>
+        <item>جریان‌های ناوبری و جستجو قابل‌اعتمادتر شدند، با مدیریت امن‌تر مسیرها.</item>
+        <item>سازگاری پخش صدا برای دستگاه‌ها و قالب‌های بیشتر بهبود یافت.</item>
+        <item>جریان‌های انتخاب چندگانه در آهنگ‌ها، آلبوم‌ها و پلی‌لیست‌ها گسترش یافت.</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_060_fixes">
+        <item>رفتار صف و پخش تصادفی اکنون پایدارتر و قابل‌پیش‌بینی‌تر است.</item>
+        <item>مشکلات تایمر خواب، ناوبری برگه فایل‌ها و خرابی هنرمند آلبوم رفع شد.</item>
+        <item>بارگذاری ویجت و پایداری سرویس برای کاهش مشکلات داغ شدن/حافظه بهبود یافت.</item>
+        <item>رفع باگ‌های عمومی و بهبود رابط کاربری در سراسر برنامه.</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_050_highlights">
+        <item>به‌روزرسانی رابط کاربری Material 3 Expressive</item>
+        <item>اکولایزر ۱۰ بانده و افکت‌ها</item>
+        <item>جریان همگام‌سازی جدید کتابخانه</item>
+        <item>وارد/خارج کردن پلی‌لیست M3U</item>
+        <item>یکپارچه‌سازی تصویر هنرمند Deezer</item>
+        <item>جلدهای سفارشی پلی‌لیست</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_050_improvements">
+        <item>بازسازی معماری تنظیمات</item>
+        <item>انیمیشن‌های صف و پخش‌کننده</item>
+        <item>پروفایل‌های پایه و عملکرد</item>
+        <item>سیستم بهتر متن آهنگ با آفست همگام‌سازی</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_050_fixes">
+        <item>پایداری ورق پخش‌کننده</item>
+        <item>رفع باگ‌های عمومی و پاک‌سازی</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_040_highlights">
+        <item>بازطراحی بزرگ ناوبری</item>
+        <item>مرورگر فایل جدید برای انتخاب پوشه‌های منبع</item>
+        <item>تداوم یکپارچه بین دستگاه‌های راه دور</item>
+        <item>گذار بدون وقفه بین آهنگ‌ها</item>
+        <item>کنترل کراس‌فید</item>
+        <item>قابلیت جدید گذارهای سفارشی (فقط برای پلی‌لیست‌ها)</item>
+        <item>ادامه پخش پس از بستن برنامه</item>
+        <item>بهینه‌سازی‌های رابط کاربری</item>
+        <item>بهبود قابلیت آمار</item>
+        <item>بازطراحی کنترل صف با قابلیت‌های بیشتر</item>
+        <item>بهبود پشتیبانی از انواع فایل‌ها برای پخش و ویرایش فراداده</item>
+        <item>بهبود کنترل‌کننده مجوز</item>
+        <item>رفع باگ‌های جزئی</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_030_whats_new">
+        <item>مرکز آمار گوش دادن غنی‌تر با بینش عمیق‌تر درباره جلسه‌های شما معرفی شد.</item>
+        <item>پخش‌کننده سریع شناور برای باز کردن و پیش‌نمایش فوری فایل‌های محلی راه‌اندازی شد.</item>
+        <item>برگه پوشه‌ها با ناوبری درختی و نمای آماده پلی‌لیست اضافه شد.</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_030_improvements">
+        <item>رابط کاربری کلی Material 3 برای تجربه‌ای تمیزتر و منسجم‌تر بهبود یافت.</item>
+        <item>ویرایش فراداده اکنون از تغییر جلد پشتیبانی می‌کند.</item>
+        <item>انیمیشن‌ها و گذارها در سراسر برنامه برای ناوبری روان‌تر نرم شدند.</item>
+        <item>چیدمان صفحه هنرمند با جزئیات غنی‌تر و بهبود بهبود یافت.</item>
+        <item>تولید DailyMix و YourMix با انتخاب‌های هوشمندتر و متنوع‌تر ارتقا یافت.</item>
+        <item>ارتباط و نمایش جستجو برای کشف سریع‌تر بهبود یافت.</item>
+        <item>پشتیبانی از طیف گسترده‌تری از قالب‌های فایل صوتی گسترش یافت.</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_030_fixes">
+        <item>مشکلات فراداده حل شد تا جزئیات آهنگ در همه‌جا دقیق بماند.</item>
+        <item>میانبرهای اعلان بازیابی شدند تا به‌طور قابل‌اعتماد به پخش برگردند.</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_020_added">
+        <item>تغییرات نسخه درون‌برنامه‌ای تا شما را از آخرین قابلیت‌ها مطلع نگه دارد.</item>
+        <item>پشتیبانی از فایل‌های .LRC، هم جاسازی‌شده و هم خارجی.</item>
+        <item>پشتیبانی از متن آهنگ آفلاین.</item>
+        <item>متن آهنگ همگام‌شده (همگام با آهنگ).</item>
+        <item>صفحه جدید برای مشاهده صف کامل.</item>
+        <item>مرتب‌سازی و حذف آهنگ‌ها از صف.</item>
+        <item>ژست‌های مینی‌پخش‌کننده (کشیدن به پایین برای بستن).</item>
+        <item>انیمیشن‌های متریال بیشتری اضافه شد.</item>
+        <item>تنظیمات جدید برای سفارشی‌سازی ظاهر و حس.</item>
+        <item>تنظیمات جدید برای پاک کردن حافظه پنهان.</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_020_changed">
+        <item>بازطراحی کامل رابط کاربری.</item>
+        <item>بازطراحی کامل پخش‌کننده.</item>
+        <item>بهبود عملکرد در کتابخانه.</item>
+        <item>بهبود سرعت راه‌اندازی برنامه.</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_020_fixed">
+        <item>باگ‌های مختلف در ویرایشگر برچسب رفع شد.</item>
+        <item>باگی رفع شد که اعلان پخش پاک نمی‌شد.</item>
+        <item>چند باگ که باعث خرابی برنامه می‌شد رفع شد.</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_070_whats_new">
+        <item>اولین انتشار عمومی FOSS برنامه Solina Player.</item>
+        <item>شامل پخش محلی، پلی‌لیست‌ها، علاقه‌مندی‌ها، متن آهنگ، آمار گوش دادن، تم‌دهی پویا Material 3، ویجت‌ها و پشتیبان‌گیری/بازیابی است.</item>
+        <item>پشتیبانی از Navidrome/Subsonic و Jellyfin خودمیزبان را حفظ می‌کند، به‌علاوه متن آهنگ اختیاری LRCLIB و جستجوی تصویر هنرمند Deezer.</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_070_improvements">
+        <item>وابستگی‌های زمان اجرای Telegram، NetEase، QQ Music، Google Drive، Gemini، Cast، Wear OS، صورت‌حساب Play Store، Firebase، Crashlytics و Google Play Services حذف شد.</item>
+        <item>اسکروبلینگ عمومی Last.fm و ListenBrainz حذف شد؛ گزارش‌دهی Navidrome/Subsonic خودمیزبان محدود به سرور خود کاربر باقی می‌ماند.</item>
+        <item>ترجمه‌های همراه و انتخابگر زبان درون‌برنامه‌ای برای این اولین انتشار FOSS حذف شد؛ منابع انگلیسی اول عرضه می‌شوند.</item>
+        <item>مسیرهای انتشار که به مصنوعات امضای محلی/خصوصی، مقادیر امضای ساختگی یا فرض‌های فقط فروشگاه برنامه وابسته بودند حذف شد.</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_070_fixes">
+        <item>فراداده F-Droid، فراداده فروشگاه Fastlane، یادداشت‌های حریم خصوصی، یادداشت‌های امنیتی، مستندات وابستگی/مجوز و راهنمای مشارکت‌کننده اضافه شد.</item>
+        <item>بیلدهای انتشار وقتی کلیدهای امضای محلی وجود ندارند بدون امضا می‌مانند.</item>
+        <item>solina.disableReleaseSigning=true برای بیلدهای تأیید بدون امضای قطعی اضافه شد.</item>
+        <item>رد مجوز دارایی و وابستگی مستند شد، از جمله مصنوعات بومی/باینری Maven و وابستگی‌های JitPack.</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_070_added">
+        <item>پخش ابری لوپ‌بک اکنون به یک توکن در هر جلسه نیاز دارد.</item>
+        <item>بازیابی پشتیبان کلیدهای تنظیماتی را که متعلق به کنترل‌کننده‌های ماژول اختصاصی هستند نادیده می‌گیرد.</item>
+        <item>ثبت لاگ انتشار سخت‌گیرانه‌تر شد تا هدرهای درخواست HTTP و لاگ‌های خام اندروید از فیلتر انتشار Timber عبور نکنند.</item>
+        <item>همچنین شامل ماندگاری پلی‌لیست هوشمند، اسکن آهنگ‌های تکراری، کنترل سرعت پخش، پیام‌های واضح‌تر خطای پخش/همگام‌سازی و بهبود دسترسی‌پذیری است.</item>
+    </string-array>
+
+    <string name="presentation_batch_g_changelog_sec_whats_new">چه چیزی جدید است</string>
+    <string name="presentation_batch_g_changelog_sec_improvements">بهبودها</string>
+    <string name="presentation_batch_g_changelog_sec_under_the_hood">در پشت صحنه</string>
+    <string-array name="presentation_batch_g_changelog_v020_whats_new">
+        <item>بازبینی طراحی Material 3 Expressive: یک طرح حرکتی جدید، نشانگرهای پیشرفت موج‌دار و انیمیشن‌های تغییر شکل در سراسر برنامه.</item>
+        <item>سرورهای Jellyfin روی HTTP ساده اکنون برای میزبان‌های VPN و شبکه محلی مجاز هستند.</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_v020_improvements">
+        <item>برنامه کوچک‌تر: قوانین سبک‌تر کوچک‌سازی کد حدود ۱٫۵ مگابایت از حجم نصب کم می‌کنند.</item>
+        <item>راه‌اندازی سریع‌تر و روان‌تر: پروفایل‌های پایه از صفر بازسازی شدند تا با رابط کاربری و مسیرهای کد جدید مطابقت داشته باشند.</item>
+        <item>فهرست‌ها، ورق‌ها و اکولایزر سریع‌تر به لطف بهبود گسترده عملکرد Compose.</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_v020_under_the_hood">
+        <item>پخش ابری قابل‌اعتمادتر: درخواست‌های لغوشده Navidrome/Jellyfin دیگر هنگام رد کردن سریع آهنگ‌ها به‌اشتباه به‌عنوان خطای شبکه گزارش نمی‌شوند.</item>
+        <item>رویدادهای پشتیبان‌گیری، بازیابی و راه‌اندازی دیگر هنگام چرخش صفحه از دست نمی‌روند.</item>
+        <item>پاک‌سازی بهاری: کد مرده حذف شد، APIهای منسوخ مهاجرت کردند و وابستگی‌ها به‌روز شدند.</item>
+    </string-array>
+</resources>

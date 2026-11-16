@@ -31,7 +31,7 @@ import androidx.compose.material.icons.rounded.Audiotrack
 import androidx.compose.material.icons.rounded.Bookmark
 import androidx.compose.material.icons.rounded.BookmarkBorder
 import androidx.compose.material.icons.rounded.BrightnessHigh
-import androidx.compose.material.icons.rounded.ChevronRight
+import androidx.compose.material.icons.automirrored.rounded.ArrowForwardIos
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.ClosedCaption
 import androidx.compose.material.icons.rounded.Delete
@@ -138,7 +138,7 @@ fun VideoGridMenuSheet(
         GridMenuEntry(VideoGridAction.INFO, Icons.Rounded.Info, R.string.video_grid_menu_info),
         GridMenuEntry(VideoGridAction.SHARE, Icons.Rounded.Share, R.string.video_grid_menu_share),
         GridMenuEntry(VideoGridAction.TUTORIAL, Icons.Rounded.Lightbulb, R.string.video_grid_menu_tutorial),
-        GridMenuEntry(VideoGridAction.MORE, Icons.Rounded.ChevronRight, R.string.video_grid_menu_more)
+        GridMenuEntry(VideoGridAction.MORE, Icons.AutoMirrored.Rounded.ArrowForwardIos, R.string.video_grid_menu_more)
     )
     ModalBottomSheet(
         onDismissRequest = onDismiss,

@@ -3,6 +3,7 @@
 package app.solina.player.presentation.screens
 
 import app.solina.player.presentation.navigation.navigateSafely
+import app.solina.player.data.cloud.CloudFeatures
 import app.solina.player.presentation.navigation.navigateSafelyReplacing
 
 import android.os.Trace
@@ -1255,7 +1256,12 @@ fun LibraryScreen(
                                     onFolderClick = { playerViewModel.navigateToFolder(it) },
                                     onNavigateBack = { playerViewModel.navigateBackFolder() },
                                     isShuffleEnabled = isShuffleEnabled,
-                                    showStorageFilterButton = visibleCurrentTabId.hasStorageFilterButton(),
+                                    // Cloud disabled (2026-11-16, user: fully
+                                    // offline for now): the storage filter
+                                    // cycles through the ONLINE (cloud-only)
+                                    // mode, so the button is hidden.
+                                    showStorageFilterButton = CloudFeatures.ENABLED &&
+                                        visibleCurrentTabId.hasStorageFilterButton(),
                                     currentStorageFilter = playerUiState.currentStorageFilter,
                                     onStorageFilterClick = { playerViewModel.toggleStorageFilter() }
                                 )
@@ -1479,7 +1485,10 @@ fun LibraryScreen(
                                         }
                                     }
                                     // Genres span every source, so "cloud only" would not change that tab.
-                                    if (!isFoldersTab && !isGenresTab) {
+                                    // Cloud disabled (2026-11-16, user: fully offline
+                                    // for now): the whole "Cloud sources" block
+                                    // (heading + "Cloud only" toggle) is hidden.
+                                    if (!isFoldersTab && !isGenresTab && CloudFeatures.ENABLED) {
                                         Spacer(modifier = Modifier.height(12.dp))
                                         Text(
                                             text = stringResource(R.string.presentation_batch_d_cloud_sources_heading),

@@ -41,7 +41,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Check
-import androidx.compose.material.icons.rounded.ChevronRight
+import androidx.compose.material.icons.automirrored.rounded.ArrowForwardIos
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Done
 import androidx.compose.material.icons.rounded.Folder
@@ -804,7 +804,7 @@ private fun FileExplorerItem(
 
         if (navigationEnabled) {
             Icon(
-                imageVector = Icons.Rounded.ChevronRight,
+                imageVector = Icons.AutoMirrored.Rounded.ArrowForwardIos,
                 contentDescription = null,
                 tint = contentColor
             )
@@ -988,7 +988,7 @@ private fun FileExplorerHeader(
 
                             if (!isLast) {
                                 Icon(
-                                    imageVector = Icons.Rounded.ChevronRight,
+                                    imageVector = Icons.AutoMirrored.Rounded.ArrowForwardIos,
                                     contentDescription = null,
                                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                     modifier = Modifier.padding(start = 6.dp, end = 2.dp)

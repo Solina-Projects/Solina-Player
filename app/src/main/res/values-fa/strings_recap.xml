@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- Entry points. %1$d is a calendar year, e.g. 2025. -->
+    <string name="recap_card_title" tools:ignore="PluralsCandidate">مرور %1$d شما</string>
+    <string name="recap_card_title_so_far">سال %1$d شما تا اینجا</string>
+    <string name="recap_card_subtitle">سال خود را در موسیقی دوباره زندگی کنید</string>
+    <string name="recap_card_subtitle_so_far">ببینید سال شما در موسیقی چطور پیش می‌رود</string>
+    <string name="recap_home_card_title" tools:ignore="PluralsCandidate">مرور %1$d شما رسید</string>
+    <string name="recap_home_card_subtitle">آهنگ‌ها، هنرمندان و لحظه‌هایی را دوباره ببینید که سال شما را ساختند.</string>
+    <string name="recap_home_card_open">بازکردن مرور</string>
+    <string name="recap_home_card_dismiss">رد کردن</string>
+
+    <!-- Story controls -->
+    <string name="recap_cd_close">بستن مرور</string>
+    <string name="recap_cd_pause">توقف</string>
+    <string name="recap_cd_resume">ادامه</string>
+    <string name="recap_cd_slide_progress">اسلاید %1$d از %2$d</string>
+    <string name="recap_action_next_slide">اسلاید بعدی</string>
+    <string name="recap_action_previous_slide">اسلاید قبلی</string>
+    <string name="recap_close">بستن</string>
+    <string name="recap_not_enough_title">هنوز به‌اندازهٔ کافی گوش نداده‌اید</string>
+    <string name="recap_not_enough_subtitle" tools:ignore="PluralsCandidate">به پخش موسیقی ادامه دهید تا مرور %1$d شما کامل شود.</string>
+
+    <!-- Intro -->
+    <string name="recap_intro_kicker">مرور سولینا پلیر</string>
+    <string name="recap_intro_title">سال شما در موسیقی</string>
+    <string name="recap_intro_title_so_far">سال شما تا اینجا</string>
+    <string name="recap_intro_subtitle">نگاهی به آهنگ‌ها، هنرمندان و لحظه‌هایی که موسیقی متن سال شما بودند.</string>
+    <string name="recap_tap_hint">برای ادامه بزنید</string>
+
+    <!-- Listening time -->
+    <string name="recap_minutes_kicker" tools:ignore="PluralsCandidate">در سال %1$d گوش دادید</string>
+    <!-- Unit shown under the big number of minutes; the number itself is not part of the text. -->
+    <plurals name="recap_minutes_unit" tools:ignore="ImpliedQuantity">
+        <item quantity="one">دقیقه</item>
+        <item quantity="other">دقیقه</item>
+    </plurals>
+    <plurals name="recap_minutes_days_equivalent">
+        <item quantity="one">یعنی حدود %d روز موسیقی بدون وقفه.</item>
+        <item quantity="other">یعنی حدود %d روز موسیقی بدون وقفه.</item>
+    </plurals>
+    <plurals name="recap_minutes_hours_equivalent">
+        <item quantity="one">یعنی حدود %d ساعت موسیقی بدون وقفه.</item>
+        <item quantity="other">یعنی حدود %d ساعت موسیقی بدون وقفه.</item>
+    </plurals>
+    <string name="recap_minutes_daily_average">میانگین روزانه</string>
+    <string name="recap_minutes_active_days">روزهای همراه با موسیقی</string>
+
+    <!-- Months. %1$s is a compact duration, e.g. "32h 10m". -->
+    <string name="recap_months_kicker">پرگوش‌ترین ماه شما</string>
+    <string name="recap_months_detail">%1$s گوش‌دادن</string>
+
+    <!-- Listening clock -->
+    <string name="recap_clock_kicker">ساعت گوش‌دادن شما</string>
+    <string name="recap_personality_early_bird">سحرخیز</string>
+    <string name="recap_personality_early_bird_desc">روز را با موسیقی شروع کردید. صبح‌ها بهترین وقت شما بود.</string>
+    <string name="recap_personality_daytime">شنوندهٔ روزانه</string>
+    <string name="recap_personality_daytime_desc">موسیقی شما در طول روز، از اواخر صبح تا بعدازظهر، همراهتان بود.</string>
+    <string name="recap_personality_evening">آرامش شبانه</string>
+    <string name="recap_personality_evening_desc">وقتی روز تمام می‌شد، موسیقی بلندتر می‌شد.</string>
+    <string name="recap_personality_night_owl">شب‌زنده‌دار</string>
+    <string name="recap_personality_night_owl_desc">هرچه دیرتر می‌شد، بیشتر گوش می‌دادید.</string>
+    <!-- %1$s is a weekday name, e.g. "Saturday". -->
+    <string name="recap_clock_favorite_day">روز محبوب: %1$s</string>
+    <!-- Screen reader text for the month and hour charts. %1$s in the chart strings is a list of
+         entries, each built from recap_cd_chart_entry: %1$s is a month or hour, %2$s a duration. -->
+    <string name="recap_cd_chart_entry">%1$s: %2$s</string>
+    <string name="recap_cd_months_chart">گوش‌دادن بر اساس ماه: %1$s</string>
+    <string name="recap_cd_clock_chart">گوش‌دادن بر اساس ساعت: %1$s</string>
+
+    <!-- Dedication -->
+    <string name="recap_dedication_kicker">طولانی‌ترین زنجیرهٔ شما</string>
+    <!-- Unit shown under the big number of days; the number itself is not part of the text. -->
+    <plurals name="recap_streak_unit" tools:ignore="ImpliedQuantity">
+        <item quantity="one">روز پشت سر هم</item>
+        <item quantity="other">روز پشت سر هم</item>
+    </plurals>
+    <string name="recap_dedication_longest_session">طولانی‌ترین جلسهٔ گوش‌دادن</string>
+    <string name="recap_dedication_biggest_day">پرگوش‌ترین روز</string>
+    <string name="recap_dedication_first_song">اولین آهنگ سال</string>
+
+    <!-- Genres and decade. %1$s is a percentage, e.g. "38%". -->
+    <string name="recap_genres_kicker">ژانرهای برتر شما</string>
+    <string name="recap_genres_share">%1$s از گوش‌دادن شما</string>
+    <string name="recap_decade_kicker">دورهٔ شما</string>
+    <!-- %1$d is the first year of a decade, e.g. 1990 for "1990s". -->
+    <string name="recap_decade_value">دههٔ %1$d</string>
+    <string name="recap_decade_detail">%1$s از گوش‌دادن شما مربوط به موسیقی‌های منتشرشده در این دهه بود.</string>
+
+    <!-- Top albums, artists and songs -->
+    <string name="recap_albums_kicker">آلبوم‌های برتر شما</string>
+    <plurals name="recap_unique_albums">
+        <item quantity="one">%d آلبوم در چرخهٔ پخش شما</item>
+        <item quantity="other">%d آلبوم در چرخهٔ پخش شما</item>
+    </plurals>
+    <string name="recap_artists_kicker">هنرمند برتر شما</string>
+    <plurals name="recap_unique_artists">
+        <item quantity="one">به %d هنرمند گوش دادید</item>
+        <item quantity="other">به %d هنرمند گوش دادید</item>
+    </plurals>
+    <string name="recap_songs_kicker">آهنگ برتر شما</string>
+    <plurals name="recap_unique_songs">
+        <item quantity="one">%d آهنگ پخش کردید</item>
+        <item quantity="other">%d آهنگ پخش کردید</item>
+    </plurals>
+
+    <!-- Summary -->
+    <string name="recap_summary_kicker">سال شما در یک نگاه</string>
+    <string name="recap_summary_title">سال %1$d من در موسیقی</string>
+    <string name="recap_summary_title_so_far">سال %1$d من تا اینجا</string>
+    <string name="recap_summary_minutes">دقیقه‌های گوش‌داده‌شده</string>
+    <string name="recap_summary_top_artist">هنرمند برتر</string>
+    <string name="recap_summary_top_song">آهنگ برتر</string>
+    <string name="recap_summary_top_genre">ژانر برتر</string>
+    <string name="recap_summary_top_album">آلبوم برتر</string>
+    <string name="recap_summary_listening_style">سبک گوش‌دادن</string>
+    <string name="recap_share">اشتراک‌گذاری</string>
+    <string name="recap_share_chooser_title">مرور خود را به اشتراک بگذارید</string>
+    <string name="recap_share_text">سال %1$d من در موسیقی، ساخته‌شده با Solina Player</string>
+    <string name="recap_share_failed">ساخت تصویر مرور ممکن نشد</string>
+    <string name="recap_play_top_songs">پخش آهنگ‌های برتر</string>
+    <string name="recap_top_songs_queue_name">آهنگ‌های برتر %1$d</string>
+    <string name="recap_replay">دوباره تماشا کنید</string>
+</resources>
