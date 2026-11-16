@@ -8,6 +8,7 @@ import app.solina.player.data.repository.VideoRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -20,7 +21,8 @@ import javax.inject.Inject
 @HiltViewModel
 class VideoViewModel @Inject constructor(
     videoRepository: VideoRepository,
-    private val userPreferencesRepository: UserPreferencesRepository
+    private val userPreferencesRepository: UserPreferencesRepository,
+    val videoPlaybackHolder: VideoPlaybackHolder
 ) : ViewModel() {
 
     val videos: StateFlow<List<VideoItem>> = videoRepository.observeVideos()
@@ -105,6 +107,18 @@ class VideoViewModel @Inject constructor(
     fun clearVideoResume() {
         viewModelScope.launch { userPreferencesRepository.clearVideoResume() }
     }
+
+    /**
+     * Video mini bar (2026-11-16): show it when a video is loaded in the
+     * shared holder (live session) or a resume point was saved (a video was
+     * played before, even if the app restarted). The bar itself decides
+     * what to display; this only drives list bottom padding.
+     */
+    val showVideoMiniBar: StateFlow<Boolean> = combine(
+        videoPlaybackHolder.currentVideo,
+        videoResumeUri
+    ) { video, resumeUri -> video != null || resumeUri != null }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
 
     companion object {
         const val RECENT_VIDEOS_LIMIT = 12
