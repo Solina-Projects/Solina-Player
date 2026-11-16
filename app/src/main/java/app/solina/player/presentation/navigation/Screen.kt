@@ -106,13 +106,28 @@ sealed class Screen(val route: String) {
          *  queue is passed as one encoded route argument (URIs joined by
          *  newline); empty queue = single-video playback as before. */
         fun createRoute(startUri: String, queueUris: List<String>) =
-            if (queueUris.isEmpty()) {
+            createRoute(startUri, queueUris, startPositionMs = 0L)
+
+        /** Same as [createRoute], but the first video starts at
+         *  [startPositionMs] — used by the Folders screen's Resume button. */
+        fun createRoute(
+            startUri: String,
+            queueUris: List<String>,
+            startPositionMs: Long
+        ): String {
+            val base = if (queueUris.isEmpty()) {
                 createRoute(startUri)
             } else {
                 "video_player/${Uri.encode(startUri)}?queue=${
                     Uri.encode(queueUris.joinToString("\n"))
                 }"
             }
+            return if (startPositionMs > 0) {
+                "$base${if (base.contains("?")) "&" else "?"}startMs=$startPositionMs"
+            } else {
+                base
+            }
+        }
     }
     object HomeCustomization : Screen("home_customization")
 
