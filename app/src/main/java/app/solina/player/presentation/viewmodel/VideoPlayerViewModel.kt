@@ -69,7 +69,8 @@ class VideoPlayerViewModel @Inject constructor(
     private val _isLoading = MutableStateFlow(true)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
 
-    val availableSpeeds: List<Float> = listOf(0.5f, 0.75f, 1f, 1.25f, 1.5f, 2f)
+    /** Long-press speed bar (2026-11-16): 8 options, 0.1x–4x. */
+    val availableSpeeds: List<Float> = listOf(0.1f, 0.25f, 0.5f, 0.75f, 1f, 1.5f, 2f, 4f)
 
     // ---- Persisted player settings (Folders + Player, 2026-11-16) ----
 
@@ -123,6 +124,16 @@ class VideoPlayerViewModel @Inject constructor(
         _volume.value = volume.coerceIn(0f, 1f)
         exoPlayer?.volume = _volume.value
         viewModelScope.launch { userPreferencesRepository.setVideoVolume(_volume.value) }
+    }
+
+    /**
+     * Live volume change (swipe gesture, 2026-11-16): applies at once
+     * without a DataStore write per move; the gesture end persists it
+     * through [setVolume].
+     */
+    fun setVolumeLive(volume: Float) {
+        _volume.value = volume.coerceIn(0f, 1f)
+        exoPlayer?.volume = _volume.value
     }
 
     // ---- Customise Items: which round control buttons are shown. ----
@@ -462,6 +473,34 @@ class VideoPlayerViewModel @Inject constructor(
 
     fun toggleFullscreen() {
         _isFullscreen.value = !_isFullscreen.value
+    }
+
+    // ---- Transport (custom bottom bar, gestures, 2026-11-16). ----
+
+    /** Seek to an absolute position, clamped to the video's duration. */
+    fun seekTo(positionMs: Long) {
+        val player = exoPlayer ?: return
+        val duration = player.duration.coerceAtLeast(0L)
+        player.seekTo(positionMs.coerceIn(0L, duration))
+    }
+
+    /** Relative seek (the ±15 s buttons, swipe seek). */
+    fun seekBy(deltaMs: Long) {
+        val player = exoPlayer ?: return
+        seekTo(player.currentPosition + deltaMs)
+    }
+
+    fun togglePlayPause() {
+        val player = exoPlayer ?: return
+        if (player.isPlaying) player.pause() else player.play()
+    }
+
+    fun seekToNext() {
+        exoPlayer?.seekToNext()
+    }
+
+    fun seekToPrevious() {
+        exoPlayer?.seekToPrevious()
     }
 
     fun pause() {
