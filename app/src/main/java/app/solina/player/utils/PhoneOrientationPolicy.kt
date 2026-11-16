@@ -15,8 +15,21 @@ private const val LargeScreenSmallestWidthDp = 600
  */
 object PhoneOrientationPolicy : Application.ActivityLifecycleCallbacks {
 
+    /**
+     * While the video player is open, landscape is allowed: the player
+     * forces landscape on entry and the user can rotate. Without this flag
+     * [apply] (called again from MainActivity.onConfigurationChanged) forced
+     * the phone straight back to portrait the moment the player asked for
+     * landscape — that was why the player's rotation button did nothing.
+     * The player sets this true on entry and false on leave.
+     */
+    @Volatile
+    var videoPlayerActive: Boolean = false
+
     @SuppressLint("SourceLockedOrientationActivity")
     fun apply(activity: Activity) {
+        // The video player owns the orientation while it is open.
+        if (videoPlayerActive) return
         val isPhone = activity.resources.configuration.smallestScreenWidthDp < LargeScreenSmallestWidthDp
         val orientation = if (isPhone) {
             ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
