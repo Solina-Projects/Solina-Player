@@ -719,10 +719,13 @@ class MainActivity : ComponentActivity() {
             setOf(
                 // Home feedback (2026-11-16): the floating bottom bar must not
                 // show on Home — only once inside the Music (Library) or Video
-                // (VideoLibrary / VideoPlayer) sections. Search and Customise
-                // Home are reached from Home, so they hide it too.
+                // (VideoLibrary / VideoPlayer) sections. Customise Home is
+                // reached from Home, so it hides it too.
+                // Search feedback (2026-11-16): Screen.Search is NOT hidden
+                // any more — the floating bar stays active on the Music
+                // Search screen (Home / Search / Library, Search selected).
+                // The video Search screen shows the video bar instead.
                 Screen.Home.route,
-                Screen.Search.route,
                 Screen.HomeCustomization.route,
                 Screen.Settings.route,
                 Screen.Accounts.route,
