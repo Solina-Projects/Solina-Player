@@ -34,7 +34,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -42,29 +41,37 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Audiotrack
 import androidx.compose.material.icons.rounded.Bedtime
 import androidx.compose.material.icons.rounded.ClosedCaption
 import androidx.compose.material.icons.rounded.Equalizer
+import androidx.compose.material.icons.rounded.Fullscreen
 import androidx.compose.material.icons.rounded.FullscreenExit
 import androidx.compose.material.icons.rounded.Headphones
 import androidx.compose.material.icons.rounded.KeyboardArrowUp
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material.icons.rounded.NightsStay
+import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.PhotoCamera
+import androidx.compose.material.icons.rounded.PictureInPictureAlt
+import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Repeat
 import androidx.compose.material.icons.rounded.RepeatOne
 import androidx.compose.material.icons.rounded.ScreenRotation
 import androidx.compose.material.icons.rounded.Shuffle
+import androidx.compose.material.icons.rounded.SkipNext
+import androidx.compose.material.icons.rounded.SkipPrevious
 import androidx.compose.material.icons.rounded.Speed
 import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material.icons.rounded.VolumeOff
 import androidx.compose.material.icons.rounded.VolumeUp
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -72,6 +79,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -80,6 +88,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -88,7 +98,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.pointer.awaitEachGesture
+import androidx.compose.ui.input.pointer.awaitFirstDown
+import androidx.compose.ui.input.pointer.awaitPointerEvent
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.stringResource
@@ -110,13 +124,17 @@ import androidx.navigation.NavController
 import app.solina.player.R
 import app.solina.player.presentation.viewmodel.VideoPlayerViewModel
 import app.solina.player.utils.PhoneOrientationPolicy
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 import java.net.URLDecoder
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import kotlin.math.abs
+import kotlin.math.roundToInt
 
 /**
  * Video player: a dedicated ExoPlayer with video + subtitle tracks, in the
@@ -154,6 +172,25 @@ import java.util.Locale
  *   Effect, Equalizer, Screenshot, Background Play, Screen Rotation,
  *   Speed. The PlayerView's own controller still gives the seek bar and
  *   prev/pause/next below it.
+ *
+ * Gestures + bars feedback (2026-11-16):
+ * - The arrow handle is now transparent (same dark translucent colour as
+ *   its bar) and sits at the top, right under the three-dot menu. The top
+ *   bar's background is the same translucent dark, not a solid surface.
+ * - ALL bars auto-hide ~3 s after the last interaction while playing, and
+ *   a tap anywhere on the video shows them again. The built-in PlayerView
+ *   controller is OFF — the bottom transport bar below is custom, exactly
+ *   like the reference: seek bar with times, then lock | prev -15s
+ *   play/pause +15s next | fullscreen PiP.
+ * - One gesture layer over the video surface, with clear thresholds, so
+ *   tap / long-press / swipe-seek / brightness / volume / pinch do not
+ *   fight each other: short tap toggles the bars; holding ~400 ms opens
+ *   a speed bar just below the arrow (8 speeds, 0.1x–4x, slide while
+ *   holding to pick, last speed remembered); horizontal drag seeks (the
+ *   delta shows on screen, applied on release); vertical drag on the left
+ *   half sets brightness, on the right half volume; two-finger pinch
+ *   zooms the video (graphicsLayer scale on the PlayerView, 1.0x–3.0x,
+ *   double-tap resets to 1.0x).
  */
 @OptIn(ExperimentalMaterial3Api::class, UnstableApi::class)
 @Composable
@@ -171,6 +208,7 @@ fun VideoPlayerScreen(
     val currentVideo by videoPlayerViewModel.currentVideo.collectAsStateWithLifecycle()
     val playbackSpeed by videoPlayerViewModel.playbackSpeed.collectAsStateWithLifecycle()
     val isFullscreen by videoPlayerViewModel.isFullscreen.collectAsStateWithLifecycle()
+    val isLoading by videoPlayerViewModel.isLoading.collectAsStateWithLifecycle()
     val aspectMode by videoPlayerViewModel.aspectMode.collectAsStateWithLifecycle()
     val backgroundPlayback by videoPlayerViewModel.backgroundPlayback.collectAsStateWithLifecycle()
     val nightLight by videoPlayerViewModel.nightLight.collectAsStateWithLifecycle()
@@ -200,6 +238,72 @@ fun VideoPlayerScreen(
     // Rotation: null = follow the system, true = landscape, false = portrait.
     // Starts at true: selecting a film plays it horizontal automatically.
     var forcedLandscape by rememberSaveable { mutableStateOf<Boolean?>(true) }
+
+    // ---- Gestures + bars state (2026-11-16) ----
+    // All bars auto-hide ~3 s after the last interaction while playing;
+    // a tap on the video shows them again. interactionTick restarts the
+    // timer; poke() is called on every user interaction with the player.
+    var barsVisible by remember { mutableStateOf(true) }
+    var interactionTick by remember { mutableIntStateOf(0) }
+    fun poke() {
+        interactionTick++
+    }
+    // Pinch zoom: graphicsLayer scale on the PlayerView, 1.0x–3.0x.
+    var zoomScale by remember { mutableStateOf(1f) }
+    // Long-press speed mode: the speed bar just below the arrow.
+    var speedMode by remember { mutableStateOf(false) }
+    var speedBarVisible by remember { mutableStateOf(false) }
+    // Seek preview while dragging (horizontal swipe or the seek slider).
+    var seekPreviewMs by remember { mutableLongStateOf(-1L) }
+    var seekDeltaText by remember { mutableStateOf<String?>(null) }
+    var scrubbing by remember { mutableStateOf(false) }
+    // Centre hint while a vertical swipe adjusts brightness / volume.
+    var gestureHint by remember { mutableStateOf<GestureHint?>(null) }
+    // Brightness set by a left-half swipe (session only); null means the
+    // night-light value (or the system brightness) applies instead.
+    var gestureBrightness by rememberSaveable { mutableStateOf<Float?>(null) }
+    var positionMs by remember { mutableLongStateOf(0L) }
+    var durationMs by remember { mutableLongStateOf(0L) }
+    var isPlaying by remember { mutableStateOf(false) }
+    var lastTapTimeMs by remember { mutableLongStateOf(0L) }
+
+    val brightnessLabel = stringResource(R.string.video_brightness)
+    val volumeLabel = stringResource(R.string.video_volume)
+    val speedOptions = videoPlayerViewModel.availableSpeeds
+
+    // Position / duration / playing state, polled for the custom bottom
+    // bar (the built-in PlayerView controller is off now).
+    LaunchedEffect(player) {
+        while (currentCoroutineContext().isActive) {
+            val p = player
+            if (p != null) {
+                if (!scrubbing) positionMs = p.currentPosition
+                durationMs = p.duration.coerceAtLeast(0L)
+                isPlaying = p.isPlaying
+            }
+            delay(250)
+        }
+    }
+
+    // Auto-hide: hide all bars 3 s after the last interaction, only while
+    // playing, and never while a menu/dialog or the speed bar is open.
+    val anyMenuOpen = showSpeedMenu || showSubtitleMenu || showAudioMenu ||
+        showOverflowMenu || showAudioDialog || showCustomiseDialog
+    LaunchedEffect(barsVisible, interactionTick, isPlaying, anyMenuOpen, speedMode, speedBarVisible) {
+        if (barsVisible && isPlaying && !anyMenuOpen && !speedMode && !speedBarVisible) {
+            delay(3_000)
+            barsVisible = false
+        }
+    }
+
+    // Speed bar: stays up while the finger is held down choosing a speed,
+    // and for 2 s after release so a speed can still be tapped.
+    LaunchedEffect(speedBarVisible, speedMode) {
+        if (speedBarVisible && !speedMode) {
+            delay(2_000)
+            speedBarVisible = false
+        }
+    }
 
     val decodedUri = remember(videoUri) {
         runCatching { URLDecoder.decode(videoUri, "UTF-8") }.getOrElse { videoUri }
@@ -238,14 +342,15 @@ fun VideoPlayerScreen(
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
-    // Night light: dim the screen while playing; restore on leave.
-    LaunchedEffect(nightLight, brightness) {
+    // Brightness: the left-half swipe wins when it has set a value,
+    // otherwise the night-light brightness applies, otherwise the system.
+    LaunchedEffect(nightLight, brightness, gestureBrightness) {
         activity?.window?.let { window ->
             val attributes = window.attributes
-            attributes.screenBrightness = if (nightLight) {
-                brightness.coerceIn(10, 100) / 100f
-            } else {
-                -1f
+            attributes.screenBrightness = when {
+                gestureBrightness != null -> gestureBrightness!!.coerceIn(0.05f, 1f)
+                nightLight -> brightness.coerceIn(10, 100) / 100f
+                else -> -1f
             }
             window.attributes = attributes
         }
@@ -377,6 +482,22 @@ fun VideoPlayerScreen(
         else allButtons.filter { visibleButtons.contains(it.id) }
     }
 
+    // The arrow handle's rotation (0° closed, 180° open).
+    val arrowRotation by animateFloatAsState(
+        targetValue = if (controlsExpanded) 180f else 0f,
+        label = "videoControlsArrow"
+    )
+
+    // Position shown on the seek bar: the drag preview while seeking.
+    val displayPositionMs = if (seekPreviewMs >= 0) seekPreviewMs else positionMs
+    // Centre hint: seek delta + target time, or brightness / volume %.
+    val indicatorText: String? = when {
+        seekPreviewMs >= 0 && seekDeltaText != null ->
+            "$seekDeltaText • ${formatVideoTime(seekPreviewMs)}"
+        gestureHint != null -> "${gestureHint.label} ${gestureHint.percent}%"
+        else -> null
+    }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -389,21 +510,31 @@ fun VideoPlayerScreen(
                         ViewGroup.LayoutParams.MATCH_PARENT,
                         ViewGroup.LayoutParams.MATCH_PARENT
                     )
-                    useController = true
+                    // The built-in controller is OFF: the bottom transport
+                    // bar below is custom, and all bars share one
+                    // auto-hide state, so the built-in controller must not
+                    // pop up on its own while our bars are hidden.
+                    useController = false
                     setShowBuffering(PlayerView.SHOW_BUFFERING_WHEN_PLAYING)
                     playerViewRef = this
                 }
             },
             update = { playerView ->
                 playerView.player = player
-                playerView.useController = !controlsLocked
                 playerView.resizeMode = when (aspectMode) {
                     "FILL" -> AspectRatioFrameLayout.RESIZE_MODE_FILL
                     "ZOOM" -> AspectRatioFrameLayout.RESIZE_MODE_ZOOM
                     else -> AspectRatioFrameLayout.RESIZE_MODE_FIT
                 }
             },
-            modifier = Modifier.fillMaxSize()
+            modifier = Modifier
+                .fillMaxSize()
+                .graphicsLayer {
+                    // Pinch zoom: scale the whole PlayerView (video
+                    // surface) around its centre, 1.0x–3.0x.
+                    scaleX = zoomScale
+                    scaleY = zoomScale
+                }
         )
 
         if (controlsLocked) {
@@ -425,275 +556,615 @@ fun VideoPlayerScreen(
                 )
             }
         } else {
+            // ---- One gesture layer over the video surface. It sits above
+            // the PlayerView and below all the bars, so taps on the bars
+            // never reach it. A single custom detector (not stacked
+            // detectTap/detectDrag/detectTransform modifiers) decides the
+            // gesture by thresholds, so tap / long-press / seek / brightness
+            // / volume / pinch cannot fight each other:
+            //  * short tap (no move, < 400 ms) → toggle all bars;
+            //    two quick taps → reset the pinch zoom to 1.0x.
+            //  * hold > ~400 ms without moving → speed mode: the speed bar
+            //    opens just below the arrow; sliding the finger
+            //    forward/back while holding steps through the 8 speeds.
+            //  * horizontal drag → seek (delta shown, applied on release).
+            //  * vertical drag, left half → brightness; right half → volume.
+            //  * second finger down → pinch zoom (span ratio).
+            // Every pointer change is consumed, so the PlayerView never
+            // sees these touches.
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .pointerInput(player) {
+                        awaitEachGesture {
+                            val down = awaitFirstDown()
+                            down.consume()
+                            var mode = GestureMode.Undecided
+                            val slopPx = viewConfiguration.touchSlop
+                            var seekStartMs = player?.currentPosition ?: 0L
+                            var seekAccumMs = 0L
+                            var brightStart = gestureBrightness
+                                ?: activity?.window?.attributes?.screenBrightness
+                                    ?.takeIf { it >= 0f }
+                                ?: if (nightLight) brightness / 100f else 0.5f
+                            var volStart = volume
+                            var speedAnchorX = down.position.x
+                            var speedIndex = speedOptions
+                                .indexOfFirst { it == playbackSpeed }
+                                .coerceAtLeast(0)
+                            var pinchLastSpan = 0f
+                            var longPressFired = false
+
+                            // The long-press timer runs as a child of this
+                            // gesture (coroutineScope): awaitEachGesture's
+                            // receiver is not a CoroutineScope itself.
+                            coroutineScope {
+                            val longPressJob = launch {
+                                delay(400)
+                                if (mode == GestureMode.Undecided) {
+                                    mode = GestureMode.Speed
+                                    longPressFired = true
+                                    speedMode = true
+                                    speedBarVisible = true
+                                    barsVisible = true
+                                    poke()
+                                }
+                            }
+                            try {
+                                while (true) {
+                                    val event = awaitPointerEvent()
+                                    val pressed = event.changes.filter { it.pressed }
+                                    if (pressed.isEmpty()) break
+                                    if (pressed.size < 2 && mode == GestureMode.Pinch) {
+                                        // One finger lifted mid-pinch: forget
+                                        // the span so a fresh pinch re-inits.
+                                        pinchLastSpan = 0f
+                                    }
+                                    if (pressed.size >= 2) {
+                                        if (mode != GestureMode.Pinch || pinchLastSpan <= 0f) {
+                                            longPressJob.cancel()
+                                            if (mode == GestureMode.Speed) {
+                                                speedMode = false
+                                            }
+                                            // A drag that turns into a pinch
+                                            // is abandoned: clear its preview
+                                            // so no stale hint stays on screen.
+                                            if (mode == GestureMode.Seek) {
+                                                seekPreviewMs = -1L
+                                                seekDeltaText = null
+                                                scrubbing = false
+                                            }
+                                            if (mode == GestureMode.Brightness ||
+                                                mode == GestureMode.Volume
+                                            ) {
+                                                gestureHint = null
+                                            }
+                                            mode = GestureMode.Pinch
+                                            val p0 = pressed[0].position
+                                            val p1 = pressed[1].position
+                                            pinchLastSpan = (p0 - p1).getDistance()
+                                        } else {
+                                            val p0 = pressed[0].position
+                                            val p1 = pressed[1].position
+                                            val span = (p0 - p1).getDistance()
+                                            if (pinchLastSpan > 0f && span > 0f) {
+                                                zoomScale = (zoomScale * span / pinchLastSpan)
+                                                    .coerceIn(1f, 3f)
+                                            }
+                                            pinchLastSpan = span
+                                        }
+                                        pressed.forEach { it.consume() }
+                                        continue
+                                    }
+                                    val change = pressed.firstOrNull { it.id == down.id }
+                                        ?: pressed.first()
+                                    val pos = change.position
+                                    when (mode) {
+                                        GestureMode.Undecided -> {
+                                            val dx = pos.x - down.position.x
+                                            val dy = pos.y - down.position.y
+                                            if (abs(dx) > slopPx || abs(dy) > slopPx) {
+                                                longPressJob.cancel()
+                                                mode = if (abs(dx) > abs(dy)) {
+                                                    GestureMode.Seek
+                                                } else if (down.position.x < size.width / 2f) {
+                                                    GestureMode.Brightness
+                                                } else {
+                                                    GestureMode.Volume
+                                                }
+                                                barsVisible = true
+                                                poke()
+                                                if (mode == GestureMode.Seek) {
+                                                    val dur = player?.duration ?: 0L
+                                                    if (dur > 0) {
+                                                        scrubbing = true
+                                                        seekAccumMs =
+                                                            ((dx / size.width) * dur).toLong()
+                                                        val target = (seekStartMs + seekAccumMs)
+                                                            .coerceIn(0L, dur)
+                                                        seekPreviewMs = target
+                                                        seekDeltaText =
+                                                            formatSeekDelta(seekAccumMs)
+                                                    }
+                                                }
+                                            }
+                                        }
+                                        GestureMode.Seek -> {
+                                            val dur = player?.duration ?: 0L
+                                            if (dur > 0) {
+                                                val dx = pos.x - down.position.x
+                                                seekAccumMs =
+                                                    ((dx / size.width) * dur).toLong()
+                                                val target = (seekStartMs + seekAccumMs)
+                                                    .coerceIn(0L, dur)
+                                                seekPreviewMs = target
+                                                seekDeltaText = formatSeekDelta(seekAccumMs)
+                                            }
+                                        }
+                                        GestureMode.Brightness -> {
+                                            val dy = pos.y - down.position.y
+                                            val frac = (-dy / size.height).coerceIn(-1f, 1f)
+                                            val newVal =
+                                                (brightStart + frac).coerceIn(0.05f, 1f)
+                                            gestureBrightness = newVal
+                                            gestureHint = GestureHint(
+                                                brightnessLabel,
+                                                (newVal * 100).roundToInt()
+                                            )
+                                        }
+                                        GestureMode.Volume -> {
+                                            val dy = pos.y - down.position.y
+                                            val frac = (-dy / size.height).coerceIn(-1f, 1f)
+                                            val newVal =
+                                                (volStart + frac).coerceIn(0f, 1f)
+                                            // Live only: no DataStore write
+                                            // per move; persisted on release.
+                                            videoPlayerViewModel.setVolumeLive(newVal)
+                                            gestureHint = GestureHint(
+                                                volumeLabel,
+                                                (newVal * 100).roundToInt()
+                                            )
+                                        }
+                                        GestureMode.Speed -> {
+                                            val stepPx = with(density) { 60.dp.toPx() }
+                                            val dx = pos.x - speedAnchorX
+                                            if (abs(dx) >= stepPx) {
+                                                val steps = (dx / stepPx).toInt()
+                                                speedIndex = (speedIndex + steps)
+                                                    .coerceIn(0, speedOptions.lastIndex)
+                                                speedAnchorX = pos.x
+                                                videoPlayerViewModel.setSpeed(
+                                                    speedOptions[speedIndex]
+                                                )
+                                                poke()
+                                            }
+                                        }
+                                        GestureMode.Pinch -> {
+                                            // Handled in the two-finger
+                                            // branch above.
+                                        }
+                                    }
+                                    change.consume()
+                                }
+                            } finally {
+                                longPressJob.cancel()
+                            }
+                            // ---- Gesture end ----
+                            when (mode) {
+                                GestureMode.Undecided -> {
+                                    if (!longPressFired) {
+                                        // Tap: two quick taps reset the
+                                        // pinch zoom, otherwise toggle bars.
+                                        val now = System.currentTimeMillis()
+                                        if (now - lastTapTimeMs < 350) {
+                                            zoomScale = 1f
+                                            lastTapTimeMs = 0L
+                                        } else {
+                                            lastTapTimeMs = now
+                                            barsVisible = !barsVisible
+                                            poke()
+                                        }
+                                    }
+                                }
+                                GestureMode.Seek -> {
+                                    if (seekPreviewMs >= 0) {
+                                        videoPlayerViewModel.seekTo(seekPreviewMs)
+                                        positionMs = seekPreviewMs
+                                    }
+                                    seekPreviewMs = -1L
+                                    seekDeltaText = null
+                                    scrubbing = false
+                                }
+                                GestureMode.Brightness, GestureMode.Volume -> {
+                                    gestureHint = null
+                                    if (mode == GestureMode.Volume) {
+                                        // Persist the volume once, at the
+                                        // end of the swipe.
+                                        videoPlayerViewModel.setVolume(volume)
+                                    }
+                                }
+                                GestureMode.Speed -> {
+                                    // The chosen speed stays (persisted by
+                                    // setSpeed); the bar hides by itself
+                                    // 2 s after release.
+                                    speedMode = false
+                                }
+                                GestureMode.Pinch -> {
+                                    // Nothing to commit.
+                                }
+                            }
+                            poke()
+                            } // coroutineScope: the long-press timer child
+                        }
+                    }
+            )
+
             // ---- Top bar: back, film title, subtitles, audio (dubbing),
-            // three-dot menu — and nothing else. It sits below the status
-            // bar (statusBarsPadding + extra margin) so the title never
-            // clashes with it, in portrait and in fullscreen-landscape.
-            if (!isFullscreen) {
+            // three-dot menu — and nothing else. Its background is the
+            // same translucent dark as the arrow bar (no solid surface),
+            // and it sits below the status bar (statusBarsPadding + extra
+            // margin) so the title never clashes with it, in portrait and
+            // in fullscreen-landscape. The animated arrow handle sits
+            // right under the three-dot menu, and the long-press speed bar
+            // opens just below the arrow. The whole top area auto-hides
+            // with the other bars.
+            AnimatedVisibility(
+                visible = barsVisible,
+                enter = fadeIn(),
+                exit = fadeOut(),
+                modifier = Modifier.align(Alignment.TopCenter)
+            ) {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .align(Alignment.TopCenter)
                         .statusBarsPadding()
-                        .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.75f))
-                        .padding(start = 4.dp, end = 4.dp, top = 12.dp, bottom = 4.dp)
                 ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.fillMaxWidth()
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(Color.Black.copy(alpha = 0.55f))
+                            .padding(start = 4.dp, end = 4.dp, top = 12.dp, bottom = 4.dp)
                     ) {
-                        IconButton(onClick = { navController.popBackStack() }) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
-                                contentDescription = null
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            IconButton(onClick = { navController.popBackStack() }) {
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
+                                    contentDescription = null,
+                                    tint = Color.White
+                                )
+                            }
+                            Text(
+                                text = currentVideo?.displayTitle
+                                    ?: stringResource(R.string.video_player_title),
+                                style = MaterialTheme.typography.titleMedium,
+                                color = Color.White,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.weight(1f)
                             )
-                        }
-                        Text(
-                            text = currentVideo?.displayTitle
-                                ?: stringResource(R.string.video_player_title),
-                            style = MaterialTheme.typography.titleMedium,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.weight(1f)
-                        )
-                        // Subtitles: the file's subtitle tracks, or "off".
-                        Box {
-                            IconButton(onClick = { showSubtitleMenu = true }) {
-                                Icon(
-                                    imageVector = Icons.Rounded.ClosedCaption,
-                                    contentDescription = stringResource(R.string.video_subtitles),
-                                    tint = if (selectedSubtitleTrack >= 0) {
-                                        MaterialTheme.colorScheme.primary
-                                    } else {
-                                        MaterialTheme.colorScheme.onSurface
-                                    }
-                                )
-                            }
-                            DropdownMenu(
-                                expanded = showSubtitleMenu,
-                                onDismissRequest = { showSubtitleMenu = false }
-                            ) {
-                                DropdownMenuItem(
-                                    text = {
-                                        Text(text = stringResource(R.string.video_subtitle_off))
-                                    },
-                                    onClick = {
-                                        videoPlayerViewModel.selectSubtitleTrack(-1)
-                                        showSubtitleMenu = false
-                                    }
-                                )
-                                if (subtitleTrackLabels.isEmpty()) {
+                            // Subtitles: the file's subtitle tracks, or "off".
+                            Box {
+                                IconButton(onClick = { showSubtitleMenu = true }) {
+                                    Icon(
+                                        imageVector = Icons.Rounded.ClosedCaption,
+                                        contentDescription = stringResource(R.string.video_subtitles),
+                                        tint = if (selectedSubtitleTrack >= 0) {
+                                            MaterialTheme.colorScheme.primary
+                                        } else {
+                                            Color.White
+                                        }
+                                    )
+                                }
+                                DropdownMenu(
+                                    expanded = showSubtitleMenu,
+                                    onDismissRequest = { showSubtitleMenu = false }
+                                ) {
                                     DropdownMenuItem(
                                         text = {
-                                            Text(
-                                                text = stringResource(R.string.video_no_subtitles),
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                                            )
+                                            Text(text = stringResource(R.string.video_subtitle_off))
                                         },
-                                        onClick = { showSubtitleMenu = false },
-                                        enabled = false
+                                        onClick = {
+                                            videoPlayerViewModel.selectSubtitleTrack(-1)
+                                            showSubtitleMenu = false
+                                        }
                                     )
-                                } else {
-                                    subtitleTrackLabels.forEachIndexed { index, label ->
+                                    if (subtitleTrackLabels.isEmpty()) {
                                         DropdownMenuItem(
-                                            text = { Text(text = label) },
-                                            onClick = {
-                                                videoPlayerViewModel.selectSubtitleTrack(index)
-                                                showSubtitleMenu = false
-                                            }
+                                            text = {
+                                                Text(
+                                                    text = stringResource(R.string.video_no_subtitles),
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                )
+                                            },
+                                            onClick = { showSubtitleMenu = false },
+                                            enabled = false
                                         )
-                                    }
-                                }
-                            }
-                        }
-                        // Audio: the file's audio tracks (dubbing).
-                        Box {
-                            IconButton(onClick = { showAudioMenu = true }) {
-                                Icon(
-                                    imageVector = Icons.Rounded.Audiotrack,
-                                    contentDescription = stringResource(R.string.video_audio_settings),
-                                    tint = if (audioTrackLabels.size > 1) {
-                                        MaterialTheme.colorScheme.primary
                                     } else {
-                                        MaterialTheme.colorScheme.onSurface
-                                    }
-                                )
-                            }
-                            DropdownMenu(
-                                expanded = showAudioMenu,
-                                onDismissRequest = { showAudioMenu = false }
-                            ) {
-                                if (audioTrackLabels.isEmpty()) {
-                                    DropdownMenuItem(
-                                        text = {
-                                            Text(
-                                                text = stringResource(R.string.video_no_audio_tracks),
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                                            )
-                                        },
-                                        onClick = { showAudioMenu = false },
-                                        enabled = false
-                                    )
-                                } else {
-                                    audioTrackLabels.forEachIndexed { index, label ->
-                                        DropdownMenuItem(
-                                            text = { Text(text = label) },
-                                            onClick = {
-                                                videoPlayerViewModel.selectAudioTrack(index)
-                                                showAudioMenu = false
-                                            }
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                        // Three-dot menu: the remaining actions.
-                        Box {
-                            IconButton(onClick = { showOverflowMenu = true }) {
-                                Icon(
-                                    imageVector = Icons.Rounded.MoreVert,
-                                    contentDescription = null
-                                )
-                            }
-                            DropdownMenu(
-                                expanded = showOverflowMenu,
-                                onDismissRequest = { showOverflowMenu = false }
-                            ) {
-                                DropdownMenuItem(
-                                    text = {
-                                        Text(
-                                            text = stringResource(R.string.video_aspect_ratio) +
-                                                ": " + when (aspectMode) {
-                                                    "FILL" -> stringResource(R.string.video_aspect_fill)
-                                                    "ZOOM" -> stringResource(R.string.video_aspect_zoom)
-                                                    else -> stringResource(R.string.video_aspect_fit)
+                                        subtitleTrackLabels.forEachIndexed { index, label ->
+                                            DropdownMenuItem(
+                                                text = { Text(text = label) },
+                                                onClick = {
+                                                    videoPlayerViewModel.selectSubtitleTrack(index)
+                                                    showSubtitleMenu = false
                                                 }
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                            // Audio: the file's audio tracks (dubbing).
+                            Box {
+                                IconButton(onClick = { showAudioMenu = true }) {
+                                    Icon(
+                                        imageVector = Icons.Rounded.Audiotrack,
+                                        contentDescription = stringResource(R.string.video_audio_settings),
+                                        tint = if (audioTrackLabels.size > 1) {
+                                            MaterialTheme.colorScheme.primary
+                                        } else {
+                                            Color.White
+                                        }
+                                    )
+                                }
+                                DropdownMenu(
+                                    expanded = showAudioMenu,
+                                    onDismissRequest = { showAudioMenu = false }
+                                ) {
+                                    if (audioTrackLabels.isEmpty()) {
+                                        DropdownMenuItem(
+                                            text = {
+                                                Text(
+                                                    text = stringResource(R.string.video_no_audio_tracks),
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                )
+                                            },
+                                            onClick = { showAudioMenu = false },
+                                            enabled = false
                                         )
-                                    },
-                                    onClick = {
-                                        videoPlayerViewModel.cycleAspectMode()
-                                        showOverflowMenu = false
+                                    } else {
+                                        audioTrackLabels.forEachIndexed { index, label ->
+                                            DropdownMenuItem(
+                                                text = { Text(text = label) },
+                                                onClick = {
+                                                    videoPlayerViewModel.selectAudioTrack(index)
+                                                    showAudioMenu = false
+                                                }
+                                            )
+                                        }
                                     }
-                                )
-                                DropdownMenuItem(
-                                    text = {
-                                        Text(text = stringResource(R.string.video_screenshot))
-                                    },
-                                    onClick = {
-                                        takeScreenshot()
-                                        showOverflowMenu = false
-                                    }
-                                )
-                                DropdownMenuItem(
-                                    text = {
-                                        Text(
-                                            text = stringResource(R.string.video_background_playback) +
-                                                if (backgroundPlayback) " ✓" else ""
-                                        )
-                                    },
-                                    onClick = {
-                                        videoPlayerViewModel.setBackgroundPlayback(!backgroundPlayback)
-                                        showOverflowMenu = false
-                                    }
-                                )
-                                DropdownMenuItem(
-                                    text = {
-                                        Text(text = stringResource(R.string.video_fullscreen))
-                                    },
-                                    onClick = {
-                                        videoPlayerViewModel.toggleFullscreen()
-                                        showOverflowMenu = false
-                                    }
-                                )
-                                DropdownMenuItem(
-                                    text = {
-                                        Text(text = stringResource(R.string.video_picture_in_picture))
-                                    },
-                                    onClick = {
-                                        enterPictureInPicture()
-                                        showOverflowMenu = false
-                                    }
-                                )
-                                DropdownMenuItem(
-                                    text = {
-                                        Text(text = stringResource(R.string.video_lock_controls))
-                                    },
-                                    onClick = {
-                                        controlsLocked = true
-                                        showOverflowMenu = false
-                                    }
+                                }
+                            }
+                            // Three-dot menu: the remaining actions.
+                            Box {
+                                IconButton(onClick = { showOverflowMenu = true }) {
+                                    Icon(
+                                        imageVector = Icons.Rounded.MoreVert,
+                                        contentDescription = null,
+                                        tint = Color.White
+                                    )
+                                }
+                                DropdownMenu(
+                                    expanded = showOverflowMenu,
+                                    onDismissRequest = { showOverflowMenu = false }
+                                ) {
+                                    DropdownMenuItem(
+                                        text = {
+                                            Text(
+                                                text = stringResource(R.string.video_aspect_ratio) +
+                                                    ": " + when (aspectMode) {
+                                                        "FILL" -> stringResource(R.string.video_aspect_fill)
+                                                        "ZOOM" -> stringResource(R.string.video_aspect_zoom)
+                                                        else -> stringResource(R.string.video_aspect_fit)
+                                                    }
+                                            )
+                                        },
+                                        onClick = {
+                                            videoPlayerViewModel.cycleAspectMode()
+                                            showOverflowMenu = false
+                                        }
+                                    )
+                                    DropdownMenuItem(
+                                        text = {
+                                            Text(text = stringResource(R.string.video_screenshot))
+                                        },
+                                        onClick = {
+                                            takeScreenshot()
+                                            showOverflowMenu = false
+                                        }
+                                    )
+                                    DropdownMenuItem(
+                                        text = {
+                                            Text(
+                                                text = stringResource(R.string.video_background_playback) +
+                                                    if (backgroundPlayback) " ✓" else ""
+                                            )
+                                        },
+                                        onClick = {
+                                            videoPlayerViewModel.setBackgroundPlayback(!backgroundPlayback)
+                                            showOverflowMenu = false
+                                        }
+                                    )
+                                    DropdownMenuItem(
+                                        text = {
+                                            Text(text = stringResource(R.string.video_fullscreen))
+                                        },
+                                        onClick = {
+                                            videoPlayerViewModel.toggleFullscreen()
+                                            showOverflowMenu = false
+                                        }
+                                    )
+                                    DropdownMenuItem(
+                                        text = {
+                                            Text(text = stringResource(R.string.video_picture_in_picture))
+                                        },
+                                        onClick = {
+                                            enterPictureInPicture()
+                                            showOverflowMenu = false
+                                        }
+                                    )
+                                    DropdownMenuItem(
+                                        text = {
+                                            Text(text = stringResource(R.string.video_lock_controls))
+                                        },
+                                        onClick = {
+                                            controlsLocked = true
+                                            showOverflowMenu = false
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                    }
+                    // The animated arrow handle, transparent like its bar,
+                    // right under the three-dot menu. Tapping it slides
+                    // the round-button control bar in/out; the arrow
+                    // itself rotates 180°.
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(end = 16.dp, top = 8.dp),
+                        horizontalArrangement = Arrangement.End
+                    ) {
+                        Surface(
+                            onClick = {
+                                controlsExpanded = !controlsExpanded
+                                poke()
+                            },
+                            shape = CircleShape,
+                            color = Color.Black.copy(alpha = 0.45f),
+                            modifier = Modifier.size(40.dp)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    imageVector = Icons.Rounded.KeyboardArrowUp,
+                                    contentDescription = stringResource(
+                                        if (controlsExpanded) {
+                                            R.string.video_player_hide_controls
+                                        } else {
+                                            R.string.video_player_more_controls
+                                        }
+                                    ),
+                                    tint = Color.White,
+                                    modifier = Modifier
+                                        .size(24.dp)
+                                        .rotate(arrowRotation)
                                 )
                             }
                         }
                     }
-                }
-            } else {
-                IconButton(
-                    onClick = { videoPlayerViewModel.toggleFullscreen() },
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .statusBarsPadding()
-                        .padding(top = 12.dp, end = 8.dp)
-                        .size(48.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Rounded.FullscreenExit,
-                        contentDescription = stringResource(R.string.video_exit_fullscreen),
-                        tint = MaterialTheme.colorScheme.onSurface
-                    )
+                    // The speed bar: 8 speeds, 0.1x–4x, just below the
+                    // arrow. Opens on long-press (and stays 2 s after
+                    // release); the current speed is highlighted, and
+                    // tapping a chip picks it directly.
+                    AnimatedVisibility(
+                        visible = speedBarVisible,
+                        enter = fadeIn() + slideInVertically { -it / 2 },
+                        exit = fadeOut() + slideOutVertically { -it / 2 }
+                    ) {
+                        Surface(
+                            color = Color.Black.copy(alpha = 0.55f),
+                            shape = RoundedCornerShape(24.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(start = 16.dp, end = 16.dp, top = 8.dp)
+                        ) {
+                            LazyRow(
+                                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                items(speedOptions) { speed ->
+                                    val selected = speed == playbackSpeed
+                                    Surface(
+                                        onClick = {
+                                            videoPlayerViewModel.setSpeed(speed)
+                                            poke()
+                                        },
+                                        shape = RoundedCornerShape(16.dp),
+                                        color = if (selected) {
+                                            MaterialTheme.colorScheme.primary
+                                        } else {
+                                            Color.White.copy(alpha = 0.15f)
+                                        }
+                                    ) {
+                                        Text(
+                                            text = formatSpeedLabel(speed),
+                                            color = Color.White,
+                                            fontSize = 13.sp,
+                                            fontWeight = if (selected) {
+                                                FontWeight.Bold
+                                            } else {
+                                                FontWeight.Normal
+                                            },
+                                            modifier = Modifier.padding(
+                                                horizontal = 12.dp,
+                                                vertical = 6.dp
+                                            )
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             }
 
-            // ---- Fixed rotation icon: always visible on the right edge,
-            // outside the collapsible bar, so rotation is one tap away
-            // whether the bar is open or not. ----
-            Surface(
-                onClick = {
-                    forcedLandscape = if (forcedLandscape == true) false else true
-                },
-                shape = CircleShape,
-                color = Color.Black.copy(alpha = 0.55f),
-                modifier = Modifier
-                    .align(Alignment.CenterEnd)
-                    .padding(end = 12.dp)
-                    .size(52.dp)
+            // ---- Fixed rotation icon: always one tap away on the right
+            // edge, outside the collapsible bar. It hides with the other
+            // bars and comes back with a tap on the video. ----
+            AnimatedVisibility(
+                visible = barsVisible,
+                enter = fadeIn(),
+                exit = fadeOut(),
+                modifier = Modifier.align(Alignment.CenterEnd)
             ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Icon(
-                        imageVector = Icons.Rounded.ScreenRotation,
-                        contentDescription = stringResource(R.string.video_screen_rotation),
-                        tint = if (forcedLandscape == true) {
-                            MaterialTheme.colorScheme.primary
-                        } else {
-                            Color.White
-                        },
-                        modifier = Modifier.size(28.dp)
-                    )
+                Surface(
+                    onClick = {
+                        forcedLandscape = if (forcedLandscape == true) false else true
+                        poke()
+                    },
+                    shape = CircleShape,
+                    color = Color.Black.copy(alpha = 0.55f),
+                    modifier = Modifier
+                        .padding(end = 12.dp)
+                        .size(52.dp)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            imageVector = Icons.Rounded.ScreenRotation,
+                            contentDescription = stringResource(R.string.video_screen_rotation),
+                            tint = if (forcedLandscape == true) {
+                                MaterialTheme.colorScheme.primary
+                            } else {
+                                Color.White
+                            },
+                            modifier = Modifier.size(28.dp)
+                        )
+                    }
                 }
             }
 
-            // ---- Extra control bar (round buttons, like the reference):
-            // hidden by default; the animated arrow handle in front of it
-            // slides it in/out. ----
-            val arrowRotation by animateFloatAsState(
-                targetValue = if (controlsExpanded) 180f else 0f,
-                label = "videoControlsArrow"
-            )
+            // ---- Bottom: the round-button control bar, then the custom
+            // transport bar. Both auto-hide with the top bar. ----
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .align(Alignment.BottomCenter),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
+                // Extra control bar (round buttons, like the reference):
+                // hidden unless the arrow opened it.
                 AnimatedVisibility(
-                    visible = controlsExpanded,
+                    visible = barsVisible && controlsExpanded,
                     enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
                     exit = slideOutVertically(targetOffsetY = { it }) + fadeOut()
                 ) {
                     Surface(
                         modifier = Modifier.fillMaxWidth(),
                         color = Color.Black.copy(alpha = 0.55f),
-                        shape = androidx.compose.foundation.shape.RoundedCornerShape(
+                        shape = RoundedCornerShape(
                             topStart = 28.dp,
                             topEnd = 28.dp
                         )
@@ -752,7 +1223,7 @@ fun VideoPlayerScreen(
                                         null
                                     },
                                     circleText = if (button.id == "speed") {
-                                        if (playbackSpeed == 1f) "1×" else "${playbackSpeed}×"
+                                        formatSpeedLabel(playbackSpeed)
                                     } else {
                                         null
                                     },
@@ -784,6 +1255,7 @@ fun VideoPlayerScreen(
                                             }
                                             "speed" -> showSpeedMenu = true
                                         }
+                                        poke()
                                     },
                                 )
                             }
@@ -793,12 +1265,10 @@ fun VideoPlayerScreen(
                             expanded = showSpeedMenu,
                             onDismissRequest = { showSpeedMenu = false }
                         ) {
-                            videoPlayerViewModel.availableSpeeds.forEach { speed ->
+                            speedOptions.forEach { speed ->
                                 DropdownMenuItem(
                                     text = {
-                                        Text(
-                                            text = if (speed == 1f) "1×" else "${speed}×"
-                                        )
+                                        Text(text = formatSpeedLabel(speed))
                                     },
                                     onClick = {
                                         videoPlayerViewModel.setSpeed(speed)
@@ -809,30 +1279,226 @@ fun VideoPlayerScreen(
                         }
                     }
                 }
-                // The animated arrow handle in front of the bar.
-                Surface(
-                    onClick = { controlsExpanded = !controlsExpanded },
-                    shape = CircleShape,
-                    color = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.85f),
-                    tonalElevation = 4.dp,
-                    modifier = Modifier.padding(bottom = 12.dp)
+                // Bottom transport bar, exactly like the reference: a seek
+                // bar with the current time on the left and the total time
+                // on the right, and below it lock on the far left, prev
+                // -15s play/pause +15s next in the centre, fullscreen +
+                // picture-in-picture on the far right.
+                AnimatedVisibility(
+                    visible = barsVisible,
+                    enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
+                    exit = slideOutVertically(targetOffsetY = { it }) + fadeOut()
                 ) {
-                    Icon(
-                        imageVector = Icons.Rounded.KeyboardArrowUp,
-                        contentDescription = stringResource(
-                            if (controlsExpanded) {
-                                R.string.video_player_hide_controls
-                            } else {
-                                R.string.video_player_more_controls
-                            }
-                        ),
-                        tint = MaterialTheme.colorScheme.primary,
+                    Column(
                         modifier = Modifier
-                            .padding(8.dp)
-                            .size(24.dp)
-                            .rotate(arrowRotation)
+                            .fillMaxWidth()
+                            .background(Color.Black.copy(alpha = 0.55f))
+                            .padding(start = 8.dp, end = 8.dp, top = 4.dp, bottom = 8.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(
+                                text = formatVideoTime(displayPositionMs),
+                                color = Color.White,
+                                fontSize = 13.sp,
+                                modifier = Modifier.padding(start = 8.dp)
+                            )
+                            Slider(
+                                value = if (durationMs > 0) {
+                                    displayPositionMs.toFloat() / durationMs
+                                } else {
+                                    0f
+                                },
+                                onValueChange = { fraction ->
+                                    scrubbing = true
+                                    seekPreviewMs = (fraction * durationMs).toLong()
+                                },
+                                onValueChangeFinished = {
+                                    scrubbing = false
+                                    if (seekPreviewMs >= 0) {
+                                        videoPlayerViewModel.seekTo(seekPreviewMs)
+                                        positionMs = seekPreviewMs
+                                        seekPreviewMs = -1L
+                                    }
+                                    poke()
+                                },
+                                enabled = durationMs > 0,
+                                colors = SliderDefaults.colors(
+                                    thumbColor = Color(0xFF8FB8FF),
+                                    activeTrackColor = Color(0xFF8FB8FF),
+                                    inactiveTrackColor = Color.White.copy(alpha = 0.4f)
+                                ),
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .padding(horizontal = 8.dp)
+                            )
+                            Text(
+                                text = formatVideoTime(durationMs),
+                                color = Color.White,
+                                fontSize = 13.sp,
+                                modifier = Modifier.padding(end = 8.dp)
+                            )
+                        }
+                        Box(
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            IconButton(
+                                onClick = {
+                                    controlsLocked = true
+                                    poke()
+                                },
+                                modifier = Modifier
+                                    .align(Alignment.CenterStart)
+                                    .size(48.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Rounded.Lock,
+                                    contentDescription = stringResource(R.string.video_lock_controls),
+                                    tint = Color.White,
+                                    modifier = Modifier.size(26.dp)
+                                )
+                            }
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                modifier = Modifier.align(Alignment.Center)
+                            ) {
+                                IconButton(
+                                    onClick = {
+                                        videoPlayerViewModel.seekToPrevious()
+                                        poke()
+                                    },
+                                    modifier = Modifier.size(48.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Rounded.SkipPrevious,
+                                        contentDescription = stringResource(R.string.video_previous_video),
+                                        tint = Color.White,
+                                        modifier = Modifier.size(30.dp)
+                                    )
+                                }
+                                VideoSkip15Button(
+                                    label = "-15s",
+                                    contentDescription = stringResource(R.string.video_seek_back_15),
+                                    onClick = {
+                                        videoPlayerViewModel.seekBy(-15_000L)
+                                        poke()
+                                    }
+                                )
+                                IconButton(
+                                    onClick = {
+                                        videoPlayerViewModel.togglePlayPause()
+                                        poke()
+                                    },
+                                    modifier = Modifier.size(56.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = if (isPlaying) {
+                                            Icons.Rounded.Pause
+                                        } else {
+                                            Icons.Rounded.PlayArrow
+                                        },
+                                        contentDescription = stringResource(
+                                            if (isPlaying) {
+                                                R.string.video_pause
+                                            } else {
+                                                R.string.video_play
+                                            }
+                                        ),
+                                        tint = Color.White,
+                                        modifier = Modifier.size(36.dp)
+                                    )
+                                }
+                                VideoSkip15Button(
+                                    label = "+15s",
+                                    contentDescription = stringResource(R.string.video_seek_forward_15),
+                                    onClick = {
+                                        videoPlayerViewModel.seekBy(15_000L)
+                                        poke()
+                                    }
+                                )
+                                IconButton(
+                                    onClick = {
+                                        videoPlayerViewModel.seekToNext()
+                                        poke()
+                                    },
+                                    modifier = Modifier.size(48.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Rounded.SkipNext,
+                                        contentDescription = stringResource(R.string.video_next_video),
+                                        tint = Color.White,
+                                        modifier = Modifier.size(30.dp)
+                                    )
+                                }
+                            }
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.align(Alignment.CenterEnd)
+                            ) {
+                                IconButton(
+                                    onClick = {
+                                        videoPlayerViewModel.toggleFullscreen()
+                                        poke()
+                                    },
+                                    modifier = Modifier.size(48.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = if (isFullscreen) {
+                                            Icons.Rounded.FullscreenExit
+                                        } else {
+                                            Icons.Rounded.Fullscreen
+                                        },
+                                        contentDescription = stringResource(R.string.video_fullscreen),
+                                        tint = Color.White,
+                                        modifier = Modifier.size(28.dp)
+                                    )
+                                }
+                                IconButton(
+                                    onClick = { enterPictureInPicture() },
+                                    modifier = Modifier.size(48.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Rounded.PictureInPictureAlt,
+                                        contentDescription = stringResource(R.string.video_picture_in_picture),
+                                        tint = Color.White,
+                                        modifier = Modifier.size(28.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Centre hint for gesture feedback: seek delta + target time,
+            // or brightness / volume while swiping.
+            indicatorText?.let { text ->
+                Surface(
+                    color = Color.Black.copy(alpha = 0.6f),
+                    shape = RoundedCornerShape(20.dp),
+                    modifier = Modifier.align(Alignment.Center)
+                ) {
+                    Text(
+                        text = text,
+                        color = Color.White,
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp)
                     )
                 }
+            }
+            // Buffering spinner (the built-in controller is off, so show
+            // our own) — hidden while a gesture hint is on screen.
+            if (isLoading && indicatorText == null) {
+                CircularProgressIndicator(
+                    color = Color.White,
+                    modifier = Modifier
+                        .align(Alignment.Center)
+                        .size(48.dp)
+                )
             }
         }
     }
@@ -1038,6 +1704,31 @@ private fun VideoRoundControlButton(
     }
 }
 
+/** A small round ±15 s skip button of the bottom transport bar. */
+@Composable
+private fun VideoSkip15Button(
+    label: String,
+    contentDescription: String,
+    onClick: () -> Unit
+) {
+    Surface(
+        onClick = onClick,
+        shape = CircleShape,
+        color = Color.White.copy(alpha = 0.15f),
+        modifier = Modifier.size(40.dp)
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            Text(
+                text = label,
+                color = Color.White,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center
+            )
+        }
+    }
+}
+
 /** A round button of the player's extra control bar. */
 private data class VideoControlButton(
     val id: String,
@@ -1060,6 +1751,43 @@ private val videoControlButtons = listOf(
     VideoControlButton("rotation", Icons.Rounded.ScreenRotation, R.string.video_screen_rotation),
     VideoControlButton("speed", Icons.Rounded.Speed, R.string.video_speed)
 )
+
+/** Which gesture the video-surface detector is currently tracking. */
+private enum class GestureMode {
+    Undecided, Seek, Brightness, Volume, Speed, Pinch
+}
+
+/** Centre hint while a vertical swipe adjusts brightness / volume. */
+private data class GestureHint(val label: String, val percent: Int)
+
+/** "mm:ss" (or "h:mm:ss" for long videos), for the bottom seek bar. */
+private fun formatVideoTime(positionMs: Long): String {
+    val totalSeconds = (positionMs / 1000).coerceAtLeast(0L)
+    val hours = totalSeconds / 3600
+    val minutes = (totalSeconds % 3600) / 60
+    val seconds = totalSeconds % 60
+    return if (hours > 0) {
+        "%d:%02d:%02d".format(hours, minutes, seconds)
+    } else {
+        "%02d:%02d".format(minutes, seconds)
+    }
+}
+
+/** "+15s" / "-10s": the seek delta shown while swiping horizontally. */
+private fun formatSeekDelta(deltaMs: Long): String {
+    val seconds = abs(deltaMs) / 1000
+    return if (deltaMs >= 0) "+${seconds}s" else "-${seconds}s"
+}
+
+/** "1×" / "0.25×" / "4×": playback speed without trailing ".0". */
+private fun formatSpeedLabel(speed: Float): String {
+    val text = if (speed == speed.toInt().toFloat()) {
+        speed.toInt().toString()
+    } else {
+        speed.toString()
+    }
+    return "${text}×"
+}
 
 /** Save a captured frame under Pictures/Solina Player. */
 private fun saveScreenshotBitmap(context: android.content.Context, bitmap: Bitmap) {
