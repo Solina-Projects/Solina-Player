@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Music + Video (feature/music-and-video): video library, video player and
+     Home customisation labels. English, matching the rest of the app — the
+     app has no Persian (values-fa) locale yet. -->
+<resources>
+    <string name="video_title">Video</string>
+    <string name="video_library_title">Videos</string>
+    <string name="video_player_title">Video player</string>
+    <string name="video_count_label">%1$d videos</string>
+    <string name="video_no_videos_title">No videos yet</string>
+    <string name="video_no_videos_subtitle">Videos on your device will show up here.</string>
+    <string name="video_no_permission_subtitle">Allow video access to see your videos here.</string>
+    <string name="video_playback_speed">Playback speed</string>
+    <string name="video_fullscreen">Fullscreen</string>
+    <string name="video_exit_fullscreen">Exit fullscreen</string>
+    <string name="video_unknown_title">Unknown video</string>
+    <string name="video_subtitles">Subtitles</string>
+    <string name="video_subtitles_hint">Subtitles appear from the player controls when the video has a subtitle track.</string>
+
+    <string name="home_choose_player_title">Choose what to play</string>
+    <string name="home_music_card_title">Music</string>
+    <string name="home_music_card_subtitle">Songs, albums and playlists</string>
+    <string name="home_video_card_title">Video</string>
+    <string name="home_video_card_subtitle">Movies and clips on your device</string>
+    <string name="home_music_count_label">%1$d songs</string>
+    <string name="home_video_count_label">%1$d videos</string>
+    <string name="home_recent_music_title">Recently added music</string>
+    <string name="home_recent_videos_title">Recently added videos</string>
+    <string name="home_see_all">See all</string>
+    <string name="home_customize_title">Customise Home</string>
+    <string name="home_customize_subtitle">Choose which sections show on Home, and in which order.</string>
+    <string name="home_customize_reset">Reset to defaults</string>
+    <string name="home_customize_show">Shown</string>
+    <string name="home_customize_hidden">Hidden</string>
+    <string name="home_customize_move_up">Move up</string>
+    <string name="home_customize_move_down">Move down</string>
+    <string name="home_section_entry_cards">Music / Video chooser</string>
+    <string name="home_section_counts">Music and video counts</string>
+    <string name="home_section_recent_music">Recently added music</string>
+    <string name="home_section_recent_videos">Recently added videos</string>
+    <string name="home_section_your_mix">Your Mix</string>
+    <string name="home_section_daily_mix">Daily Mix</string>
+    <string name="home_section_recently_played">Recently played</string>
+    <string name="home_section_stats">Listening stats</string>
+    <string name="home_section_recap">Recap card</string>
+</resources>

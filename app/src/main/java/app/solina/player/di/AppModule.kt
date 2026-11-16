@@ -290,6 +290,18 @@ object AppModule {
 
     @Provides
     @Singleton
+    fun provideVideoRepository(
+        @ApplicationContext context: Context,
+        mediaStoreObserver: app.solina.player.data.observer.MediaStoreObserver
+    ): app.solina.player.data.repository.VideoRepository {
+        return app.solina.player.data.repository.MediaStoreVideoRepository(
+            context = context,
+            mediaStoreObserver = mediaStoreObserver
+        )
+    }
+
+    @Provides
+    @Singleton
     fun provideFolderTreeBuilder(): FolderTreeBuilder {
         return FolderTreeBuilder()
     }

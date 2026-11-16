@@ -357,7 +357,11 @@ class MainActivity : ComponentActivity() {
             var crashLogData by remember { mutableStateOf<CrashLogData?>(null) }
             
             val permissions = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                listOf(Manifest.permission.READ_MEDIA_AUDIO, Manifest.permission.POST_NOTIFICATIONS)
+                listOf(
+                    Manifest.permission.READ_MEDIA_AUDIO,
+                    Manifest.permission.READ_MEDIA_VIDEO,
+                    Manifest.permission.POST_NOTIFICATIONS
+                )
             } else {
                 listOf(Manifest.permission.READ_EXTERNAL_STORAGE)
             }

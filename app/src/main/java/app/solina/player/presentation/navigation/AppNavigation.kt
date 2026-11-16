@@ -48,9 +48,12 @@ import app.solina.player.presentation.screens.EasterEggScreen
 import app.solina.player.presentation.screens.ExperimentalSettingsScreen
 import app.solina.player.presentation.screens.LyricsSettingsScreen
 import app.solina.player.presentation.screens.GenreDetailScreen
+import app.solina.player.presentation.screens.HomeCustomizationScreen
 import app.solina.player.presentation.screens.HomeScreen
 import app.solina.player.presentation.screens.LibraryScreen
 import app.solina.player.presentation.screens.MashupScreen
+import app.solina.player.presentation.screens.VideoLibraryScreen
+import app.solina.player.presentation.screens.VideoPlayerScreen
 import app.solina.player.presentation.screens.NavBarCornerRadiusScreen
 import app.solina.player.presentation.screens.PaletteStyleSettingsScreen
 import app.solina.player.presentation.screens.PlaylistDetailScreen
@@ -742,6 +745,44 @@ fun AppNavigation(
                     navController = navController,
                     playerViewModel = playerViewModel
                 )
+            }
+            composable(
+                Screen.VideoLibrary.route,
+                enterTransition = { enterTransition() },
+                exitTransition = { exitTransition() },
+                popEnterTransition = { popEnterTransition() },
+                popExitTransition = { popExitTransition() },
+            ) {
+                ScreenWrapper(navController = navController, playerViewModel = playerViewModel) {
+                    VideoLibraryScreen(navController = navController)
+                }
+            }
+            composable(
+                route = Screen.VideoPlayer.route,
+                arguments = listOf(navArgument("videoUri") { type = NavType.StringType }),
+                enterTransition = { enterTransition() },
+                exitTransition = { exitTransition() },
+                popEnterTransition = { popEnterTransition() },
+                popExitTransition = { popExitTransition() },
+            ) { backStackEntry ->
+                val videoUri = backStackEntry.arguments?.getString("videoUri").orEmpty()
+                ScreenWrapper(navController = navController, playerViewModel = playerViewModel) {
+                    VideoPlayerScreen(
+                        navController = navController,
+                        videoUri = videoUri
+                    )
+                }
+            }
+            composable(
+                Screen.HomeCustomization.route,
+                enterTransition = { enterTransition() },
+                exitTransition = { exitTransition() },
+                popEnterTransition = { popEnterTransition() },
+                popExitTransition = { popExitTransition() },
+            ) {
+                ScreenWrapper(navController = navController, playerViewModel = playerViewModel) {
+                    HomeCustomizationScreen(navController = navController)
+                }
             }
         }
     }

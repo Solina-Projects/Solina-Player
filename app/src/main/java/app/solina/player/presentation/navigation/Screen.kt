@@ -94,4 +94,13 @@ sealed class Screen(val route: String) {
         fun createRoute(songId: String) = "audio_bookmarks/${Uri.encode(songId)}"
     }
 
+    // Music + Video: video library, video player and Home customisation.
+    // Video stays separate from music — its own library, player and routes.
+    object VideoLibrary : Screen("video_library")
+    object VideoPlayer : Screen("video_player/{videoUri}") {
+        fun createRoute(videoUri: String) =
+            "video_player/${Uri.encode(videoUri)}"
+    }
+    object HomeCustomization : Screen("home_customization")
+
 }

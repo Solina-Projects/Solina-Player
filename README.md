@@ -34,6 +34,20 @@ This fork stays under the same license — see [LICENSE](LICENSE).
 Changes in this fork: rebranded to Solina Player (`app.solina.player`),
 Android 12 (API 31) minimum, and arm64-v8a builds only.
 
+## Music + Video (branch `feature/music-and-video`, not merged)
+
+The player plays both music and video, kept separate — never mixed.
+Home offers two entry cards (Music / Video), separate audio and video
+file counts, a recently-added music row and a recently-added videos row.
+Video uses its own ExoPlayer/Media3 player with its own library
+(MediaStore.Video), library screen and player screen (seek, speed,
+fullscreen, subtitle tracks when the file carries them), in the same
+Material 3 Expressive style as the music player. Home sections — new
+and existing — can be shown, hidden and reordered from
+Settings → Customise Home. Video formats are what ExoPlayer plus the
+bundled FFmpeg decoders support (common containers such as MP4, MKV,
+WebM, MOV, AVI, 3GP and FLV); the music player behaviour is unchanged.
+
 ## What It Is
 
 Solina Player is an Android music player. It focuses on local playback, self-hosted music libraries, expressive Material 3 UI, and user-controlled online lookups.

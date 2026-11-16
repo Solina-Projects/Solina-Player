@@ -12,6 +12,8 @@
         android:name="android.permission.BLUETOOTH_SCAN"
         android:usesPermissionFlags="neverForLocation" />
     <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
+    <!-- Video library: the video player reads local video files via MediaStore.Video. -->
+    <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
     <!-- Optional: only requested when the user enables folder cover images, which reads
          cover.jpg/folder.jpg next to audio files. READ_MEDIA_AUDIO does not cover image files. -->
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
