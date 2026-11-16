@@ -17,6 +17,8 @@
     <string name="video_subtitles">Subtitles</string>
     <string name="video_subtitles_hint">Subtitles appear from the player controls when the video has a subtitle track.</string>
 
+    <string name="home_search_placeholder">Search music and videos</string>
+    <string name="search_filter_videos">Videos</string>
     <string name="home_choose_player_title">Choose what to play</string>
     <string name="home_music_card_title">Music</string>
     <string name="home_music_card_subtitle">Songs, albums and playlists</string>
