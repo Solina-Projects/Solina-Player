@@ -28,6 +28,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.MusicNote
 import androidx.compose.material.icons.rounded.Refresh
+import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -102,7 +103,6 @@ import app.solina.player.presentation.components.RecentlyAddedMusicRow
 import app.solina.player.presentation.components.RecentlyAddedVideosRow
 import app.solina.player.presentation.components.SmartImage
 import app.solina.player.presentation.components.StatsOverviewCard
-import app.solina.player.presentation.components.resolveMainScreenBottomGradientHeight
 import app.solina.player.presentation.model.collectRecentlyPlayedSongIds
 import app.solina.player.presentation.model.mapRecentlyPlayedSongs
 import app.solina.player.presentation.model.withUpdatedSongs
@@ -145,6 +145,51 @@ private data class HomeSongOptions(
     /** Play builds the full library queue, as tapping a Home library preview does. */
     val playFromLibrary: Boolean = false
 )
+
+/**
+ * Pinned search bar under the Home top bar (Home feedback, 2026-11-16).
+ * Read-only: tapping it opens the Search screen, which searches both
+ * music and video files. Same Expressive style as the Search screen's
+ * bar — rounded 28dp, primary container, search icon + placeholder.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun HomeSearchBar(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        onClick = onClick,
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp)
+            .height(52.dp),
+        shape = RoundedCornerShape(28.dp),
+        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Rounded.Search,
+                contentDescription = stringResource(R.string.cd_search_icon),
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(24.dp)
+            )
+            Text(
+                text = stringResource(R.string.home_search_placeholder),
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.primary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+    }
+}
 
 @androidx.annotation.OptIn(UnstableApi::class)
 @OptIn(ExperimentalMaterial3Api::class)
@@ -283,10 +328,12 @@ fun HomeScreen(
     }.collectAsStateWithLifecycle(initialValue = false)
 
     val bottomPadding = if (currentSong != null) MiniPlayerHeight else 0.dp
-    val navBarCompactMode by playerViewModel.navBarCompactMode.collectAsStateWithLifecycle()
     val windowSizeClass = currentWindowAdaptiveInfo().windowSizeClass
     val useNavigationRail = windowSizeClass.isWidthAtLeastBreakpoint(WindowSizeClass.WIDTH_DP_MEDIUM_LOWER_BOUND)
-    val bottomGradientHeight = resolveMainScreenBottomGradientHeight(navBarCompactMode, useNavigationRail)
+    // The floating bottom bar is hidden on Home, so the bottom fade only needs
+    // to cover the mini player (when a song is playing) — otherwise the last
+    // Home row would fade under a bar that is not there.
+    val bottomGradientHeight = if (currentSong != null) MiniPlayerHeight + 16.dp else 0.dp
 
     var showOptionsBottomSheet by remember { mutableStateOf(false) }
     var showChangelogBottomSheet by remember { mutableStateOf(false) }
@@ -374,22 +421,29 @@ fun HomeScreen(
         Scaffold(
             modifier = Modifier.fillMaxSize(),
             topBar = {
-                HomeGradientTopBar(
-                    onNavigationIconClick = {
-                        navController.navigateSafely(Screen.Settings.route)
-                    },
-                    onMoreOptionsClick = {
-                        showChangelogBottomSheet = true
-                    },
-                    onBetaClick = {
-                        showBetaInfoBottomSheet = true
-                    },
-                    onStreamingClick = {
-                          showStreamingProviderSheet = true
-                    },
-                    onMenuClick = onOpenSidebar,
-                    isScrolled = isScrolledPastThreshold.value
-                )
+                Column {
+                    HomeGradientTopBar(
+                        onNavigationIconClick = {
+                            navController.navigateSafely(Screen.Settings.route)
+                        },
+                        onMoreOptionsClick = {
+                            showChangelogBottomSheet = true
+                        },
+                        onBetaClick = {
+                            showBetaInfoBottomSheet = true
+                        },
+                        onStreamingClick = {
+                              showStreamingProviderSheet = true
+                        },
+                        onMenuClick = onOpenSidebar,
+                        isScrolled = isScrolledPastThreshold.value
+                    )
+                    // Pinned search bar, directly under the top bar. Tapping it
+                    // opens Search, which searches music and video files.
+                    HomeSearchBar(
+                        onClick = { navController.navigateSafely(Screen.Search.route) }
+                    )
+                }
             }
         ) { innerPadding ->
             LazyColumn(
