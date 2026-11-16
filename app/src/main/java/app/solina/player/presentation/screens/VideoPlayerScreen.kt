@@ -58,6 +58,7 @@ import java.net.URLDecoder
 fun VideoPlayerScreen(
     navController: NavController,
     videoUri: String,
+    videoQueue: List<String> = emptyList(),
     videoPlayerViewModel: VideoPlayerViewModel = hiltViewModel()
 ) {
     val context = LocalContext.current
@@ -72,9 +73,16 @@ fun VideoPlayerScreen(
         runCatching { URLDecoder.decode(videoUri, "UTF-8") }.getOrElse { videoUri }
     }
 
-    LaunchedEffect(decodedUri) {
+    LaunchedEffect(decodedUri, videoQueue) {
         videoPlayerViewModel.loadVideo(decodedUri)
-        videoPlayerViewModel.play(decodedUri)
+        if (videoQueue.size > 1) {
+            videoPlayerViewModel.playQueue(
+                contentUriStrings = videoQueue,
+                startIndex = videoQueue.indexOf(decodedUri).coerceAtLeast(0)
+            )
+        } else {
+            videoPlayerViewModel.play(decodedUri)
+        }
     }
 
     DisposableEffect(Unit) {
