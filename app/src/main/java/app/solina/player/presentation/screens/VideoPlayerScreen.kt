@@ -5,6 +5,7 @@ import android.app.PictureInPictureParams
 import android.content.ContentValues
 import android.content.Intent
 import android.content.pm.ActivityInfo
+import android.content.res.Configuration
 import android.graphics.Bitmap
 import android.media.MediaMetadataRetriever
 import android.media.audiofx.AudioEffect
@@ -42,6 +43,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -108,12 +110,15 @@ import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -151,18 +156,20 @@ import kotlin.math.roundToInt
  *   MainActivity's hidden routes), so it never covers the player.
  * - A hidden extra control bar sits at the bottom, with an animated arrow
  *   handle in front of it: tapping the arrow slides the bar in/out with
- *   animation. The bar holds aspect / rotation, playback speed, screenshot,
+ *   animation. The bar holds aspect, playback speed, screenshot,
  *   audio settings (volume + audio track), sleep mode, night light and
  *   background playback (audio keeps playing when the app goes to the
- *   background, like music).
+ *   background, like music). Rotation is NOT in this bar any more
+ *   (mini-player feedback, 2026-11-16): it lives only in the bottom
+ *   transport bar.
  * - Leaving the player (or every 15 s while playing) saves a resume point
  *   so the Folders screen's Resume button can continue where it left off.
  *
  * Home-entry + Player feedback (2026-11-16):
- * - Playback starts in LANDSCAPE automatically, and a rotation toggle
+ * - Playback starts in LANDSCAPE automatically, and the rotation toggle
  *   sits in the bottom transport bar (it used to be a fixed icon on the
- *   right edge; moved in the Search + Player polish, 2026-11-16) as well
- *   as inside the control bar. Rotation works now: the old toggle set
+ *   right edge; moved in the Search + Player polish, 2026-11-16). Rotation
+ *   works now: the old toggle set
  *   requestedOrientation, but [PhoneOrientationPolicy] forced the phone
  *   back to portrait from MainActivity.onConfigurationChanged, so the
  *   request was reverted the moment the orientation changed. The player
@@ -272,7 +279,8 @@ fun VideoPlayerScreen(
     // the bottom time bar moves the position at 0.5x — half the finger
     // travel — so scrubbing feels slower and finer. A tap (one big jump)
     // still seeks straight to the tapped point. The horizontal-swipe seek
-    // on the video surface keeps its 1:1 speed.
+    // on the video surface is 0.5x too now (mini-player feedback,
+    // 2026-11-16): the same finger travel moves half as far in time.
     var scrubAnchorFraction by remember { mutableStateOf<Float?>(null) }
     var scrubAnchorMs by remember { mutableLongStateOf(0L) }
     // Pinch zoom: graphicsLayer scale on the PlayerView, 1.0x–3.0x.
@@ -297,6 +305,23 @@ fun VideoPlayerScreen(
     val brightnessLabel = stringResource(R.string.video_brightness)
     val volumeLabel = stringResource(R.string.video_volume)
     val speedOptions = videoPlayerViewModel.availableSpeeds
+    // Landscape overlap (mini-player feedback, 2026-11-16): on a narrow
+    // phone the bottom transport row (lock + centre group + right group)
+    // is wider than the screen, so the groups overlap. In landscape — and
+    // on any narrow screen — every bottom-bar icon is 20% smaller, and the
+    // row is a single Row with a weighted centre group, so the groups can
+    // never overlap again. Width check: lock + centre + right at 0.8x is
+    // ~352 dp + 16 dp padding = ~368 dp, inside a ~393 dp portrait phone.
+    val configuration = LocalConfiguration.current
+    val bottomBarScale =
+        if (configuration.orientation == Configuration.ORIENTATION_LANDSCAPE ||
+            configuration.screenWidthDp < 470
+        ) {
+            0.8f
+        } else {
+            1f
+        }
+
     // Pixels per speed step while sliding in long-press speed mode.
     // (Computed here with LocalDensity: inside pointerInput, `density`
     // resolves to Density.density, a Float, so toPx() would not resolve.)
@@ -407,9 +432,7 @@ fun VideoPlayerScreen(
 
     DisposableEffect(Unit) {
         onDispose {
-            videoPlayerViewModel.saveResumePosition()
-            videoPlayerViewModel.pause()
-            videoPlayerViewModel.setSleepTimer(0)
+            videoPlayerViewModel.onLeavePlayer()
             PhoneOrientationPolicy.videoPlayerActive = false
             activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
             activity?.window?.let { window ->
@@ -552,9 +575,11 @@ fun VideoPlayerScreen(
         else allButtons.filter { visibleButtons.contains(it.id) }
     }
 
-    // The arrow handle's rotation (0° closed, 180° open).
+    // The arrow handle's rotation (mini-player feedback, 2026-11-16):
+    // the chevron points LEFT while the bar is closed and RIGHT once it
+    // is open (KeyboardArrowUp rotated -90° / +90°).
     val arrowRotation by animateFloatAsState(
-        targetValue = if (controlsExpanded) 180f else 0f,
+        targetValue = if (controlsExpanded) 90f else -90f,
         label = "videoControlsArrow"
     )
 
@@ -761,7 +786,7 @@ fun VideoPlayerScreen(
                                                     if (dur > 0) {
                                                         scrubbing = true
                                                         seekAccumMs =
-                                                            ((dx / size.width) * dur).toLong()
+                                                            ((dx / size.width) * dur * 0.5f).toLong()
                                                         val target = (seekStartMs + seekAccumMs)
                                                             .coerceIn(0L, dur)
                                                         seekPreviewMs = target
@@ -776,7 +801,7 @@ fun VideoPlayerScreen(
                                             if (dur > 0) {
                                                 val dx = pos.x - down.position.x
                                                 seekAccumMs =
-                                                    ((dx / size.width) * dur).toLong()
+                                                    ((dx / size.width) * dur * 0.5f).toLong()
                                                 val target = (seekStartMs + seekAccumMs)
                                                     .coerceIn(0L, dur)
                                                 seekPreviewMs = target
@@ -929,11 +954,10 @@ fun VideoPlayerScreen(
                                     Icon(
                                         imageVector = Icons.Rounded.ClosedCaption,
                                         contentDescription = stringResource(R.string.video_subtitles),
-                                        tint = if (selectedSubtitleTrack >= 0) {
-                                            MaterialTheme.colorScheme.primary
-                                        } else {
-                                            Color.White
-                                        }
+                                        // White like every other player icon
+                                        // (mini-player feedback, 2026-11-16):
+                                        // the primary tint read as brown.
+                                        tint = Color.White
                                     )
                                 }
                                 DropdownMenu(
@@ -991,11 +1015,9 @@ fun VideoPlayerScreen(
                                     Icon(
                                         imageVector = Icons.Rounded.Audiotrack,
                                         contentDescription = stringResource(R.string.video_audio_settings),
-                                        tint = if (audioTrackLabels.size > 1) {
-                                            MaterialTheme.colorScheme.primary
-                                        } else {
-                                            Color.White
-                                        }
+                                        // White like every other player icon
+                                        // (mini-player feedback, 2026-11-16).
+                                        tint = Color.White
                                     )
                                 }
                                 DropdownMenu(
@@ -1169,31 +1191,39 @@ fun VideoPlayerScreen(
                     // arrow. Opens on long-press (and stays 2 s after
                     // release); the current speed is highlighted, and
                     // tapping a chip picks it directly.
+                    // Speed bar (mini-player feedback, 2026-11-16): only
+                    // as wide as its chips — a plain Row, not a full-width
+                    // LazyRow, so there is no empty space — and the chips
+                    // are 20% smaller and tighter (10 sp text, 10x5 dp
+                    // padding, 6 dp gaps) than before.
                     AnimatedVisibility(
                         visible = speedBarVisible,
                         enter = fadeIn() + slideInVertically { -it / 2 },
-                        exit = fadeOut() + slideOutVertically { -it / 2 }
+                        exit = fadeOut() + slideOutVertically { -it / 2 },
+                        modifier = Modifier.align(Alignment.CenterHorizontally)
                     ) {
                         Surface(
                             color = Color.Black.copy(alpha = 0.55f),
-                            shape = RoundedCornerShape(24.dp),
+                            shape = RoundedCornerShape(19.dp),
                             modifier = Modifier
-                                .fillMaxWidth()
+                                .wrapContentWidth()
                                 .padding(start = 16.dp, end = 16.dp, top = 8.dp)
                         ) {
-                            LazyRow(
-                                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                modifier = Modifier.fillMaxWidth()
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier
+                                    .wrapContentWidth()
+                                    .padding(horizontal = 10.dp, vertical = 6.dp)
                             ) {
-                                items(speedOptions) { speed ->
+                                speedOptions.forEach { speed ->
                                     val selected = speed == playbackSpeed
                                     Surface(
                                         onClick = {
                                             videoPlayerViewModel.setSpeed(speed)
                                             poke()
                                         },
-                                        shape = RoundedCornerShape(16.dp),
+                                        shape = RoundedCornerShape(13.dp),
                                         color = if (selected) {
                                             MaterialTheme.colorScheme.primary
                                         } else {
@@ -1203,15 +1233,15 @@ fun VideoPlayerScreen(
                                         Text(
                                             text = formatSpeedLabel(speed),
                                             color = Color.White,
-                                            fontSize = 13.sp,
+                                            fontSize = 10.sp,
                                             fontWeight = if (selected) {
                                                 FontWeight.Bold
                                             } else {
                                                 FontWeight.Normal
                                             },
                                             modifier = Modifier.padding(
-                                                horizontal = 12.dp,
-                                                vertical = 6.dp
+                                                horizontal = 10.dp,
+                                                vertical = 5.dp
                                             )
                                         )
                                     }
@@ -1251,7 +1281,6 @@ fun VideoPlayerScreen(
                                         "shuffle" -> shuffleEnabled
                                         "mute" -> isMuted
                                         "background" -> backgroundPlayback
-                                        "rotation" -> forcedLandscape == true
                                         "loop" -> repeatMode != Player.REPEAT_MODE_OFF
                                         "sleep" -> sleepTimerMinutes > 0
                                         "ab" -> aPointMs >= 0
@@ -1316,10 +1345,6 @@ fun VideoPlayerScreen(
                                             "background" -> videoPlayerViewModel.setBackgroundPlayback(
                                                 !backgroundPlayback
                                             )
-                                            "rotation" -> {
-                                                forcedLandscape =
-                                                    if (forcedLandscape == true) false else true
-                                            }
                                             "speed" -> showSpeedMenu = true
                                         }
                                         poke()
@@ -1453,7 +1478,8 @@ fun VideoPlayerScreen(
                                 modifier = Modifier.padding(end = 8.dp)
                             )
                         }
-                        Box(
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             IconButton(
@@ -1461,34 +1487,35 @@ fun VideoPlayerScreen(
                                     controlsLocked = true
                                     poke()
                                 },
-                                modifier = Modifier
-                                    .align(Alignment.CenterStart)
-                                    .size(48.dp)
+                                modifier = Modifier.size((48f * bottomBarScale).dp)
                             ) {
                                 Icon(
                                     imageVector = Icons.Rounded.Lock,
                                     contentDescription = stringResource(R.string.video_lock_controls),
                                     tint = Color.White,
-                                    modifier = Modifier.size(26.dp)
+                                    modifier = Modifier.size((26f * bottomBarScale).dp)
                                 )
                             }
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(4.dp),
-                                modifier = Modifier.align(Alignment.Center)
+                                horizontalArrangement = Arrangement.spacedBy(
+                                    (4f * bottomBarScale).dp,
+                                    Alignment.CenterHorizontally
+                                ),
+                                modifier = Modifier.weight(1f)
                             ) {
                                 IconButton(
                                     onClick = {
                                         videoPlayerViewModel.seekToPrevious()
                                         poke()
                                     },
-                                    modifier = Modifier.size(48.dp)
+                                    modifier = Modifier.size((48f * bottomBarScale).dp)
                                 ) {
                                     Icon(
                                         imageVector = Icons.Rounded.SkipPrevious,
                                         contentDescription = stringResource(R.string.video_previous_video),
                                         tint = Color.White,
-                                        modifier = Modifier.size(30.dp)
+                                        modifier = Modifier.size((30f * bottomBarScale).dp)
                                     )
                                 }
                                 VideoSkip15Button(
@@ -1497,14 +1524,16 @@ fun VideoPlayerScreen(
                                     onClick = {
                                         videoPlayerViewModel.seekBy(-15_000L)
                                         poke()
-                                    }
+                                    },
+                                    size = (40f * bottomBarScale).dp,
+                                    fontSize = (12f * bottomBarScale).sp
                                 )
                                 IconButton(
                                     onClick = {
                                         videoPlayerViewModel.togglePlayPause()
                                         poke()
                                     },
-                                    modifier = Modifier.size(56.dp)
+                                    modifier = Modifier.size((56f * bottomBarScale).dp)
                                 ) {
                                     Icon(
                                         imageVector = if (isPlaying) {
@@ -1520,7 +1549,7 @@ fun VideoPlayerScreen(
                                             }
                                         ),
                                         tint = Color.White,
-                                        modifier = Modifier.size(36.dp)
+                                        modifier = Modifier.size((36f * bottomBarScale).dp)
                                     )
                                 }
                                 VideoSkip15Button(
@@ -1529,53 +1558,57 @@ fun VideoPlayerScreen(
                                     onClick = {
                                         videoPlayerViewModel.seekBy(15_000L)
                                         poke()
-                                    }
+                                    },
+                                    size = (40f * bottomBarScale).dp,
+                                    fontSize = (12f * bottomBarScale).sp
                                 )
                                 IconButton(
                                     onClick = {
                                         videoPlayerViewModel.seekToNext()
                                         poke()
                                     },
-                                    modifier = Modifier.size(48.dp)
+                                    modifier = Modifier.size((48f * bottomBarScale).dp)
                                 ) {
                                     Icon(
                                         imageVector = Icons.Rounded.SkipNext,
                                         contentDescription = stringResource(R.string.video_next_video),
                                         tint = Color.White,
-                                        modifier = Modifier.size(30.dp)
+                                        modifier = Modifier.size((30f * bottomBarScale).dp)
                                     )
                                 }
                             }
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.align(Alignment.CenterEnd)
+                                horizontalArrangement = Arrangement.spacedBy(
+                                    (4f * bottomBarScale).dp
+                                )
                             ) {
                                 // Screen rotation lives here now (Search +
                                 // Player polish, 2026-11-16): the fixed
-                                // right-edge button is gone. Same toggle as
-                                // the one in the control bar.
+                                // right-edge button is gone. It was removed
+                                // from the control bar in the mini-player
+                                // feedback (2026-11-16), so this is the
+                                // only rotation toggle left.
                                 IconButton(
                                     onClick = {
                                         forcedLandscape =
                                             if (forcedLandscape == true) false else true
                                         poke()
                                     },
-                                    modifier = Modifier.size(48.dp)
+                                    modifier = Modifier.size((48f * bottomBarScale).dp)
                                 ) {
                                     Icon(
                                         imageVector = Icons.Rounded.ScreenRotation,
                                         contentDescription = stringResource(R.string.video_screen_rotation),
-                                        tint = if (forcedLandscape == true) {
-                                            MaterialTheme.colorScheme.primary
-                                        } else {
-                                            Color.White
-                                        },
-                                        modifier = Modifier.size(28.dp)
+                                        // White like every other player icon
+                                        // (mini-player feedback, 2026-11-16).
+                                        tint = Color.White,
+                                        modifier = Modifier.size((28f * bottomBarScale).dp)
                                     )
                                 }
                                 IconButton(
                                     onClick = { toggleFullscreenMode() },
-                                    modifier = Modifier.size(48.dp)
+                                    modifier = Modifier.size((48f * bottomBarScale).dp)
                                 ) {
                                     Icon(
                                         imageVector = if (isFullscreen) {
@@ -1585,18 +1618,18 @@ fun VideoPlayerScreen(
                                         },
                                         contentDescription = stringResource(R.string.video_fullscreen),
                                         tint = Color.White,
-                                        modifier = Modifier.size(28.dp)
+                                        modifier = Modifier.size((28f * bottomBarScale).dp)
                                     )
                                 }
                                 IconButton(
                                     onClick = { enterPictureInPicture() },
-                                    modifier = Modifier.size(48.dp)
+                                    modifier = Modifier.size((48f * bottomBarScale).dp)
                                 ) {
                                     Icon(
                                         imageVector = Icons.Rounded.PictureInPictureAlt,
                                         contentDescription = stringResource(R.string.video_picture_in_picture),
                                         tint = Color.White,
-                                        modifier = Modifier.size(28.dp)
+                                        modifier = Modifier.size((28f * bottomBarScale).dp)
                                     )
                                 }
                             }
@@ -1651,7 +1684,7 @@ fun VideoPlayerScreen(
                         Icon(
                             imageVector = Icons.Rounded.VolumeUp,
                             contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary
+                            tint = Color.White
                         )
                         Spacer(Modifier.width(8.dp))
                         Slider(
@@ -1690,7 +1723,7 @@ fun VideoPlayerScreen(
                         Icon(
                             imageVector = Icons.Rounded.NightsStay,
                             contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary
+                            tint = Color.White
                         )
                         Spacer(Modifier.width(8.dp))
                         Text(
@@ -1859,19 +1892,21 @@ private fun VideoRoundControlButton(
 private fun VideoSkip15Button(
     label: String,
     contentDescription: String,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    size: Dp = 40.dp,
+    fontSize: TextUnit = 12.sp
 ) {
     Surface(
         onClick = onClick,
         shape = CircleShape,
         color = Color.White.copy(alpha = 0.15f),
-        modifier = Modifier.size(40.dp)
+        modifier = Modifier.size(size)
     ) {
         Box(contentAlignment = Alignment.Center) {
             Text(
                 text = label,
                 color = Color.White,
-                fontSize = 12.sp,
+                fontSize = fontSize,
                 fontWeight = FontWeight.Bold,
                 textAlign = TextAlign.Center
             )
@@ -1898,7 +1933,6 @@ private val videoControlButtons = listOf(
     VideoControlButton("equalizer", Icons.Rounded.Equalizer, R.string.video_equalizer),
     VideoControlButton("screenshot", Icons.Rounded.PhotoCamera, R.string.video_screenshot),
     VideoControlButton("background", Icons.Rounded.Headphones, R.string.video_background_play),
-    VideoControlButton("rotation", Icons.Rounded.ScreenRotation, R.string.video_screen_rotation),
     VideoControlButton("speed", Icons.Rounded.Speed, R.string.video_speed)
 )
 
