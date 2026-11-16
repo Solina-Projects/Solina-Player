@@ -139,5 +139,12 @@
     <string name="video_picture_in_picture">Picture in picture</string>
     <string name="video_pip_unavailable">Picture in picture is not available</string>
     <string name="video_aspect_ratio">Aspect ratio</string>
+    <!-- Player gestures + bars feedback (2026-11-16): custom bottom bar. -->
+    <string name="video_seek_back_15">Back 15 seconds</string>
+    <string name="video_seek_forward_15">Forward 15 seconds</string>
+    <string name="video_previous_video">Previous video</string>
+    <string name="video_next_video">Next video</string>
+    <string name="video_play">Play</string>
+    <string name="video_pause">Pause</string>
     <string name="video_player_done">Done</string>
 </resources>
