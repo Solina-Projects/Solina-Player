@@ -100,9 +100,9 @@ import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.input.pointer.awaitEachGesture
-import androidx.compose.ui.input.pointer.awaitFirstDown
-import androidx.compose.ui.input.pointer.awaitPointerEvent
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLifecycleOwner
@@ -125,11 +125,9 @@ import androidx.navigation.NavController
 import app.solina.player.R
 import app.solina.player.presentation.viewmodel.VideoPlayerViewModel
 import app.solina.player.utils.PhoneOrientationPolicy
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
-import kotlinx.coroutines.launch
 import java.net.URLDecoder
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -496,10 +494,13 @@ fun VideoPlayerScreen(
     // Position shown on the seek bar: the drag preview while seeking.
     val displayPositionMs = if (seekPreviewMs >= 0) seekPreviewMs else positionMs
     // Centre hint: seek delta + target time, or brightness / volume %.
+    // (Local copy: gestureHint is a delegated property, so it cannot be
+    // smart-cast after a null check.)
+    val hint = gestureHint
     val indicatorText: String? = when {
         seekPreviewMs >= 0 && seekDeltaText != null ->
             "$seekDeltaText • ${formatVideoTime(seekPreviewMs)}"
-        gestureHint != null -> "${gestureHint.label} ${gestureHint.percent}%"
+        hint != null -> "${hint.label} ${hint.percent}%"
         else -> null
     }
 
@@ -600,24 +601,35 @@ fun VideoPlayerScreen(
                             var pinchLastSpan = 0f
                             var longPressFired = false
 
-                            // The long-press timer runs as a child of this
-                            // gesture (coroutineScope): awaitEachGesture's
-                            // receiver is not a CoroutineScope itself.
-                            coroutineScope {
-                            val longPressJob = launch {
-                                delay(400)
-                                if (mode == GestureMode.Undecided) {
-                                    mode = GestureMode.Speed
-                                    longPressFired = true
-                                    speedMode = true
-                                    speedBarVisible = true
-                                    barsVisible = true
-                                    poke()
+                            // Long-press is detected with
+                            // withTimeoutOrNull (a member of the
+                            // restricted AwaitPointerEventScope, so it
+                            // is legal here): coroutineScope/launch/
+                            // delay are FORBIDDEN inside
+                            // awaitEachGesture — its receiver is a
+                            // @RestrictsSuspension scope that may only
+                            // suspend for awaitPointerEvent. Each loop
+                            // iteration waits up to 400 ms for the next
+                            // pointer event; a timeout with no movement
+                            // means the finger is being held still, so
+                            // speed mode opens. Any movement resets the
+                            // 400 ms window.
+                            while (true) {
+                                val event = withTimeoutOrNull(400) {
+                                    awaitPointerEvent()
                                 }
-                            }
-                            try {
-                                while (true) {
-                                    val event = awaitPointerEvent()
+                                if (event == null) {
+                                    // Held still for 400 ms: long-press.
+                                    if (mode == GestureMode.Undecided && !longPressFired) {
+                                        mode = GestureMode.Speed
+                                        longPressFired = true
+                                        speedMode = true
+                                        speedBarVisible = true
+                                        barsVisible = true
+                                        poke()
+                                    }
+                                    continue
+                                }
                                     val pressed = event.changes.filter { it.pressed }
                                     if (pressed.isEmpty()) break
                                     if (pressed.size < 2 && mode == GestureMode.Pinch) {
@@ -627,7 +639,6 @@ fun VideoPlayerScreen(
                                     }
                                     if (pressed.size >= 2) {
                                         if (mode != GestureMode.Pinch || pinchLastSpan <= 0f) {
-                                            longPressJob.cancel()
                                             if (mode == GestureMode.Speed) {
                                                 speedMode = false
                                             }
@@ -669,7 +680,6 @@ fun VideoPlayerScreen(
                                             val dx = pos.x - down.position.x
                                             val dy = pos.y - down.position.y
                                             if (abs(dx) > slopPx || abs(dy) > slopPx) {
-                                                longPressJob.cancel()
                                                 mode = if (abs(dx) > abs(dy)) {
                                                     GestureMode.Seek
                                                 } else if (down.position.x < size.width / 2f) {
@@ -751,9 +761,6 @@ fun VideoPlayerScreen(
                                     }
                                     change.consume()
                                 }
-                            } finally {
-                                longPressJob.cancel()
-                            }
                             // ---- Gesture end ----
                             when (mode) {
                                 GestureMode.Undecided -> {
@@ -799,7 +806,6 @@ fun VideoPlayerScreen(
                                 }
                             }
                             poke()
-                            } // coroutineScope: the long-press timer child
                         }
                     }
             )
