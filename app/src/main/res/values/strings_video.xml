@@ -20,7 +20,55 @@
     <string name="home_search_placeholder">Search music and videos</string>
     <string name="search_filter_videos">Videos</string>
 
-    <!-- Search feedback (2026-11-16): Video Search mirrors Music Search. -->
+    <!-- Folders + Player feedback (2026-11-16): Folders settings dialog,
+         Resume button and the player's extra control bar. -->
+    <string name="video_folders_settings">Folder settings</string>
+    <string name="video_folders_view_mode">View Mode</string>
+    <string name="video_folders_view_all">All folders</string>
+    <string name="video_folders_view_files">Files</string>
+    <string name="video_folders_view_folders">Folders</string>
+    <string name="video_folders_layout">Layout</string>
+    <string name="video_folders_layout_list">List</string>
+    <string name="video_folders_layout_grid">Grid</string>
+    <string name="video_folders_sort">Sort</string>
+    <string name="video_folders_sort_title">Title</string>
+    <string name="video_folders_sort_date">Date</string>
+    <string name="video_folders_sort_length">Length</string>
+    <string name="video_folders_sort_size">Size</string>
+    <string name="video_folders_sort_resolution">Resolution</string>
+    <string name="video_folders_sort_path">Path</string>
+    <string name="video_folders_sort_type">Type</string>
+    <string name="video_folders_sort_a_to_z">A to Z</string>
+    <string name="video_folders_sort_z_to_a">Z to A</string>
+    <string name="video_folders_search_hint">Search folders</string>
+    <string name="video_folders_search_videos_hint">Search videos</string>
+    <string name="video_resume">Resume</string>
+    <string name="video_resume_label">Resume: %1$s • %2$s</string>
+    <string name="video_all_videos">All videos</string>
+    <string name="video_folder_videos_summary">%1$d videos • %2$s</string>
+    <string name="video_player_more_controls">More controls</string>
+    <string name="video_player_hide_controls">Hide controls</string>
+    <string name="video_aspect">Aspect</string>
+    <string name="video_aspect_fit">Fit</string>
+    <string name="video_aspect_fill">Fill</string>
+    <string name="video_aspect_zoom">Zoom</string>
+    <string name="video_rotate">Rotate</string>
+    <string name="video_screenshot">Screenshot</string>
+    <string name="video_screenshot_saved">Screenshot saved to Pictures</string>
+    <string name="video_screenshot_failed">Could not save the screenshot</string>
+    <string name="video_audio_settings">Audio</string>
+    <string name="video_volume">Volume</string>
+    <string name="video_audio_track">Audio track</string>
+    <string name="video_audio_track_single">1 audio track</string>
+    <string name="video_sleep_mode">Sleep mode</string>
+    <string name="video_sleep_off">Off</string>
+    <string name="video_sleep_minutes">%1$d min</string>
+    <string name="video_sleep_active">Sleep in %1$d min</string>
+    <string name="video_night_light">Night light</string>
+    <string name="video_brightness">Brightness</string>
+    <string name="video_background_playback">Background playback</string>
+    <string name="video_background_hint">Audio keeps playing when the app goes to the background, like music.</string>
+
     <string name="video_search_title">Search videos</string>
     <string name="video_search_placeholder">Search videos</string>
     <string name="video_search_no_results">No videos found</string>
