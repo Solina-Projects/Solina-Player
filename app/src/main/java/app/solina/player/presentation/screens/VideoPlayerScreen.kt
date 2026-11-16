@@ -104,6 +104,7 @@ import androidx.compose.ui.input.pointer.awaitEachGesture
 import androidx.compose.ui.input.pointer.awaitFirstDown
 import androidx.compose.ui.input.pointer.awaitPointerEvent
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -270,6 +271,10 @@ fun VideoPlayerScreen(
     val brightnessLabel = stringResource(R.string.video_brightness)
     val volumeLabel = stringResource(R.string.video_volume)
     val speedOptions = videoPlayerViewModel.availableSpeeds
+    // Pixels per speed step while sliding in long-press speed mode.
+    // (Computed here with LocalDensity: inside pointerInput, `density`
+    // resolves to Density.density, a Float, so toPx() would not resolve.)
+    val speedStepPx = with(LocalDensity.current) { 60.dp.toPx() }
 
     // Position / duration / playing state, polled for the custom bottom
     // bar (the built-in PlayerView controller is off now).
@@ -726,7 +731,7 @@ fun VideoPlayerScreen(
                                             )
                                         }
                                         GestureMode.Speed -> {
-                                            val stepPx = with(density) { 60.dp.toPx() }
+                                            val stepPx = speedStepPx
                                             val dx = pos.x - speedAnchorX
                                             if (abs(dx) >= stepPx) {
                                                 val steps = (dx / stepPx).toInt()
