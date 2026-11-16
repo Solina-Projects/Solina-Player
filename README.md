@@ -47,7 +47,13 @@ and existing — can be shown, hidden and reordered from
 Settings → Customise Home. The video section has its own bottom bar
 (Home / Search / Folders): Home always returns to the main Home page,
 video Search lists all videos and searches within them, and Folders
-groups videos by folder with sort and Play-all actions. Video formats are what ExoPlayer plus the
+groups videos by folder with sort and Play-all actions, a settings
+dialog (view mode / layout / sort), search, and a floating Resume
+button that continues the last partially-watched video. While a video
+plays, the floating bottom bar is hidden and an extra control bar —
+opened with an animated arrow — offers aspect / rotation, speed,
+screenshot, audio settings, sleep mode, night light and background
+playback. Video formats are what ExoPlayer plus the
 bundled FFmpeg decoders support (common containers such as MP4, MKV,
 WebM, MOV, AVI, 3GP and FLV); the music player behaviour is unchanged.
 
