@@ -54,6 +54,9 @@ import app.solina.player.presentation.screens.LibraryScreen
 import app.solina.player.presentation.screens.MashupScreen
 import app.solina.player.presentation.screens.VideoLibraryScreen
 import app.solina.player.presentation.screens.VideoPlayerScreen
+import app.solina.player.presentation.screens.VideoFolderDetailScreen
+import app.solina.player.presentation.screens.VideoFoldersScreen
+import app.solina.player.presentation.screens.VideoSearchScreen
 import app.solina.player.presentation.screens.NavBarCornerRadiusScreen
 import app.solina.player.presentation.screens.PaletteStyleSettingsScreen
 import app.solina.player.presentation.screens.PlaylistDetailScreen
@@ -758,18 +761,72 @@ fun AppNavigation(
                 }
             }
             composable(
-                route = Screen.VideoPlayer.route,
-                arguments = listOf(navArgument("videoUri") { type = NavType.StringType }),
+                route = Screen.VideoPlayer.route + "?queue={queue}",
+                arguments = listOf(
+                    navArgument("videoUri") { type = NavType.StringType },
+                    navArgument("queue") {
+                        type = NavType.StringType
+                        nullable = true
+                        defaultValue = null
+                    }
+                ),
                 enterTransition = { enterTransition() },
                 exitTransition = { exitTransition() },
                 popEnterTransition = { popEnterTransition() },
                 popExitTransition = { popExitTransition() },
             ) { backStackEntry ->
                 val videoUri = backStackEntry.arguments?.getString("videoUri").orEmpty()
+                val videoQueue = backStackEntry.arguments?.getString("queue")
+                    ?.let { encoded ->
+                        runCatching { java.net.URLDecoder.decode(encoded, "UTF-8") }
+                            .getOrElse { encoded }
+                    }
+                    ?.split("\n")
+                    ?.filter { it.isNotBlank() }
+                    .orEmpty()
                 ScreenWrapper(navController = navController, playerViewModel = playerViewModel) {
                     VideoPlayerScreen(
                         navController = navController,
-                        videoUri = videoUri
+                        videoUri = videoUri,
+                        videoQueue = videoQueue
+                    )
+                }
+            }
+            composable(
+                Screen.VideoSearch.route,
+                enterTransition = { enterTransition() },
+                exitTransition = { exitTransition() },
+                popEnterTransition = { popEnterTransition() },
+                popExitTransition = { popExitTransition() },
+            ) {
+                ScreenWrapper(navController = navController, playerViewModel = playerViewModel) {
+                    VideoSearchScreen(navController = navController)
+                }
+            }
+            composable(
+                Screen.VideoFolders.route,
+                enterTransition = { enterTransition() },
+                exitTransition = { exitTransition() },
+                popEnterTransition = { popEnterTransition() },
+                popExitTransition = { popExitTransition() },
+            ) {
+                ScreenWrapper(navController = navController, playerViewModel = playerViewModel) {
+                    VideoFoldersScreen(navController = navController)
+                }
+            }
+            composable(
+                route = Screen.VideoFolderDetail.route,
+                arguments = listOf(navArgument("folderPath") { type = NavType.StringType }),
+                enterTransition = { enterTransition() },
+                exitTransition = { exitTransition() },
+                popEnterTransition = { popEnterTransition() },
+                popExitTransition = { popExitTransition() },
+            ) { backStackEntry ->
+                val folderPath = backStackEntry.arguments?.getString("folderPath").orEmpty()
+                ScreenWrapper(navController = navController, playerViewModel = playerViewModel) {
+                    VideoFolderDetailScreen(
+                        navController = navController,
+                        folderPathArg = folderPath
                     )
                 }
             }
