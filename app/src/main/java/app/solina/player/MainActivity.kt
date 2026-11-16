@@ -706,6 +706,13 @@ class MainActivity : ComponentActivity() {
 
         val routesWithHiddenNavigationBar = remember {
             setOf(
+                // Home feedback (2026-11-16): the floating bottom bar must not
+                // show on Home — only once inside the Music (Library) or Video
+                // (VideoLibrary / VideoPlayer) sections. Search and Customise
+                // Home are reached from Home, so they hide it too.
+                Screen.Home.route,
+                Screen.Search.route,
+                Screen.HomeCustomization.route,
                 Screen.Settings.route,
                 Screen.Accounts.route,
                 Screen.PlaylistDetail.route,
