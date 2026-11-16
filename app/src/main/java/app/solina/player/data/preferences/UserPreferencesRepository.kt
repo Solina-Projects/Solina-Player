@@ -277,6 +277,10 @@ constructor(
         val VIDEO_ASPECT_MODE = stringPreferencesKey("video_aspect_mode")
         val VIDEO_VOLUME = androidx.datastore.preferences.core.floatPreferencesKey("video_volume")
         val VIDEO_PLAYBACK_SPEED = androidx.datastore.preferences.core.floatPreferencesKey("video_playback_speed")
+        // Home-entry + Player feedback (2026-11-16): which of the player's
+        // round control buttons are shown (Customise Items). Stored as the
+        // set of visible button ids; an empty set means "show all".
+        val VIDEO_PLAYER_VISIBLE_BUTTONS = stringSetPreferencesKey("video_player_visible_buttons")
 
         val IS_ALBUMS_LIST_VIEW = booleanPreferencesKey("is_albums_list_view")
         val IS_PLAYLISTS_GRID_VIEW = booleanPreferencesKey("is_playlists_grid_view")
@@ -1008,6 +1012,21 @@ constructor(
     suspend fun setVideoPlaybackSpeed(speed: Float) {
         dataStore.edit { preferences ->
             preferences[PreferencesKeys.VIDEO_PLAYBACK_SPEED] = speed.coerceIn(0.5f, 2f)
+        }
+    }
+
+    /**
+     * Visible round buttons of the video player's control bar (Customise
+     * Items). Null/empty means every button is visible.
+     */
+    val videoPlayerVisibleButtonsFlow: Flow<Set<String>> =
+        dataStore.data.map { preferences ->
+            preferences[PreferencesKeys.VIDEO_PLAYER_VISIBLE_BUTTONS] ?: emptySet()
+        }
+
+    suspend fun setVideoPlayerVisibleButtons(buttonIds: Set<String>) {
+        dataStore.edit { preferences ->
+            preferences[PreferencesKeys.VIDEO_PLAYER_VISIBLE_BUTTONS] = buttonIds
         }
     }
 
