@@ -260,6 +260,24 @@ constructor(
         // own persisted grid/list mode, mirroring the genre grid above.
         val IS_VIDEO_SEARCH_GRID_VIEW = booleanPreferencesKey("is_video_search_grid_view")
 
+        // Video Folders + Player feedback (2026-11-16): the Folders settings
+        // dialog (view mode / layout / sort, mirroring the reference app's
+        // View Mode / Layout / Sort dialog) and the video player's extra
+        // controls are all persisted here in the shared settings DataStore.
+        val IS_VIDEO_FOLDERS_GRID_VIEW = booleanPreferencesKey("is_video_folders_grid_view")
+        val VIDEO_FOLDERS_VIEW_MODE = stringPreferencesKey("video_folders_view_mode")
+        val VIDEO_FOLDERS_SORT = stringPreferencesKey("video_folders_sort")
+        val VIDEO_FOLDERS_SORT_ASCENDING = booleanPreferencesKey("video_folders_sort_ascending")
+        val VIDEO_RESUME_URI = stringPreferencesKey("video_resume_uri")
+        val VIDEO_RESUME_POSITION_MS = longPreferencesKey("video_resume_position_ms")
+        val VIDEO_RESUME_TITLE = stringPreferencesKey("video_resume_title")
+        val VIDEO_BACKGROUND_PLAYBACK = booleanPreferencesKey("video_background_playback")
+        val VIDEO_NIGHT_LIGHT = booleanPreferencesKey("video_night_light")
+        val VIDEO_BRIGHTNESS = intPreferencesKey("video_brightness")
+        val VIDEO_ASPECT_MODE = stringPreferencesKey("video_aspect_mode")
+        val VIDEO_VOLUME = androidx.datastore.preferences.core.floatPreferencesKey("video_volume")
+        val VIDEO_PLAYBACK_SPEED = androidx.datastore.preferences.core.floatPreferencesKey("video_playback_speed")
+
         val IS_ALBUMS_LIST_VIEW = booleanPreferencesKey("is_albums_list_view")
         val IS_PLAYLISTS_GRID_VIEW = booleanPreferencesKey("is_playlists_grid_view")
         val SHOW_SCROLLBAR = booleanPreferencesKey("show_scrollbar")
@@ -846,6 +864,150 @@ constructor(
     suspend fun setVideoSearchGridView(isGrid: Boolean) {
         dataStore.edit { preferences ->
             preferences[PreferencesKeys.IS_VIDEO_SEARCH_GRID_VIEW] = isGrid
+        }
+    }
+
+    // ---- Video Folders + Player (2026-11-16) ----
+
+    val isVideoFoldersGridViewFlow: Flow<Boolean> =
+        dataStore.data.map { preferences ->
+            preferences[PreferencesKeys.IS_VIDEO_FOLDERS_GRID_VIEW] ?: false
+        }
+
+    suspend fun setVideoFoldersGridView(isGrid: Boolean) {
+        dataStore.edit { preferences ->
+            preferences[PreferencesKeys.IS_VIDEO_FOLDERS_GRID_VIEW] = isGrid
+        }
+    }
+
+    /** "ALL_FOLDERS" / "FILES" / "FOLDERS" — default FOLDERS. */
+    val videoFoldersViewModeFlow: Flow<String> =
+        dataStore.data.map { preferences ->
+            preferences[PreferencesKeys.VIDEO_FOLDERS_VIEW_MODE] ?: "FOLDERS"
+        }
+
+    suspend fun setVideoFoldersViewMode(mode: String) {
+        dataStore.edit { preferences ->
+            preferences[PreferencesKeys.VIDEO_FOLDERS_VIEW_MODE] = mode
+        }
+    }
+
+    /** "TITLE" / "DATE" / "LENGTH" / "SIZE" / "RESOLUTION" / "PATH" / "TYPE". */
+    val videoFoldersSortFlow: Flow<String> =
+        dataStore.data.map { preferences ->
+            preferences[PreferencesKeys.VIDEO_FOLDERS_SORT] ?: "TITLE"
+        }
+
+    suspend fun setVideoFoldersSort(sort: String) {
+        dataStore.edit { preferences ->
+            preferences[PreferencesKeys.VIDEO_FOLDERS_SORT] = sort
+        }
+    }
+
+    val videoFoldersSortAscendingFlow: Flow<Boolean> =
+        dataStore.data.map { preferences ->
+            preferences[PreferencesKeys.VIDEO_FOLDERS_SORT_ASCENDING] ?: true
+        }
+
+    suspend fun setVideoFoldersSortAscending(ascending: Boolean) {
+        dataStore.edit { preferences ->
+            preferences[PreferencesKeys.VIDEO_FOLDERS_SORT_ASCENDING] = ascending
+        }
+    }
+
+    /** Last partially-watched video, for the Folders screen's Resume button. */
+    val videoResumeUriFlow: Flow<String?> =
+        dataStore.data.map { preferences -> preferences[PreferencesKeys.VIDEO_RESUME_URI] }
+
+    val videoResumePositionMsFlow: Flow<Long> =
+        dataStore.data.map { preferences ->
+            preferences[PreferencesKeys.VIDEO_RESUME_POSITION_MS] ?: 0L
+        }
+
+    val videoResumeTitleFlow: Flow<String?> =
+        dataStore.data.map { preferences -> preferences[PreferencesKeys.VIDEO_RESUME_TITLE] }
+
+    suspend fun saveVideoResume(uri: String, positionMs: Long, title: String) {
+        dataStore.edit { preferences ->
+            preferences[PreferencesKeys.VIDEO_RESUME_URI] = uri
+            preferences[PreferencesKeys.VIDEO_RESUME_POSITION_MS] = positionMs
+            preferences[PreferencesKeys.VIDEO_RESUME_TITLE] = title
+        }
+    }
+
+    suspend fun clearVideoResume() {
+        dataStore.edit { preferences ->
+            preferences.remove(PreferencesKeys.VIDEO_RESUME_URI)
+            preferences.remove(PreferencesKeys.VIDEO_RESUME_POSITION_MS)
+            preferences.remove(PreferencesKeys.VIDEO_RESUME_TITLE)
+        }
+    }
+
+    val videoBackgroundPlaybackFlow: Flow<Boolean> =
+        dataStore.data.map { preferences ->
+            preferences[PreferencesKeys.VIDEO_BACKGROUND_PLAYBACK] ?: false
+        }
+
+    suspend fun setVideoBackgroundPlayback(enabled: Boolean) {
+        dataStore.edit { preferences ->
+            preferences[PreferencesKeys.VIDEO_BACKGROUND_PLAYBACK] = enabled
+        }
+    }
+
+    val videoNightLightFlow: Flow<Boolean> =
+        dataStore.data.map { preferences ->
+            preferences[PreferencesKeys.VIDEO_NIGHT_LIGHT] ?: false
+        }
+
+    suspend fun setVideoNightLight(enabled: Boolean) {
+        dataStore.edit { preferences ->
+            preferences[PreferencesKeys.VIDEO_NIGHT_LIGHT] = enabled
+        }
+    }
+
+    /** Screen brightness percent (10–100) while night light is on. */
+    val videoBrightnessFlow: Flow<Int> =
+        dataStore.data.map { preferences ->
+            preferences[PreferencesKeys.VIDEO_BRIGHTNESS] ?: 40
+        }
+
+    suspend fun setVideoBrightness(percent: Int) {
+        dataStore.edit { preferences ->
+            preferences[PreferencesKeys.VIDEO_BRIGHTNESS] = percent.coerceIn(10, 100)
+        }
+    }
+
+    /** "FIT" / "FILL" / "ZOOM" — PlayerView resize mode. */
+    val videoAspectModeFlow: Flow<String> =
+        dataStore.data.map { preferences ->
+            preferences[PreferencesKeys.VIDEO_ASPECT_MODE] ?: "FIT"
+        }
+
+    suspend fun setVideoAspectMode(mode: String) {
+        dataStore.edit { preferences ->
+            preferences[PreferencesKeys.VIDEO_ASPECT_MODE] = mode
+        }
+    }
+
+    val videoVolumeFlow: Flow<Float> =
+        dataStore.data.map { preferences ->
+            preferences[PreferencesKeys.VIDEO_VOLUME] ?: 1f
+        }
+
+    suspend fun setVideoVolume(volume: Float) {
+        dataStore.edit { preferences ->
+            preferences[PreferencesKeys.VIDEO_VOLUME] = volume.coerceIn(0f, 1f)
+        }
+    }
+
+    val videoPlaybackSpeedFlow: Flow<Float> =
+        dataStore.data.map { preferences ->
+            preferences[PreferencesKeys.VIDEO_PLAYBACK_SPEED] ?: 1f
+        }
+
+    suspend fun setVideoPlaybackSpeed(speed: Float) {
+        dataStore.edit { preferences ->
+            preferences[PreferencesKeys.VIDEO_PLAYBACK_SPEED] = speed.coerceIn(0.5f, 2f)
         }
     }
 
