@@ -477,7 +477,7 @@ fun HomeScreen(
                                             navController.navigateSafely(Screen.Library.route)
                                         },
                                         onVideoClick = {
-                                            navController.navigateSafely(Screen.VideoLibrary.route)
+                                            navController.navigateSafely(Screen.VideoFolders.route)
                                         },
                                         onCustomizeClick = {
                                             navController.navigateSafely(Screen.HomeCustomization.route)
@@ -499,7 +499,7 @@ fun HomeScreen(
                                             navController.navigateSafely(Screen.Library.route)
                                         },
                                         onVideoClick = {
-                                            navController.navigateSafely(Screen.VideoLibrary.route)
+                                            navController.navigateSafely(Screen.VideoFolders.route)
                                         }
                                     )
                                 }
@@ -540,7 +540,7 @@ fun HomeScreen(
                                             )
                                         },
                                         onOpenAllClick = {
-                                            navController.navigateSafely(Screen.VideoLibrary.route)
+                                            navController.navigateSafely(Screen.VideoFolders.route)
                                         }
                                     )
                                 }
