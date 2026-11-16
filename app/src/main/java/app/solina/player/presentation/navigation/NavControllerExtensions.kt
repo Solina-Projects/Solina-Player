@@ -57,3 +57,22 @@ fun NavController.navigateToTopLevelSafely(route: String): Boolean {
     }
     return true
 }
+
+/**
+ * Bottom-bar feedback (2026-11-16): tapping Home in the floating bar must
+ * always land on the main Home page, in both the music and the video
+ * sections. The previous behaviour popped to the graph's start destination
+ * — the user's launch tab, which can be Library or Search — not
+ * necessarily Home. This pops everything above Home itself (the drawer
+ * already navigates Home this way) and recreates a single Home on top.
+ * If Home is not in the back stack at all (launch tab is not Home), the
+ * pop is a no-op and Home is simply pushed on top — it still lands on Home.
+ */
+fun NavController.navigateHomeSafely(): Boolean {
+    if (!isReadyForNavigation()) return false
+    navigate(Screen.Home.route) {
+        popUpTo(Screen.Home.route) { inclusive = true }
+        launchSingleTop = true
+    }
+    return true
+}
