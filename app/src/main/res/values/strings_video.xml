@@ -111,4 +111,33 @@
     <string name="home_section_recently_played">Recently played</string>
     <string name="home_section_stats">Listening stats</string>
     <string name="home_section_recap">Recap card</string>
+    <!-- Home-entry + Player feedback (2026-11-16): round control buttons. -->
+    <string name="video_night_mode">Night Mode</string>
+    <string name="video_customise_items">Customise Items</string>
+    <string name="video_shuffle">Shuffle</string>
+    <string name="video_loop">Loop</string>
+    <string name="video_loop_off">Off</string>
+    <string name="video_loop_one">Loop one</string>
+    <string name="video_loop_all">Loop all</string>
+    <string name="video_mute">Mute</string>
+    <string name="video_sleep_timer">Sleep Timer</string>
+    <string name="video_sleep_timer_active">Sleep %1$d min</string>
+    <string name="video_ab_repeat">A-B Repeat</string>
+    <string name="video_ab_repeat_set_a">Tap to set B</string>
+    <string name="video_ab_repeat_active">A-B on</string>
+    <string name="video_audio_effect">Audio Effect</string>
+    <string name="video_equalizer">Equalizer</string>
+    <string name="video_equalizer_unavailable">No system equalizer on this device</string>
+    <string name="video_background_play">Background Play</string>
+    <string name="video_screen_rotation">Screen Rotation</string>
+    <string name="video_speed">Speed</string>
+    <string name="video_subtitle_off">Subtitles off</string>
+    <string name="video_no_subtitles">No subtitles in this video</string>
+    <string name="video_no_audio_tracks">No other audio track</string>
+    <string name="video_lock_controls">Lock controls</string>
+    <string name="video_unlock_controls">Unlock controls</string>
+    <string name="video_picture_in_picture">Picture in picture</string>
+    <string name="video_pip_unavailable">Picture in picture is not available</string>
+    <string name="video_aspect_ratio">Aspect ratio</string>
+    <string name="video_player_done">Done</string>
 </resources>
