@@ -133,6 +133,7 @@ import app.solina.player.presentation.components.PlayerInternalNavigationBar
 import app.solina.player.presentation.components.PlayerNavigationRail
 import app.solina.player.presentation.components.SmartMixHost
 import app.solina.player.presentation.components.UnifiedPlayerSheetV2
+import app.solina.player.presentation.components.VideoMiniPlayerBar
 import app.solina.player.presentation.components.calculatePlayerSheetCollapsedTargetY
 import app.solina.player.presentation.components.resolveNavBarOccupiedHeight
 import app.solina.player.presentation.components.resolveNavBarSurfaceHeight
@@ -1183,6 +1184,35 @@ class MainActivity : ComponentActivity() {
                             navController = navController,
                             isNavBarHidden = isNavBarEffectivelyHidden
                         )
+
+                        // Video mini-player bar (2026-11-16): in the Video
+                        // section (library / folders / search / folder
+                        // detail — never on the full player itself), a bar
+                        // above the floating nav bar shows the last-played
+                        // video, like the music now-playing bar. It stacks
+                        // above the music mini-player when that is visible.
+                        // The bar hides itself when no video was ever
+                        // played, so this only places it.
+                        if (isVideoSection &&
+                            currentRoute?.startsWith("video_player") != true
+                        ) {
+                            VideoMiniPlayerBar(
+                                navController = navController,
+                                modifier = Modifier
+                                    .align(Alignment.BottomCenter)
+                                    .padding(
+                                        bottom = miniPlayerBottomMargin + 8.dp +
+                                            if (showPlayerContentInitially &&
+                                                !shouldHideMiniPlayer
+                                            ) {
+                                                MiniPlayerHeight + 8.dp
+                                            } else {
+                                                0.dp
+                                            }
+                                    )
+                                    .padding(horizontal = horizontalPadding)
+                            )
+                        }
 
                         val dismissUndoBarSlice by remember {
                             playerViewModel.playerUiState
