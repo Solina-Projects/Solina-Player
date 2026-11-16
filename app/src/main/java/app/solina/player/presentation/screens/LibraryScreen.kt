@@ -911,17 +911,28 @@ fun LibraryScreen(
                     )
                 )
                 if (!isCompactNavigation) {
-                    val showTabIndicator = false
+                    // Gliding pill (d3motion segmented-control): one
+                    // pill that glides between tabs with the row's
+                    // built-in spring, instead of each tab jumping its
+                    // own background. The tabs themselves paint no
+                    // background (paintBackground = false below).
+                    val showTabIndicator = true
                     PrimaryScrollableTabRow(
                         selectedTabIndex = currentTabIndex,
                         containerColor = Color.Transparent,
                         edgePadding = 12.dp,
                         indicator = {
                             if (showTabIndicator) {
-                                TabRowDefaults.PrimaryIndicator(
-                                    modifier = Modifier.tabIndicatorOffset(selectedTabIndex = currentTabIndex),
-                                    height = 3.dp,
-                                    color = MaterialTheme.colorScheme.primary
+                                Box(
+                                    modifier = Modifier
+                                        .tabIndicatorOffset(
+                                            selectedTabIndex = currentTabIndex
+                                        )
+                                        .padding(5.dp)
+                                        .clip(CircleShape)
+                                        .background(
+                                            MaterialTheme.colorScheme.primary
+                                        )
                                 )
                             }
                         },
@@ -933,6 +944,7 @@ fun LibraryScreen(
                                 index = index,
                                 title = tabId.storageKey,
                                 selectedIndex = currentTabIndex,
+                                paintBackground = false,
                                 onClick = {
                                     scope.launch {
                                         pagerState.animateScrollToPage(

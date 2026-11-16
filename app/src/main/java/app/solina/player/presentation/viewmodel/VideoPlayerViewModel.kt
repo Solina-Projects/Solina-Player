@@ -164,18 +164,39 @@ class VideoPlayerViewModel @Inject constructor(
     // ---- Sleep timer: pauses playback after N minutes. ----
 
     private var sleepJob: Job? = null
+    private var sleepTickJob: Job? = null
     private val _sleepTimerMinutes = MutableStateFlow(0)
     val sleepTimerMinutes: StateFlow<Int> = _sleepTimerMinutes.asStateFlow()
+
+    // Remaining sleep-timer seconds, ticking once a second while the timer
+    // runs (d3motion countdown-timer ring): the sleep button draws a radial
+    // ring from this, so it shows real progress, not a guess. Cheap — one
+    // Int emission per second, only while a timer is active.
+    private val _sleepTimerRemainingSeconds = MutableStateFlow(0)
+    val sleepTimerRemainingSeconds: StateFlow<Int> =
+        _sleepTimerRemainingSeconds.asStateFlow()
 
     fun setSleepTimer(minutes: Int) {
         sleepJob?.cancel()
         sleepJob = null
+        sleepTickJob?.cancel()
+        sleepTickJob = null
         _sleepTimerMinutes.value = minutes
+        _sleepTimerRemainingSeconds.value = minutes * 60
         if (minutes > 0) {
             sleepJob = viewModelScope.launch {
                 delay(minutes * 60_000L)
                 videoPlaybackHolder.pause()
                 _sleepTimerMinutes.value = 0
+                _sleepTimerRemainingSeconds.value = 0
+            }
+            sleepTickJob = viewModelScope.launch {
+                var remaining = minutes * 60
+                while (remaining > 0) {
+                    delay(1_000L)
+                    remaining--
+                    _sleepTimerRemainingSeconds.value = remaining
+                }
             }
         }
     }

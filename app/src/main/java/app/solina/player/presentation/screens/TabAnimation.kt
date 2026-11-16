@@ -2,7 +2,7 @@ package app.solina.player.presentation.screens
 
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.padding
@@ -41,6 +41,11 @@ fun TabAnimation(
     selectedIndex: Int,
     onClick: () -> Unit,
     transformOrigin: TransformOrigin = TransformOrigin.Center,
+    // Gliding pill (d3motion segmented-control): when false the tab
+    // paints no background of its own — the TabRow indicator is the
+    // single pill that glides between tabs. Default true keeps every
+    // other usage (sheets, equalizer, stats) unchanged.
+    paintBackground: Boolean = true,
     content: @Composable () -> Unit
 ) {
     val hapticFeedback = LocalHapticFeedback.current
@@ -49,10 +54,19 @@ fun TabAnimation(
     val offsetX = remember { Animatable(0f) }
     var hasAnimatedSelectionChange by remember { mutableStateOf(false) }
 
-    val animationSpec = tween<Float>(durationMillis = 250, easing = FastOutSlowInEasing)
+    // d3motion spring (verified from their source): damping 0.55,
+    // stiffness 140 — the selected tab pops with a small overshoot and
+    // the neighbours nudge with the same spring.
+    val animationSpec = spring<Float>(dampingRatio = 0.55f, stiffness = 140f)
 
     val backgroundColor by animateColorAsState(
-        targetValue = if (isSelected) selectedColor else unselectedColor,
+        targetValue = if (!paintBackground) {
+            Color.Transparent
+        } else if (isSelected) {
+            selectedColor
+        } else {
+            unselectedColor
+        },
         animationSpec = tween(durationMillis = 200),
         label = "Tab Background Color"
     )

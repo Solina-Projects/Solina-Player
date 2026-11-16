@@ -1,8 +1,11 @@
 package app.solina.player.presentation.screens
 
 import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -56,8 +59,14 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -75,6 +84,8 @@ import app.solina.player.R
 import app.solina.player.data.model.VideoBookmark
 import app.solina.player.data.model.VideoItem
 import app.solina.player.data.model.VideoSubtitleStyle
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 /**
  * Reference-player redesign (2026-11-16): the player's menus and panels —
@@ -187,6 +198,34 @@ private fun VideoGridMenuCell(
         isFavouriteCell -> Icons.Rounded.FavoriteBorder
         else -> entry.icon
     }
+    // Heart pop (d3motion social-heart-like): on the favourite cell the
+    // heart bounces with the d3motion spring and a shockwave ring expands
+    // around it; the sheet dismisses just after the pop is visible.
+    val scope = rememberCoroutineScope()
+    var popping by remember { mutableStateOf(false) }
+    val popScale by animateFloatAsState(
+        targetValue = if (popping) 1.35f else 1f,
+        animationSpec = spring(dampingRatio = 0.55f, stiffness = 300f),
+        label = "favPop"
+    )
+    val ripple by animateFloatAsState(
+        targetValue = if (popping) 1f else 0f,
+        animationSpec = tween(durationMillis = 450),
+        label = "favRipple"
+    )
+    val cellClick = {
+        if (isFavouriteCell) {
+            if (!popping) {
+                popping = true
+                scope.launch {
+                    delay(420)
+                    onClick()
+                }
+            }
+        } else {
+            onClick()
+        }
+    }
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(6.dp),
@@ -195,24 +234,43 @@ private fun VideoGridMenuCell(
             scaleY = scale
         }
     ) {
-        Surface(
-            onClick = onClick,
-            interactionSource = interactionSource,
-            shape = CircleShape,
-            color = Color.White.copy(alpha = 0.12f),
-            modifier = Modifier.size(56.dp)
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier.size(72.dp)
         ) {
-            Box(contentAlignment = Alignment.Center) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    tint = if (isFavouriteCell && isFavourite) {
-                        Color(0xFFFF5A5A)
-                    } else {
-                        Color.White
-                    },
-                    modifier = Modifier.size(26.dp)
-                )
+            if (isFavouriteCell && ripple > 0f) {
+                Canvas(modifier = Modifier.size(72.dp)) {
+                    drawCircle(
+                        color = Color(0xFFFF5A5A).copy(alpha = (1f - ripple) * 0.7f),
+                        radius = size.minDimension / 2f * (0.55f + ripple * 0.45f),
+                        style = Stroke(width = 2.dp.toPx())
+                    )
+                }
+            }
+            Surface(
+                onClick = cellClick,
+                interactionSource = interactionSource,
+                shape = CircleShape,
+                color = Color.White.copy(alpha = 0.12f),
+                modifier = Modifier.size(56.dp)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        tint = if (isFavouriteCell && isFavourite) {
+                            Color(0xFFFF5A5A)
+                        } else {
+                            Color.White
+                        },
+                        modifier = Modifier
+                            .size(26.dp)
+                            .graphicsLayer {
+                                scaleX = popScale
+                                scaleY = popScale
+                            }
+                    )
+                }
             }
         }
         Text(
@@ -856,6 +914,14 @@ fun VideoEdgeSlider(
     isBrightness: Boolean,
     modifier: Modifier = Modifier
 ) {
+    // Fluid fill (d3motion volume-brightness-sliders): the fill height
+    // chases the target with the d3motion spring instead of jumping, so
+    // it settles with a small bounce when the finger stops.
+    val fillHeight by animateDpAsState(
+        targetValue = (120 * percent / 100).dp,
+        animationSpec = spring(dampingRatio = 0.55f, stiffness = 140f),
+        label = "edgeFill"
+    )
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -879,7 +945,7 @@ fun VideoEdgeSlider(
                     .align(Alignment.BottomCenter)
                     .size(
                         width = 4.dp,
-                        height = (120 * percent / 100).dp
+                        height = fillHeight
                     )
                     .background(videoAccentColor, RoundedCornerShape(2.dp))
             )

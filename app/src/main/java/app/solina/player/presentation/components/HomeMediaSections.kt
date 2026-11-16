@@ -92,6 +92,11 @@ fun VideoThumbnail(
                 modifier = Modifier.matchParentSize()
             )
         } else {
+            // Skeleton shimmer (d3motion claude-chat thinking state):
+            // a travelling gradient while the frame loads, instead of a
+            // flat box. It leaves composition the moment the bitmap
+            // arrives, so it costs nothing afterwards.
+            ShimmerBox(modifier = Modifier.matchParentSize())
             Icon(
                 imageVector = Icons.Rounded.VideoLibrary,
                 contentDescription = null,

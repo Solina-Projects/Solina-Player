@@ -20,7 +20,9 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -73,7 +75,9 @@ import app.solina.player.data.model.VideoFolder
 import app.solina.player.data.model.VideoItem
 import app.solina.player.data.model.groupVideosByFolder
 import app.solina.player.data.model.parentFolderPath
+import app.solina.player.presentation.components.D3Reveal
 import app.solina.player.presentation.components.VideoThumbnail
+import app.solina.player.presentation.components.rememberRevealedKeys
 import app.solina.player.presentation.navigation.Screen
 import app.solina.player.presentation.navigation.navigateSafely
 import app.solina.player.presentation.viewmodel.VideoViewModel
@@ -430,6 +434,9 @@ private fun VideoFolderList(
     navController: NavController
 ) {
     val bottomPadding = PaddingValues(bottom = 160.dp)
+    // Staggered tile reveal (d3motion gemini-image): each card fades in
+    // once, in order, when the list first loads.
+    val revealedKeys = rememberRevealedKeys()
     if (isGrid) {
         LazyVerticalGrid(
             columns = GridCells.Fixed(2),
@@ -447,7 +454,12 @@ private fun VideoFolderList(
                     )
                 }
             }
-            items(folders, key = { it.path.ifBlank { "unknown" } }) { folder ->
+            itemsIndexed(folders, key = { _, folder -> folder.path.ifBlank { "unknown" } }) { index, folder ->
+                D3Reveal(
+                    key = folder.path.ifBlank { "unknown" },
+                    index = index,
+                    revealed = revealedKeys
+                ) {
                 VideoFolderGridCard(
                     folder = folder,
                     showPath = showPaths,
@@ -465,6 +477,7 @@ private fun VideoFolderList(
                         )
                     }
                 )
+                }
             }
         }
     } else {
@@ -482,7 +495,12 @@ private fun VideoFolderList(
                     )
                 }
             }
-            items(folders, key = { it.path.ifBlank { "unknown" } }) { folder ->
+            itemsIndexed(folders, key = { _, folder -> folder.path.ifBlank { "unknown" } }) { index, folder ->
+                D3Reveal(
+                    key = folder.path.ifBlank { "unknown" },
+                    index = index,
+                    revealed = revealedKeys
+                ) {
                 VideoFolderRow(
                     folder = folder,
                     showPath = showPaths,
@@ -500,6 +518,7 @@ private fun VideoFolderList(
                         )
                     }
                 )
+                }
             }
         }
     }
@@ -512,6 +531,9 @@ private fun VideoFilesList(
     navController: NavController
 ) {
     val bottomPadding = PaddingValues(bottom = 160.dp)
+    // Staggered tile reveal (d3motion gemini-image): each card fades in
+    // once, in order, when the list first loads.
+    val revealedKeys = rememberRevealedKeys()
     if (isGrid) {
         LazyVerticalGrid(
             columns = GridCells.Fixed(2),
@@ -520,7 +542,12 @@ private fun VideoFilesList(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            items(videos, key = { it.id }) { video ->
+            itemsIndexed(videos, key = { _, video -> video.id }) { index, video ->
+                D3Reveal(
+                    key = video.id,
+                    index = index,
+                    revealed = revealedKeys
+                ) {
                 VideoFileGridCard(
                     video = video,
                     onClick = {
@@ -529,6 +556,7 @@ private fun VideoFilesList(
                         )
                     }
                 )
+                }
             }
         }
     } else {
@@ -537,7 +565,12 @@ private fun VideoFilesList(
             contentPadding = bottomPadding,
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            items(videos, key = { it.id }) { video ->
+            itemsIndexed(videos, key = { _, video -> video.id }) { index, video ->
+                D3Reveal(
+                    key = video.id,
+                    index = index,
+                    revealed = revealedKeys
+                ) {
                 VideoFileRow(
                     video = video,
                     onClick = {
@@ -546,6 +579,7 @@ private fun VideoFilesList(
                         )
                     }
                 )
+                }
             }
         }
     }

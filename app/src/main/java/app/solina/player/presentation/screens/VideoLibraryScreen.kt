@@ -13,7 +13,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
@@ -38,7 +38,9 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import app.solina.player.R
+import app.solina.player.presentation.components.D3Reveal
 import app.solina.player.presentation.components.VideoThumbnail
+import app.solina.player.presentation.components.rememberRevealedKeys
 import app.solina.player.presentation.navigation.Screen
 import app.solina.player.presentation.navigation.navigateSafely
 import app.solina.player.presentation.viewmodel.VideoViewModel
@@ -59,6 +61,9 @@ fun VideoLibraryScreen(
     // Mini-player bar (2026-11-16): it overlays the bottom of this list, so
     // leave room for it (64 dp bar + 8 dp gap) when it is showing.
     val showVideoMiniBar by videoViewModel.showVideoMiniBar.collectAsStateWithLifecycle()
+    // Staggered tile reveal (d3motion gemini-image): each row fades/scales
+    // in once, in order, when the list first loads.
+    val revealedKeys = rememberRevealedKeys()
 
     Scaffold(
         topBar = {
@@ -118,7 +123,12 @@ fun VideoLibraryScreen(
                 ),
                 verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(12.dp)
             ) {
-                items(videos, key = { it.id }) { video ->
+                itemsIndexed(videos, key = { _, video -> video.id }) { index, video ->
+                    D3Reveal(
+                        key = video.id,
+                        index = index,
+                        revealed = revealedKeys
+                    ) {
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -171,6 +181,7 @@ fun VideoLibraryScreen(
                                 tint = MaterialTheme.colorScheme.primary
                             )
                         }
+                    }
                     }
                 }
             }

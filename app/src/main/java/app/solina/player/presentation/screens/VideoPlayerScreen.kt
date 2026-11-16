@@ -23,21 +23,27 @@ import android.view.ViewGroup
 import android.view.WindowInsets
 import android.view.WindowInsetsController
 import android.widget.Toast
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -58,6 +64,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.AspectRatio
 import androidx.compose.material.icons.rounded.Bedtime
+import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.ClosedCaption
 import androidx.compose.material.icons.rounded.Equalizer
 import androidx.compose.material.icons.rounded.Fullscreen
@@ -82,6 +89,8 @@ import androidx.compose.material.icons.rounded.Speed
 import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material.icons.rounded.VolumeOff
 import androidx.compose.material.icons.rounded.VolumeUp
+import androidx.compose.material.icons.rounded.WbSunny
+import app.solina.player.presentation.components.RollingTimeText
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
@@ -113,6 +122,8 @@ import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Shadow
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -276,6 +287,18 @@ fun VideoPlayerScreen(
     val brightness by videoPlayerViewModel.brightness.collectAsStateWithLifecycle()
     val volume by videoPlayerViewModel.volume.collectAsStateWithLifecycle()
     val sleepTimerMinutes by videoPlayerViewModel.sleepTimerMinutes.collectAsStateWithLifecycle()
+    val sleepTimerRemainingSeconds by videoPlayerViewModel.sleepTimerRemainingSeconds.collectAsStateWithLifecycle()
+    // Screenshot button state machine (d3motion deploy-button: idle ->
+    // loading -> verified checkmark). 0 = idle, 1 = capturing, 2 = done.
+    // The check only shows on a real successful save (see takeScreenshot);
+    // a failure returns to idle and the toast explains it.
+    var screenshotState by remember { mutableIntStateOf(0) }
+    LaunchedEffect(screenshotState) {
+        if (screenshotState == 2) {
+            delay(1200)
+            screenshotState = 0
+        }
+    }
     val audioTrackLabels by videoPlayerViewModel.audioTrackLabels.collectAsStateWithLifecycle()
     val selectedAudioTrack by videoPlayerViewModel.selectedAudioTrack.collectAsStateWithLifecycle()
     val subtitleTrackLabels by videoPlayerViewModel.subtitleTrackLabels.collectAsStateWithLifecycle()
@@ -591,7 +614,12 @@ fun VideoPlayerScreen(
         }
     }
 
-    fun takeScreenshot() {
+    /**
+     * Screenshot with a real completion callback (d3motion deploy-button
+     * state machine): [onDone] receives true only when the frame was
+     * actually saved, so the button's checkmark never lies.
+     */
+    fun takeScreenshot(onDone: (Boolean) -> Unit) {
         val playerView = playerViewRef
         if (playerView == null) {
             Toast.makeText(
@@ -599,6 +627,7 @@ fun VideoPlayerScreen(
                 context.getString(R.string.video_screenshot_failed),
                 Toast.LENGTH_SHORT
             ).show()
+            onDone(false)
             return
         }
         val surfaceView = playerView.videoSurfaceView
@@ -612,12 +641,13 @@ fun VideoPlayerScreen(
                     bitmap,
                     { result ->
                         if (result == PixelCopy.SUCCESS) {
-                            saveScreenshotBitmap(context, bitmap)
+                            onDone(saveScreenshotBitmap(context, bitmap))
                         } else {
                             captureFrameWithRetriever(
                                 context,
                                 decodedUri,
-                                videoPlayerViewModel.currentPositionMs()
+                                videoPlayerViewModel.currentPositionMs(),
+                                onDone
                             )
                         }
                     },
@@ -627,19 +657,21 @@ fun VideoPlayerScreen(
             is TextureView -> {
                 val bitmap = surfaceView.bitmap
                 if (bitmap != null) {
-                    saveScreenshotBitmap(context, bitmap)
+                    onDone(saveScreenshotBitmap(context, bitmap))
                 } else {
                     captureFrameWithRetriever(
                         context,
                         decodedUri,
-                        videoPlayerViewModel.currentPositionMs()
+                        videoPlayerViewModel.currentPositionMs(),
+                        onDone
                     )
                 }
             }
             else -> captureFrameWithRetriever(
                 context,
                 decodedUri,
-                videoPlayerViewModel.currentPositionMs()
+                videoPlayerViewModel.currentPositionMs(),
+                onDone
             )
         }
     }
@@ -757,7 +789,14 @@ fun VideoPlayerScreen(
             "ab" -> videoPlayerViewModel.tapABRepeat()
             "audiofx" -> showAudioDialog = true
             "equalizer" -> openSystemEqualizer()
-            "screenshot" -> takeScreenshot()
+            "screenshot" -> {
+                if (screenshotState == 0) {
+                    screenshotState = 1
+                    takeScreenshot { ok ->
+                        screenshotState = if (ok) 2 else 0
+                    }
+                }
+            }
             "background" -> videoPlayerViewModel.setBackgroundPlayback(
                 !backgroundPlayback
             )
@@ -1356,6 +1395,37 @@ fun VideoPlayerScreen(
                                         } else {
                                             null
                                         },
+                                        // Sleep timer ring (d3motion
+                                        // countdown-timer): real remaining
+                                        // fraction while the timer runs.
+                                        ringProgress = if (button.id == "sleep" &&
+                                            sleepTimerMinutes > 0
+                                        ) {
+                                            sleepTimerRemainingSeconds.toFloat() /
+                                                (sleepTimerMinutes * 60f)
+                                        } else {
+                                            null
+                                        },
+                                        // Screenshot state machine
+                                        // (d3motion deploy-button): spinner
+                                        // while capturing, check on success.
+                                        customContent = if (button.id == "screenshot" &&
+                                            screenshotState != 0
+                                        ) {
+                                            {
+                                                if (screenshotState == 1) {
+                                                    CircularProgressIndicator(
+                                                        modifier = Modifier.size(20.dp),
+                                                        color = Color.White,
+                                                        strokeWidth = 2.dp
+                                                    )
+                                                } else {
+                                                    ScreenshotDoneCheck()
+                                                }
+                                            }
+                                        } else {
+                                            null
+                                        },
                                         onClick = { onControlButtonClick(button) }
                                     )
                                 }
@@ -1530,7 +1600,9 @@ fun VideoPlayerScreen(
                             verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            Text(
+                            // Rolling digits (d3motion otp / countdown):
+                            // each changed digit rolls vertically.
+                            RollingTimeText(
                                 text = formatVideoTime(displayPositionMs),
                                 color = Color.White,
                                 fontSize = 13.sp,
@@ -1594,7 +1666,7 @@ fun VideoPlayerScreen(
                                     .weight(1f)
                                     .padding(horizontal = 8.dp)
                             )
-                            Text(
+                            RollingTimeText(
                                 text = formatVideoTime(durationMs),
                                 color = Color.White,
                                 fontSize = 13.sp,
@@ -2143,6 +2215,11 @@ private fun VideoRoundControlButton(
     circleText: String? = null,
     iconOverride: ImageVector? = null,
     activeColor: Color? = null,
+    // Sleep-timer radial ring (d3motion countdown-timer): remaining
+    // fraction 0..1 while the timer runs, null otherwise.
+    ringProgress: Float? = null,
+    // Replaces the icon (e.g. the screenshot spinner / checkmark).
+    customContent: (@Composable BoxScope.() -> Unit)? = null,
     onClick: () -> Unit
 ) {
     // Press-scale micro-feedback (modern layer): the button shrinks
@@ -2167,41 +2244,83 @@ private fun VideoRoundControlButton(
                 scaleY = pressScale
             }
     ) {
-        Surface(
-            onClick = onClick,
-            interactionSource = interactionSource,
-            shape = CircleShape,
-            color = if (isActive) {
-                activeColor ?: MaterialTheme.colorScheme.primary
-            } else {
-                Color.Black.copy(alpha = 0.45f)
-            },
-            modifier = Modifier.size(46.dp)
+        // Ring + circle: the ring is drawn around the 46 dp circle.
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier.size(52.dp)
         ) {
-            Box(contentAlignment = Alignment.Center) {
-                if (circleText != null) {
-                    Text(
-                        text = circleText,
-                        color = if (isActive && activeColor == null) {
-                            MaterialTheme.colorScheme.onPrimary
-                        } else {
-                            Color.White
-                        },
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Bold,
-                        textAlign = TextAlign.Center
+            if (ringProgress != null) {
+                Canvas(modifier = Modifier.size(52.dp)) {
+                    drawArc(
+                        color = videoAccentColor,
+                        startAngle = -90f,
+                        sweepAngle = 360f * ringProgress.coerceIn(0f, 1f),
+                        useCenter = false,
+                        style = Stroke(width = 3.dp.toPx(), cap = StrokeCap.Round)
                     )
+                }
+            }
+            Surface(
+                onClick = onClick,
+                interactionSource = interactionSource,
+                shape = CircleShape,
+                color = if (isActive) {
+                    activeColor ?: MaterialTheme.colorScheme.primary
                 } else {
-                    Icon(
-                        imageVector = iconOverride ?: button.icon,
-                        contentDescription = null,
-                        tint = if (isActive && activeColor == null) {
-                            MaterialTheme.colorScheme.onPrimary
-                        } else {
-                            Color.White
-                        },
-                        modifier = Modifier.size(22.dp)
-                    )
+                    Color.Black.copy(alpha = 0.45f)
+                },
+                modifier = Modifier.size(46.dp)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    if (customContent != null) {
+                        customContent()
+                    } else if (circleText != null) {
+                        Text(
+                            text = circleText,
+                            color = if (isActive && activeColor == null) {
+                                MaterialTheme.colorScheme.onPrimary
+                            } else {
+                                Color.White
+                            },
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold,
+                            textAlign = TextAlign.Center
+                        )
+                    } else if (button.id == "night") {
+                        // Night-mode sun/moon morph (d3motion
+                        // theme-toggle): the moon fades and scales into
+                        // the sun when night light turns on, and back.
+                        AnimatedContent(
+                            targetState = isActive,
+                            transitionSpec = {
+                                (fadeIn() + scaleIn(initialScale = 0.6f)) togetherWith
+                                    (fadeOut() + scaleOut(targetScale = 0.6f))
+                            },
+                            label = "nightMorph"
+                        ) { on ->
+                            Icon(
+                                imageVector = if (on) {
+                                    Icons.Rounded.WbSunny
+                                } else {
+                                    Icons.Rounded.NightsStay
+                                },
+                                contentDescription = null,
+                                tint = Color.White,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
+                    } else {
+                        Icon(
+                            imageVector = iconOverride ?: button.icon,
+                            contentDescription = null,
+                            tint = if (isActive && activeColor == null) {
+                                MaterialTheme.colorScheme.onPrimary
+                            } else {
+                                Color.White
+                            },
+                            modifier = Modifier.size(22.dp)
+                        )
+                    }
                 }
             }
         }
@@ -2214,6 +2333,32 @@ private fun VideoRoundControlButton(
             textAlign = TextAlign.Center
         )
     }
+}
+
+/** The screenshot "done" checkmark, popping in with the d3motion spring. */
+@Composable
+private fun ScreenshotDoneCheck() {
+    val scale = remember { Animatable(0.5f) }
+    LaunchedEffect(Unit) {
+        scale.animateTo(
+            1f,
+            animationSpec = spring(
+                dampingRatio = 0.55f,
+                stiffness = 300f
+            )
+        )
+    }
+    Icon(
+        imageVector = Icons.Rounded.Check,
+        contentDescription = null,
+        tint = Color.White,
+        modifier = Modifier
+            .size(22.dp)
+            .graphicsLayer {
+                scaleX = scale.value
+                scaleY = scale.value
+            }
+    )
 }
 
 /** A small round ±15 s skip button of the bottom transport bar. */
@@ -2349,8 +2494,8 @@ private fun formatSpeedLabel(speed: Float): String {
     return "${text}×"
 }
 
-/** Save a captured frame under Pictures/Solina Player. */
-private fun saveScreenshotBitmap(context: android.content.Context, bitmap: Bitmap) {
+/** Save a captured frame under Pictures/Solina Player. Returns true on success. */
+private fun saveScreenshotBitmap(context: android.content.Context, bitmap: Bitmap): Boolean {
     val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
     val values = ContentValues().apply {
         put(MediaStore.Images.Media.DISPLAY_NAME, "SolinaPlayer_$timestamp.jpg")
@@ -2384,6 +2529,7 @@ private fun saveScreenshotBitmap(context: android.content.Context, bitmap: Bitma
         },
         Toast.LENGTH_SHORT
     ).show()
+    return saved
 }
 
 /**
@@ -2393,7 +2539,8 @@ private fun saveScreenshotBitmap(context: android.content.Context, bitmap: Bitma
 private fun captureFrameWithRetriever(
     context: android.content.Context,
     videoUri: String,
-    positionMs: Long
+    positionMs: Long,
+    onDone: (Boolean) -> Unit
 ) {
     val retriever = MediaMetadataRetriever()
     val bitmap = runCatching {
@@ -2405,12 +2552,13 @@ private fun captureFrameWithRetriever(
     }.getOrNull()
     runCatching { retriever.release() }
     if (bitmap != null) {
-        saveScreenshotBitmap(context, bitmap)
+        onDone(saveScreenshotBitmap(context, bitmap))
     } else {
         Toast.makeText(
             context,
             context.getString(R.string.video_screenshot_failed),
             Toast.LENGTH_SHORT
         ).show()
+        onDone(false)
     }
 }

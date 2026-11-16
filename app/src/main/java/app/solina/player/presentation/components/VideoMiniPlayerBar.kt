@@ -21,7 +21,6 @@ import androidx.compose.material.icons.rounded.SkipPrevious
 import androidx.compose.material.icons.rounded.VideoLibrary
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -174,6 +173,21 @@ fun VideoMiniPlayerBar(
                         modifier = Modifier.size(24.dp)
                     )
                 }
+                // Live waveform (d3motion pill-chatgpt / music-player):
+                // tiny EQ bars over the preview corner while playing.
+                if (isPlaying) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(4.dp),
+                        contentAlignment = Alignment.BottomStart
+                    ) {
+                        MiniEqBars(
+                            isPlaying = true,
+                            color = Color.White
+                        )
+                    }
+                }
             }
             Spacer(Modifier.width(8.dp))
             Column(modifier = Modifier.weight(1f)) {
@@ -184,22 +198,21 @@ fun VideoMiniPlayerBar(
                     overflow = TextOverflow.Ellipsis
                 )
                 Spacer(Modifier.height(4.dp))
-                LinearProgressIndicator(
-                    progress = { progress },
+                // Gradient progress fill (d3motion file-upload).
+                GradientProgressBar(
+                    progress = progress,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(4.dp)
-                        .clip(RoundedCornerShape(2.dp)),
-                    color = MaterialTheme.colorScheme.primary,
+                        .height(4.dp),
+                    startColor = MaterialTheme.colorScheme.primary,
+                    endColor = Color(0xFF8FB8FF),
                     trackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.15f)
                 )
                 Spacer(Modifier.height(2.dp))
-                Text(
+                RollingTimeText(
                     text = "${formatDuration(livePosition)} / ${formatDuration(liveDuration)}",
-                    style = MaterialTheme.typography.bodySmall,
-                    fontSize = 11.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1
+                    fontSize = 11.sp
                 )
             }
             IconButton(

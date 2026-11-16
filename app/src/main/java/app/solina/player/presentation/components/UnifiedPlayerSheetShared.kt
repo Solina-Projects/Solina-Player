@@ -155,6 +155,14 @@ internal fun MiniPlayerContentInternal(
         }
         Spacer(modifier = Modifier.width(8.dp))
 
+        // Live EQ bars (d3motion music-player / suno): four bars driven
+        // by one infiniteTransition, only while actually playing.
+        MiniEqBars(
+            isPlaying = isPlaying && controlsEnabled,
+            color = LocalMaterialTheme.current.primary
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+
         // Media transport controls stay left-to-right in RTL locales.
         CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
             Row(verticalAlignment = Alignment.CenterVertically) {
