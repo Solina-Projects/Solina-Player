@@ -48,34 +48,16 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import app.solina.player.R
+import app.solina.player.data.model.VideoFolder
 import app.solina.player.data.model.VideoItem
+import app.solina.player.data.model.groupVideosByFolder
+import app.solina.player.data.model.parentFolderPath
 import app.solina.player.presentation.components.VideoThumbnail
 import app.solina.player.presentation.navigation.Screen
 import app.solina.player.presentation.navigation.navigateSafely
 import app.solina.player.presentation.viewmodel.VideoViewModel
 import app.solina.player.utils.formatDuration
 import java.net.URLDecoder
-
-private data class VideoFolder(
-    val path: String,
-    val name: String,
-    val videos: List<VideoItem>
-) {
-    val totalDurationMs: Long get() = videos.sumOf { it.durationMs }
-}
-
-private fun VideoItem.parentFolderPath(): String =
-    path?.substringBeforeLast('/') ?: ""
-
-private fun groupVideosByFolder(videos: List<VideoItem>): List<VideoFolder> =
-    videos.groupBy { it.parentFolderPath() }
-        .map { (folderPath, folderVideos) ->
-            VideoFolder(
-                path = folderPath,
-                name = folderPath.substringAfterLast('/').ifBlank { "" },
-                videos = folderVideos
-            )
-        }
 
 private enum class FolderSort { NAME, COUNT }
 
