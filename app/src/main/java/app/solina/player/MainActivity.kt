@@ -186,6 +186,17 @@ internal val MainNavItems: ImmutableList<BottomNavItem> = persistentListOf(
     BottomNavItem(R.string.tab_library, R.drawable.rounded_library_music_24, R.drawable.round_library_music_24, Screen.Library)
 )
 
+/**
+ * Bottom bar for the video section (feedback, 2026-11-16): Home, video
+ * Search and Folders. The music Library tab is replaced by Folders here —
+ * video folders live in their own screen, not the music library.
+ */
+internal val VideoNavItems: ImmutableList<BottomNavItem> = persistentListOf(
+    BottomNavItem(R.string.tab_home, R.drawable.rounded_home_24, R.drawable.home_24_rounded_filled, Screen.Home),
+    BottomNavItem(R.string.search, R.drawable.rounded_search_24, R.drawable.rounded_search_24, Screen.VideoSearch),
+    BottomNavItem(R.string.library_tab_folders, R.drawable.rounded_folder_24, R.drawable.rounded_folder_open_24, Screen.VideoFolders)
+)
+
 private data class DismissUndoBarSlice(
     val isVisible: Boolean = false,
     val durationMillis: Long = 4000L
@@ -764,6 +775,22 @@ class MainActivity : ComponentActivity() {
         }
 
         val navBarStyle by playerViewModel.navBarStyle.collectAsStateWithLifecycle()
+
+        // Bottom-bar feedback (2026-11-16): the video section (library,
+        // player, video search, folders) shows Home / Search / Folders;
+        // everywhere else the music bar (Home / Search / Library) is used.
+        // Route patterns carry "{...}" placeholders, so prefix-match them.
+        val isVideoSection by remember(currentRoute) {
+            derivedStateOf {
+                val route = currentRoute.orEmpty()
+                route == Screen.VideoLibrary.route ||
+                    route == Screen.VideoSearch.route ||
+                    route == Screen.VideoFolders.route ||
+                    route.startsWith("video_player") ||
+                    route.startsWith("video_folder")
+            }
+        }
+        val bottomNavItems = if (isVideoSection) VideoNavItems else MainNavItems
         val navBarCompactMode by playerViewModel.navBarCompactMode.collectAsStateWithLifecycle()
         val navBarCornerRadiusRaw by playerViewModel.navBarCornerRadius.collectAsStateWithLifecycle()
         val navBarCornerRadius = sanitizeNavBarCornerRadius(navBarCornerRadiusRaw)
@@ -915,7 +942,7 @@ class MainActivity : ComponentActivity() {
                         }
                         PlayerNavigationRail(
                             navController = navController,
-                            navItems = MainNavItems,
+                            navItems = bottomNavItems,
                             currentRoute = currentRoute,
                             onSearchIconDoubleTap = onSearchIconDoubleTap
                         )
@@ -1026,7 +1053,7 @@ class MainActivity : ComponentActivity() {
                             ) {
                                 PlayerInternalNavigationBar(
                                     navController = navController,
-                                    navItems = MainNavItems,
+                                    navItems = bottomNavItems,
                                     currentRoute = currentRoute,
                                     navBarStyle = navBarStyle,
                                     compactMode = navBarCompactMode,
