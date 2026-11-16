@@ -17,12 +17,16 @@ import android.view.PixelCopy
 import android.view.SurfaceView
 import android.view.TextureView
 import android.view.ViewGroup
+import android.view.WindowInsets
+import android.view.WindowInsetsController
 import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -155,9 +159,10 @@ import kotlin.math.roundToInt
  *   so the Folders screen's Resume button can continue where it left off.
  *
  * Home-entry + Player feedback (2026-11-16):
- * - Playback starts in LANDSCAPE automatically, and a FIXED rotation icon
- *   is always visible on the right edge of the player (not only inside the
- *   hidden bar). Rotation works now: the old toggle set
+ * - Playback starts in LANDSCAPE automatically, and a rotation toggle
+ *   sits in the bottom transport bar (it used to be a fixed icon on the
+ *   right edge; moved in the Search + Player polish, 2026-11-16) as well
+ *   as inside the control bar. Rotation works now: the old toggle set
  *   requestedOrientation, but [PhoneOrientationPolicy] forced the phone
  *   back to portrait from MainActivity.onConfigurationChanged, so the
  *   request was reverted the moment the orientation changed. The player
@@ -190,6 +195,22 @@ import kotlin.math.roundToInt
  *   half sets brightness, on the right half volume; two-finger pinch
  *   zooms the video (graphicsLayer scale on the PlayerView, 1.0x–3.0x,
  *   double-tap resets to 1.0x).
+ *
+ * Search + Player polish (2026-11-16):
+ * - The round-button control bar now hangs under the arrow at the top
+ *   and slides in from the right edge (right to left); its buttons are
+ *   smaller and more compact (46 dp circles, 22 dp icons).
+ * - The fixed right-edge rotation button is gone; rotation lives in the
+ *   bottom transport bar, next to fullscreen and PiP.
+ * - The bottom time bar scrubs at 0.5x — the same finger travel moves
+ *   the position half as far; a tap still seeks straight to the point.
+ * - The fullscreen icon works now: before it only flipped a state whose
+ *   orientation effect was already satisfied by the forced landscape on
+ *   entry, so the tap looked dead. Entering fullscreen hides the system
+ *   bars (the video grows to the whole screen) and forces landscape;
+ *   exiting shows the bars and goes back to portrait, with a toast.
+ * - Every menu and dialog opened during playback is transparent like
+ *   the rest of the player (Black ~0.75–0.85 alpha, white text).
  */
 @OptIn(ExperimentalMaterial3Api::class, UnstableApi::class)
 @Composable
@@ -247,6 +268,13 @@ fun VideoPlayerScreen(
     fun poke() {
         interactionTick++
     }
+    // Relative scrubbing (Search + Player polish, 2026-11-16): dragging
+    // the bottom time bar moves the position at 0.5x — half the finger
+    // travel — so scrubbing feels slower and finer. A tap (one big jump)
+    // still seeks straight to the tapped point. The horizontal-swipe seek
+    // on the video surface keeps its 1:1 speed.
+    var scrubAnchorFraction by remember { mutableStateOf<Float?>(null) }
+    var scrubAnchorMs by remember { mutableLongStateOf(0L) }
     // Pinch zoom: graphicsLayer scale on the PlayerView, 1.0x–3.0x.
     var zoomScale by remember { mutableStateOf(1f) }
     // Long-press speed mode: the speed bar just below the arrow.
@@ -388,6 +416,7 @@ fun VideoPlayerScreen(
                 val attributes = window.attributes
                 attributes.screenBrightness = -1f
                 window.attributes = attributes
+                window.insetsController?.show(WindowInsets.Type.systemBars())
             }
         }
     }
@@ -474,6 +503,44 @@ fun VideoPlayerScreen(
                 context.getString(R.string.video_pip_unavailable),
                 Toast.LENGTH_SHORT
             ).show()
+        }
+    }
+
+    /**
+     * Fullscreen that actually does something (Search + Player polish,
+     * 2026-11-16): before, the bottom-bar icon only flipped
+     * [VideoPlayerViewModel.isFullscreen], whose orientation effect was
+     * already satisfied by the forced landscape on entry — and nothing
+     * hid the system bars or changed the video size, so the tap looked
+     * dead. Now entering fullscreen hides the system bars (the video
+     * grows to the whole screen) and forces landscape; exiting shows the
+     * bars again and goes back to portrait, with a toast either way.
+     */
+    fun toggleFullscreenMode() {
+        val entering = !isFullscreen
+        videoPlayerViewModel.toggleFullscreen()
+        forcedLandscape = entering
+        Toast.makeText(
+            context,
+            context.getString(
+                if (entering) R.string.video_fullscreen else R.string.video_exit_fullscreen
+            ),
+            Toast.LENGTH_SHORT
+        ).show()
+        poke()
+    }
+
+    // Fullscreen hides the system bars; leaving fullscreen shows them.
+    LaunchedEffect(isFullscreen) {
+        activity?.window?.let { window ->
+            val controller = window.insetsController
+            if (isFullscreen) {
+                controller?.hide(WindowInsets.Type.systemBars())
+                controller?.systemBarsBehavior =
+                    WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+            } else {
+                controller?.show(WindowInsets.Type.systemBars())
+            }
         }
     }
 
@@ -871,11 +938,18 @@ fun VideoPlayerScreen(
                                 }
                                 DropdownMenu(
                                     expanded = showSubtitleMenu,
-                                    onDismissRequest = { showSubtitleMenu = false }
+                                    onDismissRequest = { showSubtitleMenu = false },
+                                    // Transparent like the rest of the
+                                    // player (Search + Player polish,
+                                    // 2026-11-16): no solid surface.
+                                    containerColor = Color.Black.copy(alpha = 0.75f)
                                 ) {
                                     DropdownMenuItem(
                                         text = {
-                                            Text(text = stringResource(R.string.video_subtitle_off))
+                                            Text(
+                                                text = stringResource(R.string.video_subtitle_off),
+                                                color = Color.White
+                                            )
                                         },
                                         onClick = {
                                             videoPlayerViewModel.selectSubtitleTrack(-1)
@@ -887,7 +961,7 @@ fun VideoPlayerScreen(
                                             text = {
                                                 Text(
                                                     text = stringResource(R.string.video_no_subtitles),
-                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                    color = Color.White.copy(alpha = 0.5f)
                                                 )
                                             },
                                             onClick = { showSubtitleMenu = false },
@@ -896,7 +970,12 @@ fun VideoPlayerScreen(
                                     } else {
                                         subtitleTrackLabels.forEachIndexed { index, label ->
                                             DropdownMenuItem(
-                                                text = { Text(text = label) },
+                                                text = {
+                                                    Text(
+                                                        text = label,
+                                                        color = Color.White
+                                                    )
+                                                },
                                                 onClick = {
                                                     videoPlayerViewModel.selectSubtitleTrack(index)
                                                     showSubtitleMenu = false
@@ -921,14 +1000,15 @@ fun VideoPlayerScreen(
                                 }
                                 DropdownMenu(
                                     expanded = showAudioMenu,
-                                    onDismissRequest = { showAudioMenu = false }
+                                    onDismissRequest = { showAudioMenu = false },
+                                    containerColor = Color.Black.copy(alpha = 0.75f)
                                 ) {
                                     if (audioTrackLabels.isEmpty()) {
                                         DropdownMenuItem(
                                             text = {
                                                 Text(
                                                     text = stringResource(R.string.video_no_audio_tracks),
-                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                    color = Color.White.copy(alpha = 0.5f)
                                                 )
                                             },
                                             onClick = { showAudioMenu = false },
@@ -937,7 +1017,12 @@ fun VideoPlayerScreen(
                                     } else {
                                         audioTrackLabels.forEachIndexed { index, label ->
                                             DropdownMenuItem(
-                                                text = { Text(text = label) },
+                                                text = {
+                                                    Text(
+                                                        text = label,
+                                                        color = Color.White
+                                                    )
+                                                },
                                                 onClick = {
                                                     videoPlayerViewModel.selectAudioTrack(index)
                                                     showAudioMenu = false
@@ -958,7 +1043,8 @@ fun VideoPlayerScreen(
                                 }
                                 DropdownMenu(
                                     expanded = showOverflowMenu,
-                                    onDismissRequest = { showOverflowMenu = false }
+                                    onDismissRequest = { showOverflowMenu = false },
+                                    containerColor = Color.Black.copy(alpha = 0.75f)
                                 ) {
                                     DropdownMenuItem(
                                         text = {
@@ -968,7 +1054,8 @@ fun VideoPlayerScreen(
                                                         "FILL" -> stringResource(R.string.video_aspect_fill)
                                                         "ZOOM" -> stringResource(R.string.video_aspect_zoom)
                                                         else -> stringResource(R.string.video_aspect_fit)
-                                                    }
+                                                    },
+                                                color = Color.White
                                             )
                                         },
                                         onClick = {
@@ -978,7 +1065,10 @@ fun VideoPlayerScreen(
                                     )
                                     DropdownMenuItem(
                                         text = {
-                                            Text(text = stringResource(R.string.video_screenshot))
+                                            Text(
+                                                text = stringResource(R.string.video_screenshot),
+                                                color = Color.White
+                                            )
                                         },
                                         onClick = {
                                             takeScreenshot()
@@ -989,7 +1079,8 @@ fun VideoPlayerScreen(
                                         text = {
                                             Text(
                                                 text = stringResource(R.string.video_background_playback) +
-                                                    if (backgroundPlayback) " ✓" else ""
+                                                    if (backgroundPlayback) " ✓" else "",
+                                                color = Color.White
                                             )
                                         },
                                         onClick = {
@@ -999,16 +1090,22 @@ fun VideoPlayerScreen(
                                     )
                                     DropdownMenuItem(
                                         text = {
-                                            Text(text = stringResource(R.string.video_fullscreen))
+                                            Text(
+                                                text = stringResource(R.string.video_fullscreen),
+                                                color = Color.White
+                                            )
                                         },
                                         onClick = {
-                                            videoPlayerViewModel.toggleFullscreen()
+                                            toggleFullscreenMode()
                                             showOverflowMenu = false
                                         }
                                     )
                                     DropdownMenuItem(
                                         text = {
-                                            Text(text = stringResource(R.string.video_picture_in_picture))
+                                            Text(
+                                                text = stringResource(R.string.video_picture_in_picture),
+                                                color = Color.White
+                                            )
                                         },
                                         onClick = {
                                             enterPictureInPicture()
@@ -1017,7 +1114,10 @@ fun VideoPlayerScreen(
                                     )
                                     DropdownMenuItem(
                                         text = {
-                                            Text(text = stringResource(R.string.video_lock_controls))
+                                            Text(
+                                                text = stringResource(R.string.video_lock_controls),
+                                                color = Color.White
+                                            )
                                         },
                                         onClick = {
                                             controlsLocked = true
@@ -1119,73 +1219,29 @@ fun VideoPlayerScreen(
                             }
                         }
                     }
-                }
-            }
-
-            // ---- Fixed rotation icon: always one tap away on the right
-            // edge, outside the collapsible bar. It hides with the other
-            // bars and comes back with a tap on the video. ----
-            AnimatedVisibility(
-                visible = barsVisible,
-                enter = fadeIn(),
-                exit = fadeOut(),
-                modifier = Modifier.align(Alignment.CenterEnd)
-            ) {
-                Surface(
-                    onClick = {
-                        forcedLandscape = if (forcedLandscape == true) false else true
-                        poke()
-                    },
-                    shape = CircleShape,
-                    color = Color.Black.copy(alpha = 0.55f),
-                    modifier = Modifier
-                        .padding(end = 12.dp)
-                        .size(52.dp)
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Icon(
-                            imageVector = Icons.Rounded.ScreenRotation,
-                            contentDescription = stringResource(R.string.video_screen_rotation),
-                            tint = if (forcedLandscape == true) {
-                                MaterialTheme.colorScheme.primary
-                            } else {
-                                Color.White
-                            },
-                            modifier = Modifier.size(28.dp)
-                        )
-                    }
-                }
-            }
-
-            // ---- Bottom: the round-button control bar, then the custom
-            // transport bar. Both auto-hide with the top bar. ----
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .align(Alignment.BottomCenter),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
                 // Extra control bar (round buttons, like the reference):
-                // hidden unless the arrow opened it.
+                // it hangs under the arrow at the top and slides in
+                // from the right edge (Search + Player polish,
+                // 2026-11-16), hidden unless the arrow opened it.
                 AnimatedVisibility(
                     visible = barsVisible && controlsExpanded,
-                    enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
-                    exit = slideOutVertically(targetOffsetY = { it }) + fadeOut()
+                    enter = slideInHorizontally(initialOffsetX = { it }) + fadeIn(),
+                    exit = slideOutHorizontally(targetOffsetX = { it }) + fadeOut()
                 ) {
                     Surface(
                         modifier = Modifier.fillMaxWidth(),
                         color = Color.Black.copy(alpha = 0.55f),
                         shape = RoundedCornerShape(
-                            topStart = 28.dp,
-                            topEnd = 28.dp
+                            bottomStart = 28.dp,
+                            bottomEnd = 28.dp
                         )
                     ) {
                         LazyRow(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(vertical = 12.dp),
-                            contentPadding = PaddingValues(horizontal = 16.dp),
-                            horizontalArrangement = Arrangement.spacedBy(16.dp)
+                                .padding(vertical = 8.dp),
+                            contentPadding = PaddingValues(horizontal = 12.dp),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
                             items(shownButtons, key = { it.id }) { button ->
                                 VideoRoundControlButton(
@@ -1274,12 +1330,16 @@ fun VideoPlayerScreen(
                         // Speed menu, anchored to the speed round button.
                         DropdownMenu(
                             expanded = showSpeedMenu,
-                            onDismissRequest = { showSpeedMenu = false }
+                            onDismissRequest = { showSpeedMenu = false },
+                            containerColor = Color.Black.copy(alpha = 0.75f)
                         ) {
                             speedOptions.forEach { speed ->
                                 DropdownMenuItem(
                                     text = {
-                                        Text(text = formatSpeedLabel(speed))
+                                        Text(
+                                            text = formatSpeedLabel(speed),
+                                            color = Color.White
+                                        )
                                     },
                                     onClick = {
                                         videoPlayerViewModel.setSpeed(speed)
@@ -1290,6 +1350,18 @@ fun VideoPlayerScreen(
                         }
                     }
                 }
+
+                }
+            }
+
+            // ---- Bottom: the custom transport bar. It auto-hides
+            // with the top bar. ----
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .align(Alignment.BottomCenter),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
                 // Bottom transport bar, exactly like the reference: a seek
                 // bar with the current time on the left and the total time
                 // on the right, and below it lock on the far left, prev
@@ -1324,10 +1396,39 @@ fun VideoPlayerScreen(
                                 },
                                 onValueChange = { fraction ->
                                     scrubbing = true
-                                    seekPreviewMs = (fraction * durationMs).toLong()
+                                    val duration = durationMs
+                                    if (duration > 0) {
+                                        val anchorFraction = scrubAnchorFraction
+                                        if (anchorFraction == null) {
+                                            // First move of this scrub: a
+                                            // big jump is a tap — seek
+                                            // straight to the tapped point.
+                                            // A small move starts a 0.5x
+                                            // relative drag from here.
+                                            val currentFraction =
+                                                positionMs.toFloat() / duration
+                                            if (abs(fraction - currentFraction) > 0.25f) {
+                                                scrubAnchorFraction = fraction
+                                                scrubAnchorMs =
+                                                    (fraction * duration).toLong()
+                                                seekPreviewMs =
+                                                    (fraction * duration).toLong()
+                                            } else {
+                                                scrubAnchorFraction = fraction
+                                                scrubAnchorMs = positionMs
+                                                seekPreviewMs = positionMs
+                                            }
+                                        } else {
+                                            val delta = ((fraction - anchorFraction) *
+                                                duration * 0.5f).toLong()
+                                            seekPreviewMs = (scrubAnchorMs + delta)
+                                                .coerceIn(0L, duration)
+                                        }
+                                    }
                                 },
                                 onValueChangeFinished = {
                                     scrubbing = false
+                                    scrubAnchorFraction = null
                                     if (seekPreviewMs >= 0) {
                                         videoPlayerViewModel.seekTo(seekPreviewMs)
                                         positionMs = seekPreviewMs
@@ -1449,11 +1550,31 @@ fun VideoPlayerScreen(
                                 verticalAlignment = Alignment.CenterVertically,
                                 modifier = Modifier.align(Alignment.CenterEnd)
                             ) {
+                                // Screen rotation lives here now (Search +
+                                // Player polish, 2026-11-16): the fixed
+                                // right-edge button is gone. Same toggle as
+                                // the one in the control bar.
                                 IconButton(
                                     onClick = {
-                                        videoPlayerViewModel.toggleFullscreen()
+                                        forcedLandscape =
+                                            if (forcedLandscape == true) false else true
                                         poke()
                                     },
+                                    modifier = Modifier.size(48.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Rounded.ScreenRotation,
+                                        contentDescription = stringResource(R.string.video_screen_rotation),
+                                        tint = if (forcedLandscape == true) {
+                                            MaterialTheme.colorScheme.primary
+                                        } else {
+                                            Color.White
+                                        },
+                                        modifier = Modifier.size(28.dp)
+                                    )
+                                }
+                                IconButton(
+                                    onClick = { toggleFullscreenMode() },
                                     modifier = Modifier.size(48.dp)
                                 ) {
                                     Icon(
@@ -1514,10 +1635,15 @@ fun VideoPlayerScreen(
         }
     }
 
-    // ---- Audio Effect dialog: volume + audio track + night light. ----
+    // ---- Audio Effect dialog: volume + audio track + night light.
+    // Transparent like the rest of the player (Search + Player polish,
+    // 2026-11-16): no solid surface.
     if (showAudioDialog) {
         AlertDialog(
             onDismissRequest = { showAudioDialog = false },
+            containerColor = Color.Black.copy(alpha = 0.85f),
+            titleContentColor = Color.White,
+            textContentColor = Color.White,
             title = { Text(text = stringResource(R.string.video_audio_effect)) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -1548,6 +1674,7 @@ fun VideoPlayerScreen(
                             Text(
                                 text = if (index == selectedAudioTrack) "●  $label" else "○  $label",
                                 style = MaterialTheme.typography.bodyLarge,
+                                color = Color.White,
                                 modifier = Modifier.weight(1f)
                             )
                         }
@@ -1556,7 +1683,7 @@ fun VideoPlayerScreen(
                         Text(
                             text = stringResource(R.string.video_audio_track_single),
                             style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = Color.White.copy(alpha = 0.7f)
                         )
                     }
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -1569,6 +1696,7 @@ fun VideoPlayerScreen(
                         Text(
                             text = stringResource(R.string.video_night_light),
                             style = MaterialTheme.typography.titleSmall,
+                            color = Color.White,
                             modifier = Modifier.weight(1f)
                         )
                         Slider(
@@ -1603,6 +1731,9 @@ fun VideoPlayerScreen(
         }
         AlertDialog(
             onDismissRequest = { showCustomiseDialog = false },
+            containerColor = Color.Black.copy(alpha = 0.85f),
+            titleContentColor = Color.White,
+            textContentColor = Color.White,
             title = { Text(text = stringResource(R.string.video_customise_items)) },
             text = {
                 Column {
@@ -1626,11 +1757,17 @@ fun VideoPlayerScreen(
                                     selectedIds.value =
                                         if (checked) current + button.id
                                         else current - button.id
-                                }
+                                },
+                                colors = androidx.compose.material3.CheckboxDefaults.colors(
+                                    checkedColor = MaterialTheme.colorScheme.primary,
+                                    uncheckedColor = Color.White.copy(alpha = 0.6f),
+                                    checkmarkColor = MaterialTheme.colorScheme.onPrimary
+                                )
                             )
                             Text(
                                 text = stringResource(button.labelRes),
-                                style = MaterialTheme.typography.bodyLarge
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = Color.White
                             )
                         }
                     }
@@ -1652,7 +1789,9 @@ fun VideoPlayerScreen(
     }
 }
 
-/** One round control button: dark circle + icon, small label underneath. */
+/** One round control button: dark circle + icon, small label underneath.
+ * Compact (Search + Player polish, 2026-11-16): 46 dp circles, 22 dp
+ * icons, 10 sp labels, so more buttons fit on screen at once. */
 @Composable
 private fun VideoRoundControlButton(
     button: VideoControlButton,
@@ -1664,8 +1803,8 @@ private fun VideoRoundControlButton(
 ) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(4.dp),
-        modifier = Modifier.width(64.dp)
+        verticalArrangement = Arrangement.spacedBy(2.dp),
+        modifier = Modifier.width(56.dp)
     ) {
         Surface(
             onClick = onClick,
@@ -1675,7 +1814,7 @@ private fun VideoRoundControlButton(
             } else {
                 Color.Black.copy(alpha = 0.45f)
             },
-            modifier = Modifier.size(56.dp)
+            modifier = Modifier.size(46.dp)
         ) {
             Box(contentAlignment = Alignment.Center) {
                 if (circleText != null) {
@@ -1686,7 +1825,7 @@ private fun VideoRoundControlButton(
                         } else {
                             Color.White
                         },
-                        fontSize = 15.sp,
+                        fontSize = 13.sp,
                         fontWeight = FontWeight.Bold,
                         textAlign = TextAlign.Center
                     )
@@ -1699,7 +1838,7 @@ private fun VideoRoundControlButton(
                         } else {
                             Color.White
                         },
-                        modifier = Modifier.size(28.dp)
+                        modifier = Modifier.size(22.dp)
                     )
                 }
             }
@@ -1707,7 +1846,7 @@ private fun VideoRoundControlButton(
         Text(
             text = labelOverride ?: stringResource(button.labelRes),
             color = Color.White,
-            fontSize = 11.sp,
+            fontSize = 10.sp,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
             textAlign = TextAlign.Center
