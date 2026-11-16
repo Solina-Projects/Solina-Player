@@ -613,6 +613,10 @@ class MusicRepositoryImpl @Inject constructor(
                 // Each type filter shows exactly its section of the All results, so Songs matches
                 // artists as well as titles: an artist search must not lose its songs.
                 SearchFilterType.SONGS -> searchSongs(query).map { songs -> songs.map { SearchResultItem.SongItem(it) } }
+                // Videos are searched separately in the Search screen (VideoRepository),
+                // never through the music pipeline — the music search returns nothing
+                // for the Videos-only filter.
+                SearchFilterType.VIDEOS -> flowOf(emptyList())
                 SearchFilterType.ALBUMS -> searchAlbums(query, minTracks).map { albums -> albums.map { SearchResultItem.AlbumItem(it) } }
                 SearchFilterType.ARTISTS -> searchArtists(query).map { artists -> artists.map { SearchResultItem.ArtistItem(it) } }
                 SearchFilterType.PLAYLISTS -> playlistsFlow.map { playlists -> playlists.map { SearchResultItem.PlaylistItem(it) } }
