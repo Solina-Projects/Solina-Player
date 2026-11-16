@@ -49,6 +49,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DockedSearchBar
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
@@ -111,7 +112,7 @@ private enum class VideoBrowseMode { FOLDERS, FORMATS }
  * routes. The search bar itself is the same DockedSearchBar as music
  * search; the gear opens the same Settings screen.
  */
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun VideoSearchScreen(
     navController: NavController,
@@ -344,6 +345,7 @@ private val VideoItem.formatExtension: String
  * card shape/spacing, and the same bottom padding for the floating bar.
  * Browse mode switches between folders and formats with chips.
  */
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun VideoBrowseGrid(
     folders: List<VideoFolder>,
@@ -579,6 +581,7 @@ private fun VideoBrowseCard(
     }
 }
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun VideoSearchResults(
     results: List<VideoItem>,
