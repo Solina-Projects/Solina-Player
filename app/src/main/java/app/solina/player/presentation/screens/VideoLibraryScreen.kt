@@ -56,6 +56,9 @@ fun VideoLibraryScreen(
 ) {
     val videos by videoViewModel.videos.collectAsStateWithLifecycle()
     val videoCount by videoViewModel.videoCount.collectAsStateWithLifecycle()
+    // Mini-player bar (2026-11-16): it overlays the bottom of this list, so
+    // leave room for it (64 dp bar + 8 dp gap) when it is showing.
+    val showVideoMiniBar by videoViewModel.showVideoMiniBar.collectAsStateWithLifecycle()
 
     Scaffold(
         topBar = {
@@ -107,7 +110,12 @@ fun VideoLibraryScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(padding),
-                contentPadding = PaddingValues(16.dp),
+                contentPadding = PaddingValues(
+                    start = 16.dp,
+                    top = 16.dp,
+                    end = 16.dp,
+                    bottom = if (showVideoMiniBar) 88.dp else 16.dp
+                ),
                 verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(12.dp)
             ) {
                 items(videos, key = { it.id }) { video ->
