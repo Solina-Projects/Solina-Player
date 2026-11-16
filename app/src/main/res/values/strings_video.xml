@@ -209,6 +209,7 @@
     <string name="video_loading">Loading</string>
     <string name="video_muted">Muted</string>
     <string name="video_queue_empty">Nothing in the queue</string>
+    <string name="video_player_done">Done</string>
     <string name="video_decoder_hw">HW</string>
     <string name="video_decoder_sw">SW</string>
 </resources>
