@@ -4,6 +4,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -177,6 +179,16 @@ fun VideoFoldersScreen(
         else flatVideos.filter { it.displayTitle.contains(query, ignoreCase = true) }
     }
 
+    // Filter fix (Home-entry + Player, 2026-11-16): "Play all" and the
+    // "All videos" card used to play the FULL unfiltered list even while a
+    // search was active, so the filter looked broken. They now play exactly
+    // what is shown on screen: the filtered videos in Files mode, the
+    // videos of the filtered folders in the folder modes.
+    val playAllVideos = remember(viewMode, shownVideos, shownFolders) {
+        if (viewMode == FolderViewMode.FILES) shownVideos
+        else shownFolders.flatMap { it.videos }
+    }
+
     // The resume point only counts while the video still exists on device.
     val resumeVideo = remember(videos, resumeUri, resumePositionMs) {
         if (resumeUri.isNullOrBlank() || resumePositionMs <= 10_000L) null
@@ -330,13 +342,13 @@ fun VideoFoldersScreen(
                     style = MaterialTheme.typography.titleMedium,
                     modifier = Modifier.weight(1f)
                 )
-                if (videos.isNotEmpty()) {
+                if (playAllVideos.isNotEmpty()) {
                     Button(
                         onClick = {
                             navController.navigateSafely(
                                 Screen.VideoPlayer.createRoute(
-                                    startUri = videos.first().contentUriString,
-                                    queueUris = videos.map { it.contentUriString }
+                                    startUri = playAllVideos.first().contentUriString,
+                                    queueUris = playAllVideos.map { it.contentUriString }
                                 )
                             )
                         }
@@ -381,13 +393,17 @@ fun VideoFoldersScreen(
                     isGrid = isGrid,
                     showPaths = showPaths,
                     showAllVideosCard = viewMode == FolderViewMode.ALL_FOLDERS,
-                    allVideosCount = videos.size,
-                    allVideosDurationMs = videos.sumOf { it.durationMs },
+                    allVideosCount = if (query.isBlank()) videos.size else playAllVideos.size,
+                    allVideosDurationMs = if (query.isBlank()) {
+                        videos.sumOf { it.durationMs }
+                    } else {
+                        playAllVideos.sumOf { it.durationMs }
+                    },
                     onAllVideosClick = {
                         navController.navigateSafely(
                             Screen.VideoPlayer.createRoute(
-                                startUri = videos.first().contentUriString,
-                                queueUris = videos.map { it.contentUriString }
+                                startUri = playAllVideos.first().contentUriString,
+                                queueUris = playAllVideos.map { it.contentUriString }
                             )
                         )
                     },
@@ -837,6 +853,19 @@ private fun VideoFileGridCard(
  * out rather than shown as dead controls.
  */
 @Composable
+/**
+ * Folder settings dialog.
+ *
+ * Home-entry + Player feedback (2026-11-16): the old dialog put the three
+ * View Mode chips in a single non-wrapping [Row] inside the narrow
+ * AlertDialog text area. The three chips did not fit, so the last one
+ * ("Folders") was squeezed to ~one character wide and its label wrapped
+ * vertically, one letter per line — the "folder filter is broken" the user
+ * reported. Every chip group here is now a [FlowRow] that wraps onto a
+ * second row instead of squeezing, and every chip label is a single
+ * non-wrapping line, so no label can ever render vertically.
+ */
+@OptIn(ExperimentalLayoutApi::class)
 private fun VideoFoldersSettingsDialog(
     viewMode: FolderViewMode,
     isGrid: Boolean,
@@ -860,11 +889,22 @@ private fun VideoFoldersSettingsDialog(
                     text = stringResource(R.string.video_folders_view_mode),
                     style = MaterialTheme.typography.titleMedium
                 )
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                // Two rows on a phone: "All folders" + "Files" on the first,
+                // "Folders" on the second — FlowRow wraps instead of squeezing.
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
                     FilterChip(
                         selected = viewMode == FolderViewMode.ALL_FOLDERS,
                         onClick = { onViewModeChange(FolderViewMode.ALL_FOLDERS) },
-                        label = { Text(text = stringResource(R.string.video_folders_view_all)) },
+                        label = {
+                            Text(
+                                text = stringResource(R.string.video_folders_view_all),
+                                maxLines = 1,
+                                softWrap = false
+                            )
+                        },
                         leadingIcon = {
                             Icon(
                                 imageVector = Icons.Rounded.FolderCopy,
@@ -876,7 +916,13 @@ private fun VideoFoldersSettingsDialog(
                     FilterChip(
                         selected = viewMode == FolderViewMode.FILES,
                         onClick = { onViewModeChange(FolderViewMode.FILES) },
-                        label = { Text(text = stringResource(R.string.video_folders_view_files)) },
+                        label = {
+                            Text(
+                                text = stringResource(R.string.video_folders_view_files),
+                                maxLines = 1,
+                                softWrap = false
+                            )
+                        },
                         leadingIcon = {
                             Icon(
                                 imageVector = Icons.Rounded.Description,
@@ -888,7 +934,13 @@ private fun VideoFoldersSettingsDialog(
                     FilterChip(
                         selected = viewMode == FolderViewMode.FOLDERS,
                         onClick = { onViewModeChange(FolderViewMode.FOLDERS) },
-                        label = { Text(text = stringResource(R.string.video_folders_view_folders)) },
+                        label = {
+                            Text(
+                                text = stringResource(R.string.video_folders_view_folders),
+                                maxLines = 1,
+                                softWrap = false
+                            )
+                        },
                         leadingIcon = {
                             Icon(
                                 imageVector = Icons.Rounded.Folder,
@@ -902,11 +954,20 @@ private fun VideoFoldersSettingsDialog(
                     text = stringResource(R.string.video_folders_layout),
                     style = MaterialTheme.typography.titleMedium
                 )
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
                     FilterChip(
                         selected = !isGrid,
                         onClick = { if (isGrid) onLayoutChange() },
-                        label = { Text(text = stringResource(R.string.video_folders_layout_list)) },
+                        label = {
+                            Text(
+                                text = stringResource(R.string.video_folders_layout_list),
+                                maxLines = 1,
+                                softWrap = false
+                            )
+                        },
                         leadingIcon = {
                             Icon(
                                 imageVector = Icons.Rounded.ViewList,
@@ -918,7 +979,13 @@ private fun VideoFoldersSettingsDialog(
                     FilterChip(
                         selected = isGrid,
                         onClick = { if (!isGrid) onLayoutChange() },
-                        label = { Text(text = stringResource(R.string.video_folders_layout_grid)) },
+                        label = {
+                            Text(
+                                text = stringResource(R.string.video_folders_layout_grid),
+                                maxLines = 1,
+                                softWrap = false
+                            )
+                        },
                         leadingIcon = {
                             Icon(
                                 imageVector = Icons.Rounded.GridView,
@@ -941,17 +1008,22 @@ private fun VideoFoldersSettingsDialog(
                     FolderSort.PATH to R.string.video_folders_sort_path,
                     FolderSort.TYPE to R.string.video_folders_sort_type
                 )
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    sortOptions.chunked(3).forEach { row ->
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            row.forEach { (option, labelRes) ->
-                                FilterChip(
-                                    selected = sort == option,
-                                    onClick = { onSortChange(option) },
-                                    label = { Text(text = stringResource(labelRes)) }
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    sortOptions.forEach { (option, labelRes) ->
+                        FilterChip(
+                            selected = sort == option,
+                            onClick = { onSortChange(option) },
+                            label = {
+                                Text(
+                                    text = stringResource(labelRes),
+                                    maxLines = 1,
+                                    softWrap = false
                                 )
                             }
-                        }
+                        )
                     }
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
