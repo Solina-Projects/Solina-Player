@@ -19,6 +19,18 @@
 
     <string name="home_search_placeholder">Search music and videos</string>
     <string name="search_filter_videos">Videos</string>
+
+    <!-- Bottom-bar feedback (2026-11-16): video Search and Folders. -->
+    <string name="video_search_title">Search videos</string>
+    <string name="video_search_placeholder">Search videos</string>
+    <string name="video_search_no_results">No videos found</string>
+    <string name="video_play_all">Play all</string>
+    <string name="video_folders_title">Video folders</string>
+    <string name="video_folders_sort_name">Name</string>
+    <string name="video_folders_sort_count">Count</string>
+    <string name="video_folders_show_paths">Show folder paths</string>
+    <string name="video_folder_unknown">Unknown folder</string>
+    <string name="video_folder_summary">%1$d videos • %2$s</string>
     <string name="home_choose_player_title">Choose what to play</string>
     <string name="home_music_card_title">Music</string>
     <string name="home_music_card_subtitle">Songs, albums and playlists</string>
