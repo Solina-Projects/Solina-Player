@@ -20,10 +20,16 @@
     <string name="home_search_placeholder">Search music and videos</string>
     <string name="search_filter_videos">Videos</string>
 
-    <!-- Bottom-bar feedback (2026-11-16): video Search and Folders. -->
+    <!-- Search feedback (2026-11-16): Video Search mirrors Music Search. -->
     <string name="video_search_title">Search videos</string>
     <string name="video_search_placeholder">Search videos</string>
     <string name="video_search_no_results">No videos found</string>
+    <string name="video_browse_by_folder">Browse by folder</string>
+    <string name="video_browse_by_format">Browse by format</string>
+    <string name="video_browse_folders">Folders</string>
+    <string name="video_browse_formats">Formats</string>
+    <string name="video_search_browse_format">Format: %1$s</string>
+    <string name="video_search_clear_format">Show all videos</string>
     <string name="video_play_all">Play all</string>
     <string name="video_folders_title">Video folders</string>
     <string name="video_folders_sort_name">Name</string>
