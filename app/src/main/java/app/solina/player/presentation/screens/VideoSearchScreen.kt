@@ -354,7 +354,7 @@ private fun VideoBrowseGrid(
     onBrowseModeChange: (VideoBrowseMode) -> Unit,
     isGridView: Boolean,
     onToggleViewMode: () -> Unit,
-    navBarCompactMode: Int,
+    navBarCompactMode: Boolean,
     onFolderClick: (VideoFolder) -> Unit,
     onFormatClick: (VideoFormatGroup) -> Unit,
     modifier: Modifier = Modifier
