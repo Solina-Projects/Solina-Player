@@ -124,6 +124,19 @@ class VideoPlayerViewModel @Inject constructor(
         viewModelScope.launch { userPreferencesRepository.setVideoVolume(_volume.value) }
     }
 
+    // ---- Customise Items: which round control buttons are shown. ----
+
+    /** Empty set = show every button. */
+    val visibleControlButtons: StateFlow<Set<String>> =
+        userPreferencesRepository.videoPlayerVisibleButtonsFlow
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptySet())
+
+    fun setVisibleControlButtons(buttonIds: Set<String>) {
+        viewModelScope.launch {
+            userPreferencesRepository.setVideoPlayerVisibleButtons(buttonIds)
+        }
+    }
+
     // ---- Sleep timer: pauses playback after N minutes. ----
 
     private var sleepJob: Job? = null
@@ -179,6 +192,142 @@ class VideoPlayerViewModel @Inject constructor(
         _selectedAudioTrack.value = index
     }
 
+    // ---- Subtitle tracks (text tracks in the file). -1 = off. ----
+
+    private val _subtitleTrackLabels = MutableStateFlow<List<String>>(emptyList())
+    val subtitleTrackLabels: StateFlow<List<String>> = _subtitleTrackLabels.asStateFlow()
+
+    private val _selectedSubtitleTrack = MutableStateFlow(-1)
+    val selectedSubtitleTrack: StateFlow<Int> = _selectedSubtitleTrack.asStateFlow()
+
+    private fun refreshSubtitleTracks() {
+        val player = exoPlayer ?: return
+        val textGroups = player.currentTracks.groups
+            .filter { it.type == C.TRACK_TYPE_TEXT }
+        _subtitleTrackLabels.value = textGroups.mapIndexed { index, group ->
+            val format = group.mediaTrackGroup.getFormat(0)
+            format.label?.takeIf { it.isNotBlank() }
+                ?: format.language?.takeIf { it.isNotBlank() }
+                ?: "Subtitle ${index + 1}"
+        }
+        _selectedSubtitleTrack.value = textGroups.indexOfFirst { group ->
+            group.isSelected
+        }.let { if (it < 0) -1 else it }
+    }
+
+    /** index -1 turns subtitles off; otherwise selects that text track. */
+    fun selectSubtitleTrack(index: Int) {
+        val player = exoPlayer ?: return
+        if (index < 0) {
+            player.trackSelectionParameters = player.trackSelectionParameters
+                .buildUpon()
+                .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, true)
+                .build()
+            _selectedSubtitleTrack.value = -1
+            return
+        }
+        val textGroups = player.currentTracks.groups
+            .filter { it.type == C.TRACK_TYPE_TEXT }
+        val group = textGroups.getOrNull(index) ?: return
+        val override = TrackSelectionOverride(group.mediaTrackGroup, 0)
+        player.trackSelectionParameters = player.trackSelectionParameters
+            .buildUpon()
+            .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, false)
+            .setOverrideForType(override)
+            .build()
+        _selectedSubtitleTrack.value = index
+    }
+
+    // ---- Shuffle / loop (Home-entry + Player, 2026-11-16). ----
+
+    private val _shuffleEnabled = MutableStateFlow(false)
+    val shuffleEnabled: StateFlow<Boolean> = _shuffleEnabled.asStateFlow()
+
+    fun toggleShuffle() {
+        _shuffleEnabled.value = !_shuffleEnabled.value
+        exoPlayer?.shuffleModeEnabled = _shuffleEnabled.value
+    }
+
+    /** Player.REPEAT_MODE_OFF / ONE / ALL, cycled by the Loop button. */
+    private val _repeatMode = MutableStateFlow(Player.REPEAT_MODE_OFF)
+    val repeatMode: StateFlow<Int> = _repeatMode.asStateFlow()
+
+    fun cycleRepeatMode() {
+        _repeatMode.value = when (_repeatMode.value) {
+            Player.REPEAT_MODE_OFF -> Player.REPEAT_MODE_ONE
+            Player.REPEAT_MODE_ONE -> Player.REPEAT_MODE_ALL
+            else -> Player.REPEAT_MODE_OFF
+        }
+        exoPlayer?.repeatMode = _repeatMode.value
+    }
+
+    // ---- Mute: remembers the volume it replaced. ----
+
+    private var preMuteVolume = 1f
+    private val _isMuted = MutableStateFlow(false)
+    val isMuted: StateFlow<Boolean> = _isMuted.asStateFlow()
+
+    fun toggleMute() {
+        if (_isMuted.value) {
+            _isMuted.value = false
+            setVolume(preMuteVolume)
+        } else {
+            preMuteVolume = _volume.value.coerceAtLeast(0.05f)
+            _isMuted.value = true
+            setVolume(0f)
+        }
+    }
+
+    // ---- A-B repeat: loops the segment between A and B. ----
+
+    /** -1 = point not set. */
+    private val _aPointMs = MutableStateFlow(-1L)
+    val aPointMs: StateFlow<Long> = _aPointMs.asStateFlow()
+    private val _bPointMs = MutableStateFlow(-1L)
+    val bPointMs: StateFlow<Long> = _bPointMs.asStateFlow()
+
+    private var abRepeatJob: Job? = null
+
+    /**
+     * First tap sets A (current position), second tap sets B and starts
+     * looping A→B, third tap clears both points.
+     */
+    fun tapABRepeat() {
+        val player = exoPlayer
+        if (_aPointMs.value < 0) {
+            _aPointMs.value = player?.currentPosition ?: 0L
+            return
+        }
+        if (_bPointMs.value < 0) {
+            val b = player?.currentPosition ?: 0L
+            if (b <= _aPointMs.value) {
+                // B must be after A — restart from a fresh A point.
+                _aPointMs.value = b
+                return
+            }
+            _bPointMs.value = b
+            abRepeatJob?.cancel()
+            abRepeatJob = viewModelScope.launch {
+                while (isActive) {
+                    delay(200)
+                    val p = exoPlayer ?: break
+                    if (p.currentPosition >= _bPointMs.value && _bPointMs.value > 0) {
+                        p.seekTo(_aPointMs.value)
+                    }
+                }
+            }
+            return
+        }
+        clearABRepeat()
+    }
+
+    fun clearABRepeat() {
+        abRepeatJob?.cancel()
+        abRepeatJob = null
+        _aPointMs.value = -1L
+        _bPointMs.value = -1L
+    }
+
     private val playerListener = object : Player.Listener {
         override fun onPlaybackStateChanged(playbackState: Int) {
             _isLoading.value = playbackState == Player.STATE_BUFFERING
@@ -186,6 +335,7 @@ class VideoPlayerViewModel @Inject constructor(
 
         override fun onTracksChanged(tracks: Tracks) {
             refreshAudioTracks()
+            refreshSubtitleTracks()
         }
 
         // Queue playback (Play all): keep the top-bar title in sync when the
@@ -216,6 +366,8 @@ class VideoPlayerViewModel @Inject constructor(
                 addListener(playerListener)
                 volume = _volume.value
                 setPlaybackSpeed(_playbackSpeed.value)
+                shuffleModeEnabled = _shuffleEnabled.value
+                repeatMode = _repeatMode.value
             }
     }
 
@@ -323,6 +475,7 @@ class VideoPlayerViewModel @Inject constructor(
         sleepJob?.cancel()
         sleepJob = null
         _sleepTimerMinutes.value = 0
+        clearABRepeat()
         exoPlayer?.removeListener(playerListener)
         exoPlayer?.release()
         exoPlayer = null
