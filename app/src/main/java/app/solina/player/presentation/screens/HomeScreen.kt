@@ -100,6 +100,7 @@ import app.solina.player.presentation.components.EqBars
 import app.solina.player.presentation.components.HomeGradientTopBar
 import app.solina.player.presentation.components.HomeMusicPlaybackBar
 import app.solina.player.presentation.components.VideoMiniPlayerBar
+import app.solina.player.presentation.components.VideoMiniPlayerBarKind
 import app.solina.player.presentation.components.HomeOptionsBottomSheet
 import app.solina.player.presentation.components.MediaEntryCards
 import app.solina.player.presentation.components.RecentlyPlayedSection
@@ -596,6 +597,7 @@ fun HomeScreen(
                                 ) {
                                     VideoMiniPlayerBar(
                                         navController = navController,
+                                        kind = VideoMiniPlayerBarKind.HOME,
                                         modifier = Modifier.padding(horizontal = 16.dp)
                                     )
                                 }

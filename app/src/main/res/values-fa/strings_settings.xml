@@ -398,4 +398,45 @@
     <string name="updates_notification_text">نسخهٔ %1$s از Solina Player آمادهٔ نصب است.</string>
     <string name="updates_notification_confirm_title">به‌روزرسانی Solina Player را تمام کنید</string>
     <string name="updates_notification_confirm_text">برای تأیید نصب ضربه بزنید.</string>
+
+    <!-- Appearance customisation (bug-fix round 2026-11-17, item 6) -->
+    <string name="appearance_customize_title">شخصی‌سازی ظاهر</string>
+    <string name="appearance_customize_subtitle">نوارها، کارت‌ها، رنگ‌ها و فونت‌ها — هر بخش جدا.</string>
+    <string name="appearance_preset_title">ظاهرهای آماده</string>
+    <string name="appearance_preset_default">پیش‌فرض</string>
+    <string name="appearance_preset_compact">فشرده</string>
+    <string name="appearance_preset_bold">درشت</string>
+    <string name="appearance_preset_night">شبانه</string>
+    <string name="appearance_theme_title">تم</string>
+    <string name="appearance_theme_system">سیستم</string>
+    <string name="appearance_theme_light">روشن</string>
+    <string name="appearance_theme_dark">تیره</string>
+    <string name="appearance_home_cards_title">کارت‌های خانه</string>
+    <string name="appearance_home_music_bar_title">نوار موزیک خانه</string>
+    <string name="appearance_home_video_bar_title">نوار ویدیو خانه</string>
+    <string name="appearance_section_video_bar_title">نوار بخش ویدیو</string>
+    <string name="appearance_floating_music_bar_title">نوار شناور موزیک</string>
+    <string name="appearance_floating_music_bar_note">فقط رنگ — اندازه و گوشه‌های آن را چیدمان پخش‌کننده تعیین می‌کند.</string>
+    <string name="appearance_section_colors_title">رنگ‌های بخش‌ها</string>
+    <string name="appearance_section_home">خانه</string>
+    <string name="appearance_section_music">موزیک</string>
+    <string name="appearance_section_video">ویدیو</string>
+    <string name="appearance_typography_title">فونت‌ها</string>
+    <string name="appearance_font_family_title">خانواده فونت</string>
+    <string name="appearance_font_rounded">گرد</string>
+    <string name="appearance_font_vazirmatn">وزیرمتن</string>
+    <string name="appearance_font_system">سیستم</string>
+    <string name="appearance_font_size_title">اندازه فونت</string>
+    <string name="appearance_show">نمایش</string>
+    <string name="appearance_size">اندازه</string>
+    <string name="appearance_corners">گردی گوشه‌ها</string>
+    <string name="appearance_colour">رنگ</string>
+    <string name="appearance_reset_section">بازنشانی این بخش</string>
+    <string name="appearance_reset_all">بازنشانی همه</string>
+    <string name="appearance_palette_default">پیش‌فرض</string>
+    <string name="appearance_palette_blue">آبی</string>
+    <string name="appearance_palette_green">سبز</string>
+    <string name="appearance_palette_purple">بنفش</string>
+    <string name="appearance_palette_orange">نارنجی</string>
+    <string name="appearance_palette_teal">فیروزه‌ای</string>
 </resources>

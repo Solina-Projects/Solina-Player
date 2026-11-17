@@ -48,6 +48,7 @@ import app.solina.player.presentation.screens.EasterEggScreen
 import app.solina.player.presentation.screens.ExperimentalSettingsScreen
 import app.solina.player.presentation.screens.LyricsSettingsScreen
 import app.solina.player.presentation.screens.GenreDetailScreen
+import app.solina.player.presentation.screens.AppearanceCustomizationScreen
 import app.solina.player.presentation.screens.HomeCustomizationScreen
 import app.solina.player.presentation.screens.HomeScreen
 import app.solina.player.presentation.screens.LibraryScreen
@@ -845,6 +846,17 @@ fun AppNavigation(
             ) {
                 ScreenWrapper(navController = navController, playerViewModel = playerViewModel) {
                     HomeCustomizationScreen(navController = navController)
+                }
+            }
+            composable(
+                Screen.AppearanceCustomization.route,
+                enterTransition = { enterTransition() },
+                exitTransition = { exitTransition() },
+                popEnterTransition = { popEnterTransition() },
+                popExitTransition = { popExitTransition() },
+            ) {
+                ScreenWrapper(navController = navController, playerViewModel = playerViewModel) {
+                    AppearanceCustomizationScreen(navController = navController)
                 }
             }
         }

@@ -11,7 +11,9 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import app.solina.player.presentation.viewmodel.AppearanceViewModel
 import app.solina.player.presentation.viewmodel.PlayerViewModel
 
 /**
@@ -41,24 +43,39 @@ import app.solina.player.presentation.viewmodel.PlayerViewModel
  * passes [onOpenFullPlayer], which navigates to the Music section first
  * (where the sheet lives) and then expands it — the same full player
  * that opens from the mini bar inside the Music section.
+ *
+ * Appearance customisation (bug-fix round 2026-11-17, item 6): the
+ * Home music bar has its own show/hide, size, corner and colour
+ * settings, independent of the Video section bar and of the Home
+ * video bar; when hidden it returns early so HomeScreen emits no
+ * item for it at all.
  */
 @Composable
 fun HomeMusicPlaybackBar(
     playerViewModel: PlayerViewModel,
     modifier: Modifier = Modifier,
-    onOpenFullPlayer: () -> Unit = { playerViewModel.expandPlayerSheet() }
+    onOpenFullPlayer: () -> Unit = { playerViewModel.expandPlayerSheet() },
+    appearanceViewModel: AppearanceViewModel = hiltViewModel()
 ) {
     val stablePlayerState by playerViewModel.stablePlayerState.collectAsStateWithLifecycle()
     val currentSong = stablePlayerState.currentSong ?: return
 
-    CompositionLocalProvider(LocalMaterialTheme provides MaterialTheme.colorScheme) {
+    val appearance by appearanceViewModel.appearance.collectAsStateWithLifecycle()
+    val barAppearance = appearance.homeMusicBar
+    if (!barAppearance.visible) return
+    val barHeight = MiniPlayerHeight * (barAppearance.scalePercent / 100f)
+    val barScheme = effectivePalette(barAppearance.palette, appearance.homeSectionPalette)
+        ?.let { MaterialTheme.colorScheme.withPalette(it) }
+        ?: MaterialTheme.colorScheme
+
+    CompositionLocalProvider(LocalMaterialTheme provides barScheme) {
         Surface(
             modifier = modifier
                 .fillMaxWidth()
-                .height(MiniPlayerHeight)
+                .height(barHeight)
                 .clickable { onOpenFullPlayer() },
-            shape = RoundedCornerShape(32.dp),
-            color = MaterialTheme.colorScheme.primaryContainer,
+            shape = RoundedCornerShape(barAppearance.cornerDp.dp),
+            color = barScheme.primaryContainer,
             shadowElevation = 4.dp
         ) {
             MiniPlayerContentInternal(
@@ -70,7 +87,8 @@ fun HomeMusicPlaybackBar(
                 onPrevious = { playerViewModel.previousSong() },
                 onNext = { playerViewModel.nextSong() },
                 modifier = Modifier.fillMaxWidth(),
-                canScroll = stablePlayerState.isPlaying
+                canScroll = stablePlayerState.isPlaying,
+                contentHeight = barHeight
             )
         }
     }

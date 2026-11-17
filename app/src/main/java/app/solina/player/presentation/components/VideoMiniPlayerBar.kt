@@ -52,6 +52,7 @@ import app.solina.player.R
 import app.solina.player.presentation.components.player.MorphingPlayPauseIcon
 import app.solina.player.presentation.navigation.Screen
 import app.solina.player.presentation.navigation.navigateSafely
+import app.solina.player.presentation.viewmodel.AppearanceViewModel
 import app.solina.player.presentation.viewmodel.VideoViewModel
 import app.solina.player.ui.theme.RoundedSans
 import app.solina.player.utils.formatDuration
@@ -91,12 +92,21 @@ import app.solina.player.utils.formatDuration
  * "Recently added videos" row on Home (Home feedback, 2026-11-16) — the
  * caller only changes the outer [modifier]; the pill itself is identical.
  */
+/**
+ * Which place this video bar lives in — the Video section or the fixed
+ * bar under "Recently added videos" on Home. Appearance customisation
+ * (bug-fix round 2026-11-17, item 6) treats the two independently.
+ */
+enum class VideoMiniPlayerBarKind { SECTION, HOME }
+
 @OptIn(UnstableApi::class)
 @Composable
 fun VideoMiniPlayerBar(
     navController: NavController,
     modifier: Modifier = Modifier,
-    videoViewModel: VideoViewModel = hiltViewModel()
+    kind: VideoMiniPlayerBarKind = VideoMiniPlayerBarKind.SECTION,
+    videoViewModel: VideoViewModel = hiltViewModel(),
+    appearanceViewModel: AppearanceViewModel = hiltViewModel()
 ) {
     val holder = videoViewModel.videoPlaybackHolder
     val currentVideo by holder.currentVideo.collectAsStateWithLifecycle()
@@ -108,6 +118,21 @@ fun VideoMiniPlayerBar(
     val resumePositionMs by videoViewModel.videoResumePositionMs.collectAsStateWithLifecycle()
     val resumeTitle by videoViewModel.videoResumeTitle.collectAsStateWithLifecycle()
     val videos by videoViewModel.videos.collectAsStateWithLifecycle()
+
+    // Appearance customisation (bug-fix round 2026-11-17, item 6):
+    // the Home bar and the Video section bar are tuned separately.
+    val appearance by appearanceViewModel.appearance.collectAsStateWithLifecycle()
+    val barAppearance = when (kind) {
+        VideoMiniPlayerBarKind.HOME -> appearance.homeVideoBar
+        VideoMiniPlayerBarKind.SECTION -> appearance.sectionVideoBar
+    }
+    if (!barAppearance.visible) return
+    val sectionPaletteName = when (kind) {
+        VideoMiniPlayerBarKind.HOME -> appearance.homeSectionPalette
+        VideoMiniPlayerBarKind.SECTION -> appearance.videoSectionPalette
+    }
+    val barHeight = MiniPlayerHeight * (barAppearance.scalePercent / 100f)
+    val fontScale = appearance.fontScalePercent / 100f
 
     // Live video wins; otherwise the saved resume video (looked up in the
     // device list so the thumbnail and duration are available).
@@ -151,8 +176,11 @@ fun VideoMiniPlayerBar(
     // onPrimaryContainer text, primary play circle, white prev/next
     // circles. Colours come from the app theme scheme (the music bar
     // uses the same roles from its album-art scheme, which falls back
-    // to this scheme whenever a song has no artwork).
-    val colors = MaterialTheme.colorScheme
+    // to this scheme whenever a song has no artwork). Appearance
+    // customisation (item 6) can recolour, resize and re-round it.
+    val colors = effectivePalette(barAppearance.palette, sectionPaletteName)
+        ?.let { MaterialTheme.colorScheme.withPalette(it) }
+        ?: MaterialTheme.colorScheme
     val hapticFeedback = LocalHapticFeedback.current
     val previousInteraction = remember { MutableInteractionSource() }
     val playPauseInteraction = remember { MutableInteractionSource() }
@@ -167,9 +195,9 @@ fun VideoMiniPlayerBar(
     Surface(
         modifier = modifier
             .fillMaxWidth()
-            .height(MiniPlayerHeight)
+            .height(barHeight)
             .clickable { openFullPlayer() },
-        shape = RoundedCornerShape(32.dp),
+        shape = RoundedCornerShape(barAppearance.cornerDp.dp),
         color = colors.primaryContainer,
         shadowElevation = 4.dp
     ) {
@@ -177,7 +205,7 @@ fun VideoMiniPlayerBar(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(MiniPlayerHeight)
+                    .height(barHeight)
                     .padding(start = 10.dp, end = 12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -229,7 +257,7 @@ fun VideoMiniPlayerBar(
                     Text(
                         text = title ?: stringResource(R.string.video_player_title),
                         style = MaterialTheme.typography.titleSmall.copy(
-                            fontSize = 15.sp,
+                            fontSize = 15.sp * fontScale,
                             fontWeight = FontWeight.SemiBold,
                             letterSpacing = (-0.2).sp,
                             fontFamily = RoundedSans,
@@ -241,7 +269,7 @@ fun VideoMiniPlayerBar(
                     RollingTimeText(
                         text = "${formatDuration(livePosition)} / ${formatDuration(liveDuration)}",
                         color = colors.onPrimaryContainer.copy(alpha = 0.7f),
-                        fontSize = 13.sp
+                        fontSize = 13.sp * fontScale
                     )
                 }
                 Spacer(modifier = Modifier.width(8.dp))

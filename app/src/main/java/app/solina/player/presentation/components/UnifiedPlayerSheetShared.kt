@@ -76,7 +76,11 @@ internal fun MiniPlayerContentInternal(
     onPrevious: () -> Unit,
     onNext: () -> Unit,
     modifier: Modifier = Modifier,
-    canScroll: Boolean = true
+    canScroll: Boolean = true,
+    // Appearance customisation (bug-fix round 2026-11-17, item 6):
+    // the Home music bar can be resized independently; the floating
+    // mini player always uses the fixed MiniPlayerHeight.
+    contentHeight: Dp = MiniPlayerHeight
 ) {
     val hapticFeedback = LocalHapticFeedback.current
     val controlsEnabled = !isOutputConnecting && !isPreparingPlayback
@@ -89,7 +93,7 @@ internal fun MiniPlayerContentInternal(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .height(MiniPlayerHeight)
+            .height(contentHeight)
             .padding(start = 10.dp, end = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {

@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.ui.layout.layout
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
@@ -125,7 +126,10 @@ fun UnifiedPlayerSheetV2(
     navController: NavHostController,
     hideMiniPlayer: Boolean = false,
     isNavBarHidden: Boolean = false,
-    containerWidth: Dp = Dp.Unspecified
+    containerWidth: Dp = Dp.Unspecified,
+    // Appearance customisation (bug-fix round 2026-11-17, item 6):
+    // a chosen floating-music-bar colour; null = follow the theme.
+    miniPlayerSchemeOverride: ColorScheme? = null
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -573,7 +577,8 @@ fun UnifiedPlayerSheetV2(
         themedAlbumArtUri = themedAlbumArtUri,
         preparingSongId = preparingSongId,
         systemColorScheme = MaterialTheme.colorScheme,
-        isAmoledTheme = LocalSolinaPlayerAmoledTheme.current
+        isAmoledTheme = LocalSolinaPlayerAmoledTheme.current,
+        miniPlayerSchemeOverride = miniPlayerSchemeOverride
     )
     val albumColorScheme = sheetThemeState.albumColorScheme
     val miniPlayerScheme = sheetThemeState.miniPlayerScheme

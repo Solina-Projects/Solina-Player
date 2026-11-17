@@ -398,4 +398,45 @@
     <string name="updates_notification_text">Solina Player %1$s is ready to install.</string>
     <string name="updates_notification_confirm_title">Finish updating Solina Player</string>
     <string name="updates_notification_confirm_text">Tap to confirm the installation.</string>
+
+    <!-- Appearance customisation (bug-fix round 2026-11-17, item 6) -->
+    <string name="appearance_customize_title">Customise appearance</string>
+    <string name="appearance_customize_subtitle">Bars, cards, colours and fonts — each section on its own.</string>
+    <string name="appearance_preset_title">Ready-made looks</string>
+    <string name="appearance_preset_default">Default</string>
+    <string name="appearance_preset_compact">Compact</string>
+    <string name="appearance_preset_bold">Bold</string>
+    <string name="appearance_preset_night">Night</string>
+    <string name="appearance_theme_title">Theme</string>
+    <string name="appearance_theme_system">System</string>
+    <string name="appearance_theme_light">Light</string>
+    <string name="appearance_theme_dark">Dark</string>
+    <string name="appearance_home_cards_title">Home cards</string>
+    <string name="appearance_home_music_bar_title">Home music bar</string>
+    <string name="appearance_home_video_bar_title">Home video bar</string>
+    <string name="appearance_section_video_bar_title">Video section bar</string>
+    <string name="appearance_floating_music_bar_title">Floating music bar</string>
+    <string name="appearance_floating_music_bar_note">Colour only — its size and corners are fixed by the player sheet.</string>
+    <string name="appearance_section_colors_title">Section colours</string>
+    <string name="appearance_section_home">Home</string>
+    <string name="appearance_section_music">Music</string>
+    <string name="appearance_section_video">Video</string>
+    <string name="appearance_typography_title">Fonts</string>
+    <string name="appearance_font_family_title">Font family</string>
+    <string name="appearance_font_rounded">Rounded</string>
+    <string name="appearance_font_vazirmatn">Vazirmatn</string>
+    <string name="appearance_font_system">System</string>
+    <string name="appearance_font_size_title">Font size</string>
+    <string name="appearance_show">Show</string>
+    <string name="appearance_size">Size</string>
+    <string name="appearance_corners">Corner radius</string>
+    <string name="appearance_colour">Colour</string>
+    <string name="appearance_reset_section">Reset this section</string>
+    <string name="appearance_reset_all">Reset everything</string>
+    <string name="appearance_palette_default">Default</string>
+    <string name="appearance_palette_blue">Blue</string>
+    <string name="appearance_palette_green">Green</string>
+    <string name="appearance_palette_purple">Purple</string>
+    <string name="appearance_palette_orange">Orange</string>
+    <string name="appearance_palette_teal">Teal</string>
 </resources>

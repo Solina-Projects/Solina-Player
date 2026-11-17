@@ -34,6 +34,8 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -47,6 +49,7 @@ import androidx.compose.ui.unit.sp
 import app.solina.player.R
 import app.solina.player.data.model.Song
 import app.solina.player.data.model.VideoItem
+import app.solina.player.presentation.viewmodel.AppearanceViewModel
 import app.solina.player.utils.formatDuration
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -116,8 +119,19 @@ fun MediaEntryCards(
     onMusicClick: () -> Unit,
     onVideoClick: () -> Unit,
     onCustomizeClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    appearanceViewModel: AppearanceViewModel = hiltViewModel()
 ) {
+    // Appearance customisation (bug-fix round 2026-11-17, item 6):
+    // the Home cards have their own size, corner and colour settings;
+    // a chosen palette repaints both cards (music = container,
+    // video = containerAlt), otherwise the theme colours stay.
+    val appearance by appearanceViewModel.appearance.collectAsStateWithLifecycle()
+    val cardAppearance = appearance.homeCards
+    val cardScale = cardAppearance.scalePercent / 100f
+    val fontScale = appearance.fontScalePercent / 100f
+    val palette = effectivePalette(cardAppearance.palette, appearance.homeSectionPalette)
+    val paletteScheme = palette?.let { MaterialTheme.colorScheme.withPalette(it) }
     Column(
         modifier = modifier
             .fillMaxWidth()
@@ -150,13 +164,18 @@ fun MediaEntryCards(
                     Icon(
                         imageVector = Icons.Rounded.MusicNote,
                         contentDescription = null,
-                        modifier = Modifier.size(26.dp)
+                        modifier = Modifier.size(26.dp * cardScale)
                     )
                 },
-                containerColor = MaterialTheme.colorScheme.primaryContainer,
-                contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                containerColor = paletteScheme?.primaryContainer
+                    ?: MaterialTheme.colorScheme.primaryContainer,
+                contentColor = paletteScheme?.onPrimaryContainer
+                    ?: MaterialTheme.colorScheme.onPrimaryContainer,
                 onClick = onMusicClick,
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
+                cardScale = cardScale,
+                fontScale = fontScale,
+                cornerDp = cardAppearance.cornerDp
             )
             MediaEntryCard(
                 title = stringResource(R.string.home_video_card_title),
@@ -166,13 +185,18 @@ fun MediaEntryCards(
                     Icon(
                         imageVector = Icons.Rounded.VideoLibrary,
                         contentDescription = null,
-                        modifier = Modifier.size(26.dp)
+                        modifier = Modifier.size(26.dp * cardScale)
                     )
                 },
-                containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                containerColor = paletteScheme?.secondaryContainer
+                    ?: MaterialTheme.colorScheme.secondaryContainer,
+                contentColor = paletteScheme?.onSecondaryContainer
+                    ?: MaterialTheme.colorScheme.onSecondaryContainer,
                 onClick = onVideoClick,
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
+                cardScale = cardScale,
+                fontScale = fontScale,
+                cornerDp = cardAppearance.cornerDp
             )
         }
     }
@@ -187,11 +211,14 @@ private fun MediaEntryCard(
     containerColor: androidx.compose.ui.graphics.Color,
     contentColor: androidx.compose.ui.graphics.Color,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    cardScale: Float = 1f,
+    fontScale: Float = 1f,
+    cornerDp: Int = 20
 ) {
     Card(
         modifier = modifier.clickable(onClick = onClick),
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(cornerDp.dp),
         colors = CardDefaults.cardColors(
             containerColor = containerColor,
             contentColor = contentColor
@@ -203,7 +230,7 @@ private fun MediaEntryCard(
         // and the card is proportionally smaller — less padding, a smaller
         // icon and title — while both cards stay equal size (weight 1f).
         Column(
-            modifier = Modifier.padding(12.dp),
+            modifier = Modifier.padding(12.dp * cardScale),
             verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             Row(
@@ -213,20 +240,26 @@ private fun MediaEntryCard(
                 icon()
                 Text(
                     text = title,
-                    style = MaterialTheme.typography.titleMedium,
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        fontSize = MaterialTheme.typography.titleMedium.fontSize * fontScale
+                    ),
                     maxLines = 1
                 )
             }
             Text(
                 text = subtitle,
-                style = MaterialTheme.typography.bodyMedium,
+                style = MaterialTheme.typography.bodyMedium.copy(
+                    fontSize = MaterialTheme.typography.bodyMedium.fontSize * fontScale
+                ),
                 color = contentColor.copy(alpha = 0.8f),
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis
             )
             Text(
                 text = countText,
-                style = MaterialTheme.typography.labelLarge,
+                style = MaterialTheme.typography.labelLarge.copy(
+                    fontSize = MaterialTheme.typography.labelLarge.fontSize * fontScale
+                ),
                 color = contentColor.copy(alpha = 0.8f)
             )
         }

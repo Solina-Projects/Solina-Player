@@ -6,6 +6,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AccountCircle
 import androidx.compose.material.icons.rounded.CloudDownload
 import androidx.compose.material.icons.rounded.Lyrics
+import androidx.compose.material.icons.rounded.Palette
 import androidx.compose.material.icons.rounded.SystemUpdate
 import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material3.ColorScheme
@@ -117,6 +118,15 @@ internal sealed interface MainSettingsEntry {
             icon = Icons.Rounded.Tune,
             iconTone = SettingsIconTone.TERTIARY,
             route = Screen.HomeCustomization.route
+        ),
+        // Appearance customisation (bug-fix round 2026-11-17, item 6):
+        // per-section bars, cards, colours and fonts.
+        APPEARANCE_CUSTOMIZATION(
+            titleRes = R.string.appearance_customize_title,
+            subtitleRes = R.string.appearance_customize_subtitle,
+            icon = Icons.Rounded.Palette,
+            iconTone = SettingsIconTone.TERTIARY,
+            route = Screen.AppearanceCustomization.route
         )
     }
 }
@@ -138,6 +148,7 @@ internal val mainSettingsEntries: List<MainSettingsEntry> = buildList {
     // so re-enabling is a one-line change here.
     if (CloudFeatures.ENABLED) add(MainSettingsEntry.Destination.DOWNLOADS)
     add(MainSettingsEntry.Destination.HOME_CUSTOMIZATION)
+    add(MainSettingsEntry.Destination.APPEARANCE_CUSTOMIZATION)
     add(MainSettingsEntry.Category(SettingsCategory.DEVICE_CAPABILITIES))
     if (CloudFeatures.ENABLED) add(MainSettingsEntry.Destination.ACCOUNTS)
     add(MainSettingsEntry.Destination.UPDATES)

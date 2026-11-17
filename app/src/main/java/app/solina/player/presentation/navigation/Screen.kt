@@ -131,6 +131,10 @@ sealed class Screen(val route: String) {
     }
     object HomeCustomization : Screen("home_customization")
 
+    // Appearance customisation (bug-fix round 2026-11-17, item 6):
+    // per-section look of bars, cards, colours and fonts.
+    object AppearanceCustomization : Screen("appearance_customization")
+
     // Bottom-bar feedback (2026-11-16): the video section gets its own
     // bottom bar — Home, video Search, Folders — instead of the music
     // Home / Search / Library bar.

@@ -21,6 +21,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
@@ -159,6 +160,9 @@ fun SolinaPlayerTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     colorSchemePairOverride: ColorSchemePair? = null,
     themePreset: String = ThemePreset.DEFAULT,
+    // Appearance customisation (bug-fix round 2026-11-17, item 6): the
+    // font family chosen in Settings; defaults to the app's Rounded face.
+    fontFamily: FontFamily = RoundedSans,
     content: @Composable () -> Unit
 ) {
     val context = LocalContext.current
@@ -193,7 +197,7 @@ fun SolinaPlayerTheme(
         MaterialTheme(
             colorScheme = finalColorScheme,
             motionScheme = MotionScheme.expressive(),
-            typography = Typography,
+            typography = typographyFor(fontFamily),
             shapes = Shapes,
             content = content
         )

@@ -112,6 +112,8 @@ import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.MoreExecutors
+import app.solina.player.data.preferences.AppearancePreferences
+import app.solina.player.data.preferences.AppearanceSettings
 import app.solina.player.data.preferences.AppThemeMode
 import app.solina.player.data.preferences.NavBarStyle
 import app.solina.player.data.preferences.sanitizeNavBarCornerRadius
@@ -123,6 +125,8 @@ import app.solina.player.data.service.MusicService
 import app.solina.player.data.worker.SyncManager
 import app.solina.player.data.worker.SyncProgress
 import app.solina.player.presentation.components.AllFilesAccessDialog
+import app.solina.player.presentation.components.appearancePaletteColors
+import app.solina.player.presentation.components.withPalette
 import app.solina.player.presentation.components.AppSidebarDrawer
 import app.solina.player.presentation.components.CrashReportDialog
 import app.solina.player.presentation.components.DismissUndoBar
@@ -145,6 +149,7 @@ import app.solina.player.presentation.viewmodel.MainViewModel
 import app.solina.player.presentation.viewmodel.PlayerViewModel
 import app.solina.player.presentation.splash.SolinaPlayerSplash
 import app.solina.player.ui.theme.SolinaPlayerTheme
+import app.solina.player.ui.theme.appearanceFontFamily
 import app.solina.player.ui.theme.resolveAppWideNowPlayingColorSchemePair
 import app.solina.player.ui.theme.LocalShowScrollbar
 import app.solina.player.utils.AppLocaleManager
@@ -217,6 +222,9 @@ class MainActivity : ComponentActivity() {
     lateinit var userPreferencesRepository: UserPreferencesRepository
     @Inject
     lateinit var themePreferencesRepository: ThemePreferencesRepository
+    // Appearance customisation (bug-fix round 2026-11-17, item 6).
+    @Inject
+    lateinit var appearancePreferences: AppearancePreferences
     @Inject
     lateinit var syncManager: SyncManager
     private val _pendingPlaylistNavigation = kotlinx.coroutines.flow.MutableStateFlow<String?>(null)
@@ -317,6 +325,10 @@ class MainActivity : ComponentActivity() {
             val systemDarkTheme = isSystemInDarkTheme()
             val appThemeMode by themePreferencesRepository.appThemeModeFlow.collectAsStateWithLifecycle(initialValue = AppThemeMode.FOLLOW_SYSTEM)
             val themePreset by themePreferencesRepository.themePresetFlow.collectAsStateWithLifecycle(initialValue = ThemePreset.DEFAULT)
+            // Appearance customisation (bug-fix round 2026-11-17, item 6):
+            // font family + floating music bar colour, live from DataStore.
+            val appearanceSettings by appearancePreferences.appearanceFlow
+                .collectAsStateWithLifecycle(initialValue = AppearanceSettings())
             val useDarkTheme = when (appThemeMode) {
                 AppThemeMode.DARK -> true
                 AppThemeMode.LIGHT -> false
@@ -405,7 +417,8 @@ class MainActivity : ComponentActivity() {
             SolinaPlayerTheme(
                 darkTheme = useDarkTheme,
                 colorSchemePairOverride = appWideNowPlayingScheme,
-                themePreset = themePreset
+                themePreset = themePreset,
+                fontFamily = appearanceFontFamily(appearanceSettings.fontFamily)
             ) {
                 var contentVisible by remember { mutableStateOf(false) }
                 val contentAlpha by animateFloatAsState(
@@ -1192,6 +1205,18 @@ class MainActivity : ComponentActivity() {
                             miniPlayerPaddingEnd = horizontalPadding
                         }
 
+                        // Appearance customisation (bug-fix round
+                        // 2026-11-17, item 6): the floating music
+                        // bar's colour is the only part of it that
+                        // can change — its size and corners are fixed
+                        // by the player sheet's layout math.
+                        val miniPlayerSchemeOverride =
+                            appearancePaletteColors(
+                                appearanceSettings.floatingMusicBarPalette
+                            )?.let { palette ->
+                                MaterialTheme.colorScheme.withPalette(palette)
+                            }
+
                         UnifiedPlayerSheetV2(
                             playerViewModel = playerViewModel,
                             sheetCollapsedTargetY = sheetCollapsedTargetY,
@@ -1202,7 +1227,8 @@ class MainActivity : ComponentActivity() {
                             containerHeight = containerHeight,
                             containerWidth = containerWidth,
                             navController = navController,
-                            isNavBarHidden = isNavBarEffectivelyHidden
+                            isNavBarHidden = isNavBarEffectivelyHidden,
+                            miniPlayerSchemeOverride = miniPlayerSchemeOverride
                         )
 
                         // Video mini-player bar (2026-11-16): in the Video
