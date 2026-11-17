@@ -41,6 +41,9 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.draggable
+import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
@@ -70,7 +73,8 @@ import androidx.compose.material.icons.rounded.Equalizer
 import androidx.compose.material.icons.rounded.Fullscreen
 import androidx.compose.material.icons.rounded.FullscreenExit
 import androidx.compose.material.icons.rounded.Headphones
-import androidx.compose.material.icons.rounded.KeyboardArrowUp
+import androidx.compose.material.icons.rounded.KeyboardArrowLeft
+import androidx.compose.material.icons.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material.icons.rounded.MusicNote
@@ -86,6 +90,8 @@ import androidx.compose.material.icons.rounded.Shuffle
 import androidx.compose.material.icons.rounded.SkipNext
 import androidx.compose.material.icons.rounded.SkipPrevious
 import androidx.compose.material.icons.rounded.Speed
+import androidx.compose.material.icons.rounded.StayCurrentLandscape
+import androidx.compose.material.icons.rounded.StayCurrentPortrait
 import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material.icons.rounded.VolumeOff
 import androidx.compose.material.icons.rounded.VolumeUp
@@ -119,7 +125,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Shadow
@@ -138,6 +143,7 @@ import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -162,6 +168,7 @@ import androidx.media3.ui.PlayerView
 import androidx.navigation.NavController
 import app.solina.player.R
 import app.solina.player.data.preferences.SeekBarStyleNames
+import app.solina.player.presentation.utils.ScreenAwakeCoordinator
 import app.solina.player.presentation.viewmodel.AppearanceViewModel
 import app.solina.player.presentation.viewmodel.VideoPlayerViewModel
 import app.solina.player.utils.PhoneOrientationPolicy
@@ -173,6 +180,7 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import kotlin.math.abs
+import kotlin.math.pow
 import kotlin.math.roundToInt
 
 /**
@@ -226,13 +234,17 @@ import kotlin.math.roundToInt
  *   play/pause +15s next | fullscreen PiP.
  * - One gesture layer over the video surface, with clear thresholds, so
  *   tap / long-press / swipe-seek / brightness / volume / pinch do not
- *   fight each other: short tap toggles the bars; holding ~400 ms opens
- *   a speed bar just below the arrow (8 speeds, 0.1x–4x, slide while
- *   holding to pick, last speed remembered); horizontal drag seeks (the
- *   delta shows on screen, applied on release); vertical drag on the left
- *   half sets brightness, on the right half volume; two-finger pinch
- *   zooms the video (graphicsLayer scale on the PlayerView, 1.0x–3.0x,
- *   double-tap resets to 1.0x).
+ *   fight each other: short tap toggles the bars (deferred ~350 ms so a
+ *   double-tap can seek instead); double-tap left / right seeks ∓10 s,
+ *   centre resets the pinch zoom to 1.0x; holding ~400 ms opens a speed
+ *   bar just below the arrow (8 speeds, 0.1x–4x, slide while holding to
+ *   pick — momentary, the pre-hold speed returns on release, unless a
+ *   chip was tapped); horizontal drag seeks at 0.25x (the delta shows on
+ *   screen, applied on release); vertical drag on the left half sets
+ *   brightness, on the right half volume; two fingers moving apart /
+ *   together pinch-zooms the video (graphicsLayer scale on the
+ *   PlayerView, 0.4x–3.0x, live % label while pinching), two fingers
+ *   moving together vertically set the speed (exponential, 0.25x–4x).
  *
  * Search + Player polish (2026-11-16):
  * - The round-button control bar now hangs under the arrow at the top
@@ -244,9 +256,11 @@ import kotlin.math.roundToInt
  *   the position half as far; a tap still seeks straight to the point.
  * - The fullscreen icon works now: before it only flipped a state whose
  *   orientation effect was already satisfied by the forced landscape on
- *   entry, so the tap looked dead. Entering fullscreen hides the system
- *   bars (the video grows to the whole screen) and forces landscape;
- *   exiting shows the bars and goes back to portrait, with a toast.
+ *   entry, so the tap looked dead. Entering fullscreen forces landscape
+ *   (the video grows) and exiting goes back to portrait, with a toast.
+ *   The system bars no longer follow the fullscreen toggle (round 17):
+ *   they follow the Compose bars instead — hidden with the 3 s
+ *   auto-hide while playing, shown again on tap.
  * - Every menu and dialog opened during playback is transparent like
  *   the rest of the player (Black ~0.75–0.85 alpha, white text).
  *
@@ -284,6 +298,7 @@ fun VideoPlayerScreen(
     val context = LocalContext.current
     val activity = context as? Activity
     val lifecycleOwner = LocalLifecycleOwner.current
+    val view = LocalView.current
     val player by videoPlayerViewModel.player.collectAsStateWithLifecycle()
     val currentVideo by videoPlayerViewModel.currentVideo.collectAsStateWithLifecycle()
     val playbackSpeed by videoPlayerViewModel.playbackSpeed.collectAsStateWithLifecycle()
@@ -343,6 +358,10 @@ fun VideoPlayerScreen(
     // Rotation: null = follow the system, true = landscape, false = portrait.
     // Starts at true: selecting a film plays it horizontal automatically.
     var forcedLandscape by rememberSaveable { mutableStateOf<Boolean?>(true) }
+    // Fullscreen exit restores this (round 17): the forcedLandscape value
+    // from just before fullscreen was entered, so leaving fullscreen goes
+    // back to how the player was — not always to portrait.
+    var preFullscreenLandscape by rememberSaveable { mutableStateOf<Boolean?>(null) }
 
     // ---- Gestures + bars state (2026-11-16) ----
     // All bars auto-hide ~3 s after the last interaction while playing;
@@ -357,15 +376,21 @@ fun VideoPlayerScreen(
     // the bottom time bar moves the position at 0.5x — half the finger
     // travel — so scrubbing feels slower and finer. A tap (one big jump)
     // still seeks straight to the tapped point. The horizontal-swipe seek
-    // on the video surface is 0.5x too now (mini-player feedback,
-    // 2026-11-16): the same finger travel moves half as far in time.
+    // on the video surface is 0.25x (round 17): the same finger travel
+    // moves a quarter as far in time — a full-width swipe on a 2 h film
+    // moves ~30 min instead of ~1 h. The seek-bar slider drag stays 0.5x.
     var scrubAnchorFraction by remember { mutableStateOf<Float?>(null) }
     var scrubAnchorMs by remember { mutableLongStateOf(0L) }
-    // Pinch zoom: graphicsLayer scale on the PlayerView, 1.0x–3.0x.
+    // Pinch zoom: graphicsLayer scale on the PlayerView, 0.4x–3.0x.
     var zoomScale by remember { mutableStateOf(1f) }
     // Long-press speed mode: the speed bar just below the arrow.
     var speedMode by remember { mutableStateOf(false) }
     var speedBarVisible by remember { mutableStateOf(false) }
+    // Momentary hold-to-boost (round 17, MX model): the speed from
+    // before the hold, restored on release; a speed-bar chip tapped
+    // while holding pins the speed permanently instead.
+    var preHoldSpeed by remember { mutableStateOf(1f) }
+    var holdSpeedPinned by remember { mutableStateOf(false) }
     // Seek preview while dragging (horizontal swipe or the seek slider).
     var seekPreviewMs by remember { mutableLongStateOf(-1L) }
     var seekDeltaText by remember { mutableStateOf<String?>(null) }
@@ -379,6 +404,21 @@ fun VideoPlayerScreen(
     var durationMs by remember { mutableLongStateOf(0L) }
     var isPlaying by remember { mutableStateOf(false) }
     var lastTapTimeMs by remember { mutableLongStateOf(0L) }
+    // Double-tap seek (round 17): a single tap's bar toggle is deferred
+    // ~350 ms — the double-tap window — so a second tap can cancel it
+    // and seek instead; otherwise the bars would flicker on every
+    // double-tap seek.
+    var pendingSingleTap by remember { mutableStateOf(false) }
+    LaunchedEffect(pendingSingleTap) {
+        if (pendingSingleTap) {
+            delay(350)
+            if (pendingSingleTap) {
+                pendingSingleTap = false
+                barsVisible = !barsVisible
+                poke()
+            }
+        }
+    }
 
     // Centre feedback label (reference-player redesign): a big white
     // label in the middle of the video ("STRETCH", "1.5×", "Volume
@@ -402,6 +442,26 @@ fun VideoPlayerScreen(
         val next = videoPlayerViewModel.nextAspectMode()
         videoPlayerViewModel.cycleAspectMode()
         showFeedback(next)
+        poke()
+    }
+    // Rotation, 3-state cycle (round 17): Landscape → Portrait → Auto
+    // (follow the sensor, forcedLandscape = null → UNSPECIFIED) → back to
+    // Landscape. The big centre label says which mode is now active.
+    fun cycleRotation() {
+        forcedLandscape = when (forcedLandscape) {
+            true -> false
+            false -> null
+            else -> true
+        }
+        showFeedback(
+            context.getString(
+                when (forcedLandscape) {
+                    true -> R.string.video_rotation_landscape
+                    false -> R.string.video_rotation_portrait
+                    else -> R.string.video_rotation_auto
+                }
+            )
+        )
         poke()
     }
     fun shareVideo() {
@@ -474,28 +534,43 @@ fun VideoPlayerScreen(
     val brightnessLabel = stringResource(R.string.video_brightness)
     val volumeLabel = stringResource(R.string.video_volume)
     val speedOptions = videoPlayerViewModel.availableSpeeds
-    // Landscape overlap (mini-player feedback, 2026-11-16): on a narrow
-    // phone the bottom transport row (lock + centre group + right group)
-    // is wider than the screen, so the groups overlap. In landscape — and
-    // on any narrow screen — every bottom-bar icon is 20% smaller, and the
-    // row is a single Row with a weighted centre group, so the groups can
-    // never overlap again. Width check: lock + centre + right at 0.8x is
-    // ~352 dp + 16 dp padding = ~368 dp, inside a ~393 dp portrait phone.
+    // Bottom-bar sizing, orientation-aware (round 17): portrait on a
+    // narrow phone stays compact at 0.8x, but landscape grows to 1.12x
+    // (+40% vs the old 0.8x) with wide 12.8 dp gaps, so the transport
+    // row uses the wide screen instead of huddling in the middle.
+    // Width check (POCO F3): portrait centre 185.6 + 4×6 = 209.6, right
+    // 115.2 + 2×6 = 127.2, total ≈ 337 + 16 padding ≈ 353 dp < 393 dp;
+    // landscape ≈ 552 + 16 ≈ 568 dp < 873 dp.
     val configuration = LocalConfiguration.current
-    val bottomBarScale =
-        if (configuration.orientation == Configuration.ORIENTATION_LANDSCAPE ||
-            configuration.screenWidthDp < 470
-        ) {
-            0.8f
-        } else {
-            1f
-        }
+    val bottomBarScale = when {
+        configuration.orientation == Configuration.ORIENTATION_LANDSCAPE -> 1.12f
+        configuration.screenWidthDp < 470 -> 0.8f
+        else -> 1f
+    }
 
     // Reference-player redesign (2026-11-16): landscape gets the
     // quick-action row under the top bar; portrait letterboxes the
     // video and hides the row until the arrow opens it.
     val isLandscape =
         configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+    // Bottom-bar gaps (round 17): 6 dp in portrait (up from 3.2 dp now
+    // that rotation + lock left the row), 12.8 dp in landscape.
+    val bottomBarGap = if (isLandscape) 12.8.dp else 6.dp
+    // Rotation state, shown wherever the rotation control lives: a
+    // phone icon for the locked orientation, the rotating-arrows icon
+    // for Auto (sensor follow).
+    val rotationIcon = when (forcedLandscape) {
+        true -> Icons.Rounded.StayCurrentLandscape
+        false -> Icons.Rounded.StayCurrentPortrait
+        else -> Icons.Rounded.ScreenRotation
+    }
+    val rotationLabel = stringResource(
+        when (forcedLandscape) {
+            true -> R.string.video_rotation_landscape
+            false -> R.string.video_rotation_portrait
+            else -> R.string.video_rotation_auto
+        }
+    )
     // ZOOM aspect mode adds a 1.5x zoom on top of the pinch zoom.
     val aspectZoom = if (aspectMode == "ZOOM") 1.5f else 1f
 
@@ -503,6 +578,32 @@ fun VideoPlayerScreen(
     // (Computed here with LocalDensity: inside pointerInput, `density`
     // resolves to Density.density, a Float, so toPx() would not resolve.)
     val speedStepPx = with(LocalDensity.current) { 60.dp.toPx() }
+
+    // Quick-row drag (round 17): a horizontal drag / fling on the arrow
+    // handle — and on the row itself — opens / closes the row. Drag
+    // left pulls the row out (open), drag right pushes it away (close):
+    // the same direction the arrow points. A short drag past 28 dp or a
+    // fling faster than 500 dp/s settles it; anything less snaps back
+    // (no state change). The handle and the row share one accumulator —
+    // only one finger can drag at a time.
+    var rowDragDx by remember { mutableStateOf(0f) }
+    val rowDragDistancePx = with(LocalDensity.current) { 28.dp.toPx() }
+    val rowDragFlingPx = with(LocalDensity.current) { 500.dp.toPx() }
+    fun settleRowDrag(velocity: Float) {
+        val open = rowDragDx < -rowDragDistancePx || velocity < -rowDragFlingPx
+        val close = rowDragDx > rowDragDistancePx || velocity > rowDragFlingPx
+        if (open) {
+            controlsExpanded = true
+            barsVisible = true
+            poke()
+        } else if (close) {
+            controlsExpanded = false
+            poke()
+        }
+        rowDragDx = 0f
+    }
+    val handleDragState = rememberDraggableState { delta -> rowDragDx += delta }
+    val rowDragState = rememberDraggableState { delta -> rowDragDx += delta }
 
     // Position / duration / playing state, polled for the custom bottom
     // bar (the built-in PlayerView controller is off now).
@@ -531,6 +632,11 @@ fun VideoPlayerScreen(
 
     // Auto-hide: hide all bars 3 s after the last interaction, only while
     // playing, and never while a menu/dialog or the speed bar is open.
+    // Round 17: it also collapses the quick row (controlsExpanded =
+    // false), so re-showing the bars always starts collapsed and the
+    // user reopens the row via the always-visible handle. In landscape
+    // the row stays visible regardless — its visibility condition is
+    // `isLandscape || controlsExpanded` — so the collapse cannot hide it.
     val anyMenuOpen = showSpeedMenu || showGridMenu || showSubtitlePanel ||
         showAudioListDialog || showQueueDialog || showBookmarksDialog ||
         showChaptersDialog || showInfoDialog || showTutorialDialog ||
@@ -539,11 +645,25 @@ fun VideoPlayerScreen(
         if (barsVisible && isPlaying && !anyMenuOpen && !speedMode && !speedBarVisible) {
             delay(3_000)
             barsVisible = false
+            controlsExpanded = false
         }
     }
 
-    // Speed bar: stays up while the finger is held down choosing a speed,
-    // and for 2 s after release so a speed can still be tapped.
+    // Round 17, item 1: keep the screen on ONLY while the video is
+    // actually playing. Ref-counted through ScreenAwakeCoordinator —
+    // the same mechanism the music side's LyricsSheet uses — so
+    // pausing releases it, and leaving the screen releases it too
+    // (onDispose below + the reset() in the Unit onDispose further
+    // down). No new setting.
+    DisposableEffect(isPlaying) {
+        ScreenAwakeCoordinator.request("VideoPlayer", isPlaying, view)
+        onDispose { ScreenAwakeCoordinator.request("VideoPlayer", false, view) }
+    }
+
+    // Speed bar: the hold path hides it at once on release (round 17,
+    // momentary hold-to-boost); this 2 s linger is only a safety net
+    // for a bar left open when a gesture ends abnormally (e.g. a second
+    // finger cancelling the hold into a pinch).
     LaunchedEffect(speedBarVisible, speedMode) {
         if (speedBarVisible && !speedMode) {
             delay(2_000)
@@ -607,7 +727,9 @@ fun VideoPlayerScreen(
     // applied (landscape on entry), and everything is restored on leave.
     // This is the fix for the rotation button doing nothing: before, the
     // policy re-applied portrait in onConfigurationChanged and reverted
-    // every landscape request immediately.
+    // every landscape request immediately. The rotation control cycles
+    // three states (round 17) — Landscape, Portrait, Auto (null, sensor
+    // follow) — so all three branches below are reachable from the UI.
     LaunchedEffect(Unit) {
         PhoneOrientationPolicy.videoPlayerActive = true
     }
@@ -625,6 +747,10 @@ fun VideoPlayerScreen(
             videoPlayerViewModel.onLeavePlayer()
             PhoneOrientationPolicy.videoPlayerActive = false
             activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+            // Round 17, item 1: release this screen's keep-awake request
+            // (the isPlaying effect above already releases on pause and
+            // on dispose; this is the belt-and-braces release on leave).
+            ScreenAwakeCoordinator.reset(view)
             activity?.window?.let { window ->
                 val attributes = window.attributes
                 attributes.screenBrightness = -1f
@@ -734,14 +860,28 @@ fun VideoPlayerScreen(
      * [VideoPlayerViewModel.isFullscreen], whose orientation effect was
      * already satisfied by the forced landscape on entry — and nothing
      * hid the system bars or changed the video size, so the tap looked
-     * dead. Now entering fullscreen hides the system bars (the video
-     * grows to the whole screen) and forces landscape; exiting shows the
-     * bars again and goes back to portrait, with a toast either way.
+     * dead. Now entering fullscreen forces landscape (the video grows
+     * to the whole screen); exiting restores the pre-fullscreen
+     * orientation (round 17: no longer always back to portrait), with
+     * a toast either way. The system bars are NOT toggled here — they
+     * follow the Compose bars (hidden on the 3 s auto-hide, shown on
+     * tap) via the LaunchedEffect below.
      */
     fun toggleFullscreenMode() {
         val entering = !isFullscreen
         videoPlayerViewModel.toggleFullscreen()
-        forcedLandscape = entering
+        if (entering) {
+            preFullscreenLandscape = forcedLandscape
+            forcedLandscape = true
+        } else {
+            // Only restore when the user didn't change the rotation
+            // while fullscreen: a mid-fullscreen tap is their new
+            // choice and must survive the exit.
+            if (forcedLandscape == true) {
+                forcedLandscape = preFullscreenLandscape
+            }
+            preFullscreenLandscape = null
+        }
         Toast.makeText(
             context,
             context.getString(
@@ -752,16 +892,29 @@ fun VideoPlayerScreen(
         poke()
     }
 
-    // Fullscreen hides the system bars; leaving fullscreen shows them.
-    LaunchedEffect(isFullscreen) {
+    // Round 17, item 2: the system bars follow the Compose bars, not the
+    // fullscreen toggle. The player auto-forces landscape on entry
+    // (forcedLandscape) without touching isFullscreen, so the
+    // fullscreen-only hiding above left the status bar + gesture line
+    // visible on every normal entry. Now: bars hidden (3 s auto-hide
+    // while playing) -> system bars hidden; tap to show the bars ->
+    // system bars shown again so they stay reachable. A swipe still
+    // reveals them transiently (BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE,
+    // set here on every hide so it also applies on the auto-hide path,
+    // where fullscreen was never toggled). Keyed on barsVisible AND
+    // isFullscreen, so it re-asserts the bars rule whenever either
+    // changes; the fullscreen button now only toggles orientation/size,
+    // not bar visibility. (The old fullscreen-only effect was removed
+    // in the round-17 merge — it fought this one on fullscreen exit.)
+    LaunchedEffect(barsVisible, isFullscreen) {
         activity?.window?.let { window ->
             val controller = window.insetsController
-            if (isFullscreen) {
+            if (barsVisible) {
+                controller?.show(WindowInsets.Type.systemBars())
+            } else {
                 controller?.hide(WindowInsets.Type.systemBars())
                 controller?.systemBarsBehavior =
                     WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-            } else {
-                controller?.show(WindowInsets.Type.systemBars())
             }
         }
     }
@@ -821,13 +974,11 @@ fun VideoPlayerScreen(
         poke()
     }
 
-    // The arrow handle's rotation (mini-player feedback, 2026-11-16):
-    // the chevron points LEFT while the bar is closed and RIGHT once it
-    // is open (KeyboardArrowUp rotated -90° / +90°).
-    val arrowRotation by animateFloatAsState(
-        targetValue = if (controlsExpanded) 90f else -90f,
-        label = "videoControlsArrow"
-    )
+    // The arrow handle's icon (round 17): no rotation — the icon itself
+    // swaps between KeyboardArrowLeft (closed) and KeyboardArrowRight
+    // (open) with a small slide + crossfade (VideoControlsArrowIcon).
+    // Rotating an up-chevron -90° ↔ +90° passed through 0° = pointing
+    // straight up halfway, which looked broken.
 
     // Position shown on the seek bar: the drag preview while seeking.
     val displayPositionMs = if (seekPreviewMs >= 0) seekPreviewMs else positionMs
@@ -905,8 +1056,10 @@ fun VideoPlayerScreen(
                 .fillMaxSize()
                 .graphicsLayer {
                     // Pinch zoom: scale the whole PlayerView (video
-                    // surface) around its centre, 1.0x–3.0x — times
-                    // the ZOOM aspect mode's extra 1.5x.
+                    // surface) around its centre, 0.4x–3.0x — times
+                    // the ZOOM aspect mode's extra 1.5x. The % label
+                    // shows the pinch value (zoomScale) only, not the
+                    // combined scale.
                     scaleX = zoomScale * aspectZoom
                     scaleY = zoomScale * aspectZoom
                 }
@@ -958,15 +1111,27 @@ fun VideoPlayerScreen(
             // never reach it. A single custom detector (not stacked
             // detectTap/detectDrag/detectTransform modifiers) decides the
             // gesture by thresholds, so tap / long-press / seek / brightness
-            // / volume / pinch cannot fight each other:
-            //  * short tap (no move, < 400 ms) → toggle all bars;
-            //    two quick taps → reset the pinch zoom to 1.0x.
+            // / volume / pinch / two-finger speed cannot fight each other:
+            //  * short tap (no move, < 400 ms) → toggle all bars, deferred
+            //    ~350 ms so a double-tap can seek instead.
+            //  * double-tap left / right third → seek ∓10 s (chevron +
+            //    target time in the centre label); centre → reset the
+            //    pinch zoom to 1.0x. Works even with swipe gestures off.
             //  * hold > ~400 ms without moving → speed mode: the speed bar
             //    opens just below the arrow; sliding the finger
             //    forward/back while holding steps through the 8 speeds.
-            //  * horizontal drag → seek (delta shown, applied on release).
+            //    Momentary (round 17, MX model): on release the speed
+            //    from before the hold returns and the bar hides at once —
+            //    unless a speed-bar chip was tapped, which pins it.
+            //  * horizontal drag → seek at 0.25x (delta shown, applied on
+            //    release).
             //  * vertical drag, left half → brightness; right half → volume.
-            //  * second finger down → pinch zoom (span ratio).
+            //  * second finger down → undecided until one motion wins the
+            //    slop: span change locks pinch zoom (0.4x–3.0x, live %
+            //    label), joint vertical travel locks two-finger speed
+            //    (exponential, 0.25x–4x, live "1.23×" label, persisted
+            //    once on release). Fingers apart/together = zoom, fingers
+            //    together vertically = speed.
             // Every pointer change is consumed, so the PlayerView never
             // sees these touches.
             Box(
@@ -986,10 +1151,40 @@ fun VideoPlayerScreen(
                                 ?: if (nightLight) brightness / 100f else 0.5f
                             var volStart = volume
                             var speedAnchorX = down.position.x
+                            // Read the live speed from the flow, not the
+                            // composable capture: pointerInput only
+                            // restarts on (player, swipeGesturesEnabled),
+                            // so the captured playbackSpeed can be stale
+                            // after a menu / chip speed change — and the
+                            // hold must start from the current speed.
                             var speedIndex = speedOptions
-                                .indexOfFirst { it == playbackSpeed }
+                                .indexOfFirst {
+                                    it == videoPlayerViewModel.playbackSpeed.value
+                                }
                                 .coerceAtLeast(0)
                             var pinchLastSpan = 0f
+                            // Two-finger decision (round 17): the second
+                            // finger does NOT commit to pinch at once —
+                            // span change vs joint vertical travel are
+                            // tracked until one passes the slop and locks
+                            // the mode for the rest of the gesture.
+                            var twoFingerStartSpan = 0f
+                            var twoFingerStartMidY = 0f
+                            var twoFingerStartSpeed = 1f
+                            var twoFingerSpeed = 1f
+                            // Two-finger speed rate (round 17): relative /
+                            // exponential — one full screen-height of joint
+                            // vertical travel doubles (up) or halves (down)
+                            // the speed, clamped 0.25x–4x and rounded to 2
+                            // decimals so fine values like 1.23x fall out.
+                            fun twoFingerSpeedFor(midY: Float, height: Float): Float {
+                                val ratio = 2.0.pow(
+                                    (-(midY - twoFingerStartMidY) / height).toDouble()
+                                ).toFloat()
+                                val raw = (twoFingerStartSpeed * ratio)
+                                    .coerceIn(0.25f, 4f)
+                                return (raw * 100).roundToInt() / 100f
+                            }
                             var longPressFired = false
                             // A drag that moved past slop while swipe
                             // gestures are off: not a tap, so the gesture
@@ -1018,6 +1213,14 @@ fun VideoPlayerScreen(
                                     if (mode == GestureMode.Undecided && !longPressFired) {
                                         mode = GestureMode.Speed
                                         longPressFired = true
+                                        // Momentary hold (round 17): the
+                                        // pre-hold speed returns on
+                                        // release. Read it live from the
+                                        // flow — the composable capture
+                                        // can be stale (see speedIndex).
+                                        preHoldSpeed =
+                                            videoPlayerViewModel.playbackSpeed.value
+                                        holdSpeedPinned = false
                                         speedMode = true
                                         speedBarVisible = true
                                         barsVisible = true
@@ -1033,36 +1236,112 @@ fun VideoPlayerScreen(
                                         pinchLastSpan = 0f
                                     }
                                     if (pressed.size >= 2) {
-                                        if (mode != GestureMode.Pinch || pinchLastSpan <= 0f) {
-                                            if (mode == GestureMode.Speed) {
-                                                speedMode = false
+                                        val p0 = pressed[0].position
+                                        val p1 = pressed[1].position
+                                        val span = (p0 - p1).getDistance()
+                                        val midY = (p0.y + p1.y) / 2f
+                                        when (mode) {
+                                            GestureMode.Pinch -> {
+                                                if (pinchLastSpan > 0f && span > 0f) {
+                                                    zoomScale =
+                                                        (zoomScale * span / pinchLastSpan)
+                                                            .coerceIn(0.4f, 3f)
+                                                    // Live zoom % (round
+                                                    // 17, item 12): the pinch
+                                                    // value only, not the
+                                                    // combined scale —
+                                                    // fades out on release
+                                                    // via showFeedback's
+                                                    // own 1.1 s timer.
+                                                    showFeedback(
+                                                        "${(zoomScale * 100).roundToInt()}%"
+                                                    )
+                                                }
+                                                pinchLastSpan = span
                                             }
-                                            // A drag that turns into a pinch
-                                            // is abandoned: clear its preview
-                                            // so no stale hint stays on screen.
-                                            if (mode == GestureMode.Seek) {
-                                                seekPreviewMs = -1L
-                                                seekDeltaText = null
-                                                scrubbing = false
+                                            GestureMode.TwoFingerSpeed -> {
+                                                twoFingerSpeed = twoFingerSpeedFor(
+                                                    midY,
+                                                    size.height
+                                                )
+                                                // Live only: no DataStore
+                                                // write per move; persisted
+                                                // once at gesture end.
+                                                videoPlayerViewModel.setSpeedLive(
+                                                    twoFingerSpeed
+                                                )
+                                                showFeedback(
+                                                    formatSpeedLabel(twoFingerSpeed)
+                                                )
                                             }
-                                            if (mode == GestureMode.Brightness ||
-                                                mode == GestureMode.Volume
-                                            ) {
-                                                gestureHint = null
+                                            GestureMode.TwoFingerUndecided -> {
+                                                // Lock-in: whichever motion
+                                                // passes the slop first wins
+                                                // the rest of the gesture.
+                                                val dSpan =
+                                                    abs(span - twoFingerStartSpan)
+                                                val dMidY =
+                                                    abs(midY - twoFingerStartMidY)
+                                                if (dSpan > slopPx && dSpan >= dMidY) {
+                                                    mode = GestureMode.Pinch
+                                                    pinchLastSpan = span
+                                                } else if (dMidY > slopPx && dMidY > dSpan) {
+                                                    // Two-finger speed is
+                                                    // gated behind the
+                                                    // swipe-gestures
+                                                    // setting like the other
+                                                    // drags; pinch is not.
+                                                    // Gated off: stay
+                                                    // undecided, so a later
+                                                    // span-dominant move can
+                                                    // still lock pinch.
+                                                    if (swipeGesturesEnabled) {
+                                                        mode = GestureMode.TwoFingerSpeed
+                                                        twoFingerSpeed = twoFingerSpeedFor(
+                                                            midY,
+                                                            size.height
+                                                        )
+                                                        videoPlayerViewModel.setSpeedLive(
+                                                            twoFingerSpeed
+                                                        )
+                                                        showFeedback(
+                                                            formatSpeedLabel(twoFingerSpeed)
+                                                        )
+                                                    }
+                                                }
                                             }
-                                            mode = GestureMode.Pinch
-                                            val p0 = pressed[0].position
-                                            val p1 = pressed[1].position
-                                            pinchLastSpan = (p0 - p1).getDistance()
-                                        } else {
-                                            val p0 = pressed[0].position
-                                            val p1 = pressed[1].position
-                                            val span = (p0 - p1).getDistance()
-                                            if (pinchLastSpan > 0f && span > 0f) {
-                                                zoomScale = (zoomScale * span / pinchLastSpan)
-                                                    .coerceIn(1f, 3f)
+                                            else -> {
+                                                // Second finger down: the
+                                                // single-finger drag is
+                                                // abandoned — clear its
+                                                // preview so no stale hint
+                                                // stays on screen — and a
+                                                // momentary hold-to-boost is
+                                                // cancelled WITHOUT
+                                                // restoring its speed: the
+                                                // two-finger gesture owns
+                                                // the speed now.
+                                                if (mode == GestureMode.Speed) {
+                                                    speedMode = false
+                                                }
+                                                if (mode == GestureMode.Seek) {
+                                                    seekPreviewMs = -1L
+                                                    seekDeltaText = null
+                                                    scrubbing = false
+                                                }
+                                                if (mode == GestureMode.Brightness ||
+                                                    mode == GestureMode.Volume
+                                                ) {
+                                                    gestureHint = null
+                                                }
+                                                mode = GestureMode.TwoFingerUndecided
+                                                twoFingerStartSpan = span
+                                                twoFingerStartMidY = midY
+                                                twoFingerStartSpeed =
+                                                    videoPlayerViewModel.playbackSpeed.value
+                                                twoFingerSpeed = twoFingerStartSpeed
+                                                pinchLastSpan = 0f
                                             }
-                                            pinchLastSpan = span
                                         }
                                         pressed.forEach { it.consume() }
                                         continue
@@ -1100,7 +1379,7 @@ fun VideoPlayerScreen(
                                                     if (dur > 0) {
                                                         scrubbing = true
                                                         seekAccumMs =
-                                                            ((dx / size.width) * dur * 0.5f).toLong()
+                                                            ((dx / size.width) * dur * 0.25f).toLong()
                                                         val target = (seekStartMs + seekAccumMs)
                                                             .coerceIn(0L, dur)
                                                         seekPreviewMs = target
@@ -1115,7 +1394,7 @@ fun VideoPlayerScreen(
                                             if (dur > 0) {
                                                 val dx = pos.x - down.position.x
                                                 seekAccumMs =
-                                                    ((dx / size.width) * dur * 0.5f).toLong()
+                                                    ((dx / size.width) * dur * 0.25f).toLong()
                                                 val target = (seekStartMs + seekAccumMs)
                                                     .coerceIn(0L, dur)
                                                 seekPreviewMs = target
@@ -1161,6 +1440,13 @@ fun VideoPlayerScreen(
                                             // Handled in the two-finger
                                             // branch above.
                                         }
+                                        GestureMode.TwoFingerSpeed,
+                                        GestureMode.TwoFingerUndecided -> {
+                                            // Handled in the two-finger
+                                            // branch above; a lone remaining
+                                            // finger does nothing until the
+                                            // gesture ends.
+                                        }
                                     }
                                     change.consume()
                                 }
@@ -1168,17 +1454,47 @@ fun VideoPlayerScreen(
                             when (mode) {
                                 GestureMode.Undecided -> {
                                     if (!longPressFired && !draggedWithGesturesOff) {
-                                        // Tap: two quick taps reset the
-                                        // pinch zoom, otherwise toggle bars.
+                                        // Tap: a second tap within 350 ms
+                                        // is a double-tap — left / right
+                                        // third seeks ∓10 s, centre resets
+                                        // the pinch zoom. Otherwise the
+                                        // single tap's bar toggle is
+                                        // deferred ~350 ms (pendingSingleTap)
+                                        // so the bars don't flicker on a
+                                        // double-tap seek.
                                         val now = System.currentTimeMillis()
                                         if (now - lastTapTimeMs < 350) {
-                                            zoomScale = 1f
+                                            pendingSingleTap = false
                                             lastTapTimeMs = 0L
+                                            val tapX = down.position.x
+                                            when {
+                                                tapX < size.width / 3f -> {
+                                                    videoPlayerViewModel.seekBy(-10_000L)
+                                                    val target =
+                                                        (positionMs - 10_000L)
+                                                            .coerceIn(0L, durationMs)
+                                                    showFeedback(
+                                                        "« 10s • ${formatVideoTime(target)}"
+                                                    )
+                                                }
+                                                tapX > size.width * 2f / 3f -> {
+                                                    videoPlayerViewModel.seekBy(10_000L)
+                                                    val target =
+                                                        (positionMs + 10_000L)
+                                                            .coerceIn(0L, durationMs)
+                                                    showFeedback(
+                                                        "10s » • ${formatVideoTime(target)}"
+                                                    )
+                                                }
+                                                else -> {
+                                                    zoomScale = 1f
+                                                }
+                                            }
                                         } else {
                                             lastTapTimeMs = now
-                                            barsVisible = !barsVisible
-                                            poke()
+                                            pendingSingleTap = true
                                         }
+                                        poke()
                                     }
                                 }
                                 GestureMode.Seek -> {
@@ -1206,10 +1522,35 @@ fun VideoPlayerScreen(
                                     }
                                 }
                                 GestureMode.Speed -> {
-                                    // The chosen speed stays (persisted by
-                                    // setSpeed); the bar hides by itself
-                                    // 2 s after release.
+                                    // Momentary hold-to-boost (round 17,
+                                    // MX model): the speed picked while
+                                    // holding was only for the hold — the
+                                    // pre-hold speed returns on release
+                                    // (unless a speed-bar chip was tapped
+                                    // while holding, which pins the speed
+                                    // permanently). The bar hides at once,
+                                    // no 2 s linger.
                                     speedMode = false
+                                    if (!holdSpeedPinned &&
+                                        videoPlayerViewModel.playbackSpeed.value !=
+                                        preHoldSpeed
+                                    ) {
+                                        applySpeed(preHoldSpeed)
+                                    }
+                                    speedBarVisible = false
+                                    holdSpeedPinned = false
+                                }
+                                GestureMode.TwoFingerSpeed -> {
+                                    // Persist the live speed once, at the
+                                    // end of the drag (setSpeedLive applied
+                                    // it without a DataStore write).
+                                    videoPlayerViewModel.setSpeed(twoFingerSpeed)
+                                }
+                                GestureMode.TwoFingerUndecided -> {
+                                    // Never locked onto pinch or speed:
+                                    // nothing to commit. A hold cancelled
+                                    // by the second finger stays cancelled
+                                    // — its speed is NOT restored here.
                                 }
                                 GestureMode.Pinch -> {
                                     // Nothing to commit.
@@ -1325,13 +1666,17 @@ fun VideoPlayerScreen(
                     // Quick-action row (reference-player redesign):
                     // in landscape it sits under the top bar, left
                     // aligned — equalizer, screenshot, audio,
-                    // aspect, speed circle, then the arrow. Home
-                    // feedback (2026-11-16): while closed the bar is
-                    // COMPLETELY hidden — no peeking row, no partial
-                    // buttons — only the arrow handle below shows, and
-                    // tapping it opens the full row (it scrolls).
+                    // aspect, speed circle, then the arrow — and it
+                    // is ALWAYS open there (round 17: visible when
+                    // isLandscape, whatever controlsExpanded is, so
+                    // the auto-hide collapse cannot hide it). Home
+                    // feedback (2026-11-16): while closed in portrait
+                    // the bar is COMPLETELY hidden — no peeking row,
+                    // no partial buttons — only the arrow handle below
+                    // shows, and tapping it opens the full row (it
+                    // scrolls).
                     AnimatedVisibility(
-                        visible = controlsExpanded,
+                        visible = isLandscape || controlsExpanded,
                         enter = slideInHorizontally(
                             initialOffsetX = { it },
                             animationSpec = spring(
@@ -1348,7 +1693,22 @@ fun VideoPlayerScreen(
                         ) + fadeOut()
                     ) {
                         Surface(
-                            modifier = Modifier.fillMaxWidth(),
+                            // Round 17: a horizontal drag / fling on the
+                            // row itself closes it (drag right) — same
+                            // settle as the handle. Portrait only; in
+                            // landscape the row is always open. The
+                            // LazyRow still owns scrolling: it consumes
+                            // drags while it can scroll, so this only
+                            // fires from its resting (left-edge) spot.
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .draggable(
+                                    state = rowDragState,
+                                    orientation = Orientation.Horizontal,
+                                    enabled = !isLandscape,
+                                    onDragStarted = { rowDragDx = 0f },
+                                    onDragStopped = { velocity -> settleRowDrag(velocity) }
+                                ),
                             color = Color.Black.copy(alpha = 0.55f),
                             shape = RoundedCornerShape(
                                 bottomStart = 28.dp,
@@ -1362,6 +1722,39 @@ fun VideoPlayerScreen(
                                 contentPadding = PaddingValues(horizontal = 12.dp),
                                 horizontalArrangement = Arrangement.spacedBy(10.dp)
                             ) {
+                                // Round 17: rotation + lock moved up
+                                // from the bottom bar — first two buttons
+                                // of the quick row, so they are reachable
+                                // in landscape (row always visible) and
+                                // in portrait while the row is open.
+                                item(key = "rotation") {
+                                    VideoRoundControlButton(
+                                        button = VideoControlButton(
+                                            "rotation",
+                                            Icons.Rounded.ScreenRotation,
+                                            R.string.video_screen_rotation
+                                        ),
+                                        isActive = forcedLandscape == true,
+                                        labelOverride = rotationLabel,
+                                        iconOverride = rotationIcon,
+                                        onClick = { cycleRotation() }
+                                    )
+                                }
+                                item(key = "lock") {
+                                    VideoRoundControlButton(
+                                        button = VideoControlButton(
+                                            "lock",
+                                            Icons.Rounded.Lock,
+                                            R.string.video_lock_controls
+                                        ),
+                                        isActive = false,
+                                        labelOverride = null,
+                                        onClick = {
+                                            controlsLocked = true
+                                            poke()
+                                        }
+                                    )
+                                }
                                 items(quickRowButtons, key = { it.id }) { button ->
                                     VideoRoundControlButton(
                                         button = button,
@@ -1461,19 +1854,21 @@ fun VideoPlayerScreen(
                                 }
                                 // Arrow handle, last in the row: points
                                 // RIGHT while open (LEFT while closed);
-                                // tapping it closes the row. In the row
-                                // in both orientations now — the
-                                // standalone handle outside only shows
-                                // while the row is closed.
-                                item(key = "arrow") {
-                                    VideoRowArrowButton(
-                                        expanded = controlsExpanded,
-                                        arrowRotation = arrowRotation,
-                                        onClick = {
-                                            controlsExpanded = !controlsExpanded
-                                            poke()
-                                        }
-                                    )
+                                // tapping it closes the row. Portrait
+                                // only (round 17): in landscape the row
+                                // is always open and there is no arrow
+                                // handle. The standalone handle outside
+                                // only shows while the row is closed.
+                                if (!isLandscape) {
+                                    item(key = "arrow") {
+                                        VideoRowArrowButton(
+                                            expanded = controlsExpanded,
+                                            onClick = {
+                                                controlsExpanded = !controlsExpanded
+                                                poke()
+                                            }
+                                        )
+                                    }
                                 }
                             }
                             // Speed menu, anchored to the speed round button.
@@ -1499,51 +1894,17 @@ fun VideoPlayerScreen(
                             }
                         }
                     }
-                    // Arrow handle (Home feedback, 2026-11-16):
-                    // while the bar is closed this is the ONLY thing
-                    // visible of it — a single transparent circle under
-                    // the three-dot menu, in both orientations. Tapping
-                    // it opens the full row. (It used to be
-                    // portrait-only; landscape showed a collapsed row.)
-                    if (!controlsExpanded) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(end = 16.dp, top = 8.dp),
-                            horizontalArrangement = Arrangement.End
-                        ) {
-                            Surface(
-                                onClick = {
-                                    controlsExpanded = !controlsExpanded
-                                    poke()
-                                },
-                                shape = CircleShape,
-                                color = Color.Black.copy(alpha = 0.45f),
-                                modifier = Modifier.size(40.dp)
-                            ) {
-                                Box(contentAlignment = Alignment.Center) {
-                                    Icon(
-                                        imageVector = Icons.Rounded.KeyboardArrowUp,
-                                        contentDescription = stringResource(
-                                            if (controlsExpanded) {
-                                                R.string.video_player_hide_controls
-                                            } else {
-                                                R.string.video_player_more_controls
-                                            }
-                                        ),
-                                        tint = Color.White,
-                                        modifier = Modifier
-                                            .size(24.dp)
-                                            .rotate(arrowRotation)
-                                    )
-                                }
-                            }
-                        }
-                    }
+                    // (Round 17: the arrow handle used to live here,
+                    // inside the bars — it is now hoisted out of the
+                    // barsVisible block, just below, so it stays
+                    // visible after the bars auto-hide.)
                     // The speed bar: 8 speeds, 0.1x–4x, just below the
-                    // arrow. Opens on long-press (and stays 2 s after
-                    // release); the current speed is highlighted, and
-                    // tapping a chip picks it directly.
+                    // arrow. Opens on long-press; the hold is momentary
+                    // (round 17) — on release the pre-hold speed returns
+                    // and the bar hides at once, unless a chip was tapped
+                    // while holding, which pins that speed. The current
+                    // speed is highlighted, and tapping a chip picks it
+                    // directly.
                     AnimatedVisibility(
                         visible = speedBarVisible,
                         enter = fadeIn() + slideInVertically { -it / 2 },
@@ -1567,7 +1928,13 @@ fun VideoPlayerScreen(
                                 speedOptions.forEach { speed ->
                                     val selected = speed == playbackSpeed
                                     Surface(
-                                        onClick = { applySpeed(speed) },
+                                        // A chip tapped while holding pins
+                                        // the speed permanently (round 17):
+                                        // the hold's release restore skips.
+                                        onClick = {
+                                            holdSpeedPinned = true
+                                            applySpeed(speed)
+                                        },
                                         shape = RoundedCornerShape(13.dp),
                                         color = if (selected) {
                                             MaterialTheme.colorScheme.primary
@@ -1597,6 +1964,80 @@ fun VideoPlayerScreen(
                 }
             }
 
+            // Arrow handle, hoisted out of the bars (round 17): while
+            // the row is closed this small translucent circle stays
+            // pinned at the top-right edge — just below where the top
+            // bar sits (status bar + 84 dp, the same spot it had
+            // inside the column) — even after the bars auto-hide, so
+            // the row can always be reopened. Portrait only: in
+            // landscape the row is always open and there is no handle.
+            // Tapping it toggles the row (and shows the bars again if
+            // they were hidden); dragging it left pulls the row out,
+            // dragging it right pushes it away.
+            // Round 17 (item 15): in portrait the handle grows into a
+            // top stack — arrow → rotation → lock, top-right under the
+            // three-dot menu. While the row is open the stack hides and
+            // rotation + lock live in the row itself.
+            if (!isLandscape && !controlsExpanded) {
+                Column(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .statusBarsPadding()
+                        .padding(top = 84.dp, end = 16.dp),
+                    horizontalAlignment = Alignment.End,
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Surface(
+                        onClick = {
+                            controlsExpanded = !controlsExpanded
+                            if (controlsExpanded) barsVisible = true
+                            poke()
+                        },
+                        shape = CircleShape,
+                        color = Color.Black.copy(alpha = 0.45f),
+                        modifier = Modifier
+                            .size(40.dp)
+                            .draggable(
+                                state = handleDragState,
+                                orientation = Orientation.Horizontal,
+                                onDragStarted = { rowDragDx = 0f },
+                                onDragStopped = { velocity -> settleRowDrag(velocity) }
+                            )
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            VideoControlsArrowIcon(
+                                expanded = controlsExpanded,
+                                contentDescription = stringResource(
+                                    if (controlsExpanded) {
+                                        R.string.video_player_hide_controls
+                                    } else {
+                                        R.string.video_player_more_controls
+                                    }
+                                ),
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
+                    }
+                    VideoTopStackButton(
+                        icon = rotationIcon,
+                        contentDescription = rotationLabel,
+                        isActive = forcedLandscape == true,
+                        onClick = { cycleRotation() }
+                    )
+                    VideoTopStackButton(
+                        icon = Icons.Rounded.Lock,
+                        contentDescription = stringResource(
+                            R.string.video_lock_controls
+                        ),
+                        isActive = false,
+                        onClick = {
+                            controlsLocked = true
+                            poke()
+                        }
+                    )
+                }
+            }
+
             // ---- Bottom: the custom transport bar. It auto-hides
             // with the top bar. ----
             Column(
@@ -1607,9 +2048,15 @@ fun VideoPlayerScreen(
             ) {
                 // Bottom transport bar, exactly like the reference: a seek
                 // bar with the current time on the left and the total time
-                // on the right, and below it lock on the far left, prev
-                // -15s play/pause +15s next in the centre, fullscreen +
-                // picture-in-picture on the far right.
+                // on the right, and below it prev -15s play/pause +15s
+                // next in the centre, aspect + fullscreen +
+                // picture-in-picture on the far right. Round 17: lock
+                // and rotation left this row — they live up top now
+                // (quick row in landscape, top stack under the arrow
+                // in portrait) — and the freed right-group slot is the
+                // aspect/resize button. No button is cut in either
+                // orientation: portrait gaps widen to 6 dp, landscape
+                // to 12.8 dp with 1.12x icons.
                 AnimatedVisibility(
                     visible = barsVisible,
                     enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
@@ -1755,24 +2202,10 @@ fun VideoPlayerScreen(
                             verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            IconButton(
-                                onClick = {
-                                    controlsLocked = true
-                                    poke()
-                                },
-                                modifier = Modifier.size((48f * bottomBarScale).dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Rounded.Lock,
-                                    contentDescription = stringResource(R.string.video_lock_controls),
-                                    tint = Color.White,
-                                    modifier = Modifier.size((26f * bottomBarScale).dp)
-                                )
-                            }
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(
-                                    (4f * bottomBarScale).dp,
+                                    bottomBarGap,
                                     Alignment.CenterHorizontally
                                 ),
                                 modifier = Modifier.weight(1f)
@@ -1853,28 +2286,23 @@ fun VideoPlayerScreen(
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(
-                                    (4f * bottomBarScale).dp
+                                    bottomBarGap
                                 )
                             ) {
-                                // Screen rotation lives here now (Search +
-                                // Player polish, 2026-11-16): the fixed
-                                // right-edge button is gone. It was removed
-                                // from the control bar in the mini-player
-                                // feedback (2026-11-16), so this is the
-                                // only rotation toggle left.
+                                // Aspect / resize (round 17): the freed
+                                // slot of the old rotation button. Cycles
+                                // FIT → FILL → ZOOM → STRETCH with the
+                                // big centre feedback label, same as the
+                                // quick row's aspect button. Rotation
+                                // lives up top now (quick row / top
+                                // stack), fullscreen + PiP stay here.
                                 IconButton(
-                                    onClick = {
-                                        forcedLandscape =
-                                            if (forcedLandscape == true) false else true
-                                        poke()
-                                    },
+                                    onClick = { cycleAspect() },
                                     modifier = Modifier.size((48f * bottomBarScale).dp)
                                 ) {
                                     Icon(
-                                        imageVector = Icons.Rounded.ScreenRotation,
-                                        contentDescription = stringResource(R.string.video_screen_rotation),
-                                        // White like every other player icon
-                                        // (mini-player feedback, 2026-11-16).
+                                        imageVector = Icons.Rounded.AspectRatio,
+                                        contentDescription = stringResource(R.string.video_aspect_ratio),
                                         tint = Color.White,
                                         modifier = Modifier.size((28f * bottomBarScale).dp)
                                     )
@@ -2489,11 +2917,81 @@ private val videoControlButtons = listOf(
     VideoControlButton("speed", Icons.Rounded.Speed, R.string.video_speed)
 )
 
+/** One 40 dp round button of the portrait top stack under the arrow
+ * handle (round 17): same dark circle as the handle itself, primary
+ * filled while its state is active (rotation locked to landscape). */
+@Composable
+private fun VideoTopStackButton(
+    icon: ImageVector,
+    contentDescription: String?,
+    isActive: Boolean,
+    onClick: () -> Unit
+) {
+    Surface(
+        onClick = onClick,
+        shape = CircleShape,
+        color = if (isActive) {
+            MaterialTheme.colorScheme.primary
+        } else {
+            Color.Black.copy(alpha = 0.45f)
+        },
+        modifier = Modifier.size(40.dp)
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            Icon(
+                imageVector = icon,
+                contentDescription = contentDescription,
+                tint = if (isActive) {
+                    MaterialTheme.colorScheme.onPrimary
+                } else {
+                    Color.White
+                },
+                modifier = Modifier.size(24.dp)
+            )
+        }
+    }
+}
+
+/**
+ * The quick-row arrow (round 17): the icon itself swaps between
+ * KeyboardArrowLeft (closed) and KeyboardArrowRight (open) with a small
+ * horizontal slide + crossfade — no rotation at all. The old
+ * KeyboardArrowUp rotated -90° ↔ +90° passed through 0° = pointing
+ * straight up halfway. Opening: the right-pointing arrow slides in
+ * from the left; closing: the left-pointing arrow slides in from the
+ * right.
+ */
+@Composable
+private fun VideoControlsArrowIcon(
+    expanded: Boolean,
+    modifier: Modifier = Modifier,
+    contentDescription: String? = null
+) {
+    AnimatedContent(
+        targetState = expanded,
+        transitionSpec = {
+            (slideInHorizontally { if (targetState) -it / 4 else it / 4 } + fadeIn()) togetherWith
+                (slideOutHorizontally { if (targetState) it / 4 else -it / 4 } + fadeOut())
+        },
+        label = "videoControlsArrow"
+    ) { open ->
+        Icon(
+            imageVector = if (open) {
+                Icons.Rounded.KeyboardArrowRight
+            } else {
+                Icons.Rounded.KeyboardArrowLeft
+            },
+            contentDescription = contentDescription,
+            tint = Color.White,
+            modifier = modifier
+        )
+    }
+}
+
 /** The arrow at the end of the quick row: a round button like the others. */
 @Composable
 private fun VideoRowArrowButton(
     expanded: Boolean,
-    arrowRotation: Float,
     onClick: () -> Unit
 ) {
     Column(
@@ -2508,13 +3006,9 @@ private fun VideoRowArrowButton(
             modifier = Modifier.size(46.dp)
         ) {
             Box(contentAlignment = Alignment.Center) {
-                Icon(
-                    imageVector = Icons.Rounded.KeyboardArrowUp,
-                    contentDescription = null,
-                    tint = Color.White,
-                    modifier = Modifier
-                        .size(22.dp)
-                        .rotate(arrowRotation)
+                VideoControlsArrowIcon(
+                    expanded = expanded,
+                    modifier = Modifier.size(22.dp)
                 )
             }
         }
@@ -2537,7 +3031,11 @@ private fun VideoRowArrowButton(
 
 /** Which gesture the video-surface detector is currently tracking. */
 private enum class GestureMode {
-    Undecided, Seek, Brightness, Volume, Speed, Pinch
+    Undecided, Seek, Brightness, Volume, Speed, Pinch,
+    /** Second finger down, not yet locked to pinch or two-finger speed. */
+    TwoFingerUndecided,
+    /** Two fingers moving together vertically: playback speed. */
+    TwoFingerSpeed
 }
 
 /** Centre hint while a vertical swipe adjusts brightness / volume. */

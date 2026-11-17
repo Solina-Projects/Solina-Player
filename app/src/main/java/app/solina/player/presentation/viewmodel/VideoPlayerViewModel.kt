@@ -605,6 +605,13 @@ class VideoPlayerViewModel @Inject constructor(
     fun setSpeed(speed: Float) = videoPlaybackHolder.setSpeed(speed)
 
     /**
+     * Live speed change (two-finger speed gesture, 2026-11-17): applies
+     * at once without a DataStore write per move; the gesture end
+     * persists it through [setSpeed].
+     */
+    fun setSpeedLive(speed: Float) = videoPlaybackHolder.setSpeedLive(speed)
+
+    /**
      * Called when the player screen is left (mini player, 2026-11-16):
      * save the resume point, clear the sleep timer, and pause — unless
      * background playback is on, in which case the holder keeps playing

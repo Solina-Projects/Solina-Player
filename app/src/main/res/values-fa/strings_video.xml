@@ -130,6 +130,9 @@
     <string name="video_equalizer_unavailable">در این دستگاه اکولایزر سیستمی نیست</string>
     <string name="video_background_play">پخش در پس‌زمینه</string>
     <string name="video_screen_rotation">چرخش صفحه</string>
+    <string name="video_rotation_landscape">افقی</string>
+    <string name="video_rotation_portrait">عمودی</string>
+    <string name="video_rotation_auto">چرخش خودکار</string>
     <string name="video_speed">سرعت</string>
     <string name="video_subtitle_off">زیرنویس خاموش</string>
     <string name="video_no_subtitles">در این ویدیو زیرنویسی نیست</string>

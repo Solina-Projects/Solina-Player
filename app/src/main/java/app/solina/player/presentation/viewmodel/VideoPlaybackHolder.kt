@@ -484,6 +484,16 @@ class VideoPlaybackHolder @Inject constructor(
         }
     }
 
+    /**
+     * Live speed change (two-finger speed gesture, 2026-11-17): applies
+     * at once without a DataStore write per move; the gesture end
+     * persists it through [setSpeed].
+     */
+    fun setSpeedLive(speed: Float) {
+        _playbackSpeed.value = speed
+        exoPlayer?.setPlaybackSpeed(speed)
+    }
+
     fun setVolume(volume: Float) {
         _volume.value = volume.coerceIn(0f, 1f)
         exoPlayer?.volume = _volume.value

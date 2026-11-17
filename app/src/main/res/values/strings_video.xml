@@ -130,6 +130,9 @@
     <string name="video_equalizer_unavailable">No system equalizer on this device</string>
     <string name="video_background_play">Background Play</string>
     <string name="video_screen_rotation">Screen Rotation</string>
+    <string name="video_rotation_landscape">Landscape</string>
+    <string name="video_rotation_portrait">Portrait</string>
+    <string name="video_rotation_auto">Auto rotate</string>
     <string name="video_speed">Speed</string>
     <string name="video_subtitle_off">Subtitles off</string>
     <string name="video_no_subtitles">No subtitles in this video</string>
