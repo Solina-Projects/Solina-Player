@@ -9,9 +9,12 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -61,6 +64,7 @@ import app.solina.player.data.preferences.CornerRadii
 import app.solina.player.data.preferences.GlassPresetNames
 import app.solina.player.data.preferences.GlassStyleNames
 import app.solina.player.data.preferences.SeekBarStyleNames
+import app.solina.player.presentation.components.MiniPlayerHeight
 import app.solina.player.presentation.components.appearancePaletteColors
 import app.solina.player.presentation.viewmodel.AppearanceViewModel
 
@@ -125,7 +129,18 @@ fun AppearanceCustomizationScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding),
-            contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp),
+            // Round 15, E1: the old all-round 16 dp left the floating
+            // mini-player bar covering the last rows (e.g. the font-size
+            // slider). Bottom = bar height + system nav bar + 16 dp, the
+            // same formula as the main settings list.
+            contentPadding = androidx.compose.foundation.layout.PaddingValues(
+                start = 16.dp,
+                end = 16.dp,
+                top = 16.dp,
+                bottom = MiniPlayerHeight +
+                    WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() +
+                    16.dp
+            ),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             item(key = "appearance_intro") {

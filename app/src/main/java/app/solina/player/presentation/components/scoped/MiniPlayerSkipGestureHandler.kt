@@ -8,12 +8,15 @@ import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.hapticfeedback.HapticFeedback
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.util.VelocityTracker
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
@@ -47,7 +50,7 @@ private const val SKIP_EXIT_FADE_DURATION_MS = 110
 private const val SKIP_ENTER_FADE_DURATION_MS = 190
 
 /**
- * Horizontal mini-player gesture for the "swipe to change song" mode: swipe left for the
+ * Horizontal mini-player gesture for the "swipe to change track" mode: swipe left for the
  * next track, right for the previous one.
  *
  * Every value it writes lives in an [Animatable] that the sheet reads inside `graphicsLayer`,
@@ -256,6 +259,44 @@ internal fun rememberMiniPlayerSkipGestureHandler(
             screenWidthPx = screenWidthPx,
             onSkipToNext = { onSkipToNextState.value() },
             onSkipToPrevious = { onSkipToPreviousState.value() }
+        )
+    }
+}
+
+/**
+ * Skip-only horizontal gesture for the fixed (non-floating) mini-player
+ * bars — the Home music bar and both video bars (round 15, D1/D2).
+ *
+ * This is the same [MiniPlayerSkipGestureHandler] — and therefore the exact
+ * same shared-axis swap animation (130 ms exit + fade, track changes while
+ * invisible, spring back in from the opposite side, haptic at the commit
+ * threshold) — as the floating music bar's skip mode. The only difference
+ * from [miniPlayerHorizontalGesture] is that these bars have no dismiss
+ * behaviour, so no dismiss handler is involved at all.
+ *
+ * Tap still reaches the bar's own `clickable` (which opens the full
+ * player): [detectHorizontalDragGestures] only consumes a pointer stream
+ * once a horizontal drag passes touch slop, so a tap is never swallowed.
+ * Vertical scrolling of the list the bar sits in is untouched for the
+ * same reason — only horizontal movement is consumed.
+ */
+internal fun Modifier.miniPlayerSkipGesture(
+    enabled: Boolean,
+    skipHandler: MiniPlayerSkipGestureHandler
+): Modifier {
+    if (!enabled) return this
+    return this.pointerInput(skipHandler) {
+        detectHorizontalDragGestures(
+            onDragStart = { skipHandler.onDragStart() },
+            onHorizontalDrag = { change, dragAmount ->
+                change.consume()
+                skipHandler.onHorizontalDrag(
+                    uptimeMillis = change.uptimeMillis,
+                    dragAmount = dragAmount
+                )
+            },
+            onDragEnd = { skipHandler.onDragEnd() },
+            onDragCancel = { skipHandler.onDragCancel() }
         )
     }
 }

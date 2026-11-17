@@ -1,5 +1,6 @@
 package app.solina.player.presentation.components
 
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -27,15 +28,20 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shadow
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
@@ -52,6 +58,8 @@ import androidx.media3.ui.PlayerView
 import androidx.navigation.NavController
 import app.solina.player.R
 import app.solina.player.presentation.components.player.MorphingPlayPauseIcon
+import app.solina.player.presentation.components.scoped.miniPlayerSkipGesture
+import app.solina.player.presentation.components.scoped.rememberMiniPlayerSkipGestureHandler
 import app.solina.player.presentation.navigation.Screen
 import app.solina.player.presentation.navigation.navigateSafely
 import app.solina.player.presentation.viewmodel.AppearanceViewModel
@@ -82,6 +90,9 @@ import app.solina.player.utils.formatDuration
  * - Prev / next step through the queue (or the device video list when the
  *   video was played on its own); play / pause controls the holder.
  * - Tapping the bar reopens the full player at the current position.
+ * - Swiping the bar left / right steps to the next / previous video with
+ *   the floating music bar's shared-axis swap animation, when the
+ *   "swipe to change track" switch (Behaviour → Player gestures) is on.
  * - Hidden when no video has ever been played. When the app restarted (no
  *   live player) it falls back to the saved resume point: thumbnail,
  *   title and saved position; tapping it resumes in the full player.
@@ -200,15 +211,61 @@ fun VideoMiniPlayerBar(
         label = "VideoMiniPlayerPlayPauseCorner"
     )
 
+    // Swipe to skip (round 15, D1/D2): the same shared-axis swap as the
+    // floating music bar, via the same MiniPlayerSkipGestureHandler —
+    // card exits 130 ms in the swipe direction while fading out, the
+    // video changes while invisible, the new card springs in from the
+    // opposite side, haptic at the commit threshold. Left = next video,
+    // right = previous video, physical directions in LTR and RTL alike.
+    // Governed by the same "swipe to change track" switch as the music
+    // bars (Behaviour → Player gestures, off by default); the video
+    // surface-gestures switch does NOT apply here — it governs seek /
+    // brightness / volume on the full video player surface.
+    // Both bar kinds (SECTION + HOME) share this composable, so wiring
+    // it once here gives the swipe to both bars.
+    val swipeToSkip by videoViewModel.miniPlayerSwipeToSkip.collectAsStateWithLifecycle()
+    val density = LocalDensity.current
+    val configuration = LocalConfiguration.current
+    val scope = rememberCoroutineScope()
+    val skipOffsetX = remember { Animatable(0f) }
+    val skipContentAlpha = remember { Animatable(1f) }
+    val screenWidthPx = remember(configuration, density) {
+        with(density) { configuration.screenWidthDp.dp.toPx() }
+    }
+    val skipGestureHandler = rememberMiniPlayerSkipGestureHandler(
+        scope = scope,
+        hapticFeedback = hapticFeedback,
+        translationXAnimatable = skipOffsetX,
+        contentAlphaAnimatable = skipContentAlpha,
+        screenWidthPx = screenWidthPx,
+        onSkipToNext = { stepNeighbour(1) },
+        onSkipToPrevious = { stepNeighbour(-1) }
+    )
+    // A preference flip mid-gesture would otherwise strand the bar
+    // off-centre or faded out (same reset as the floating bar).
+    LaunchedEffect(swipeToSkip) {
+        if (skipOffsetX.value != 0f) skipOffsetX.snapTo(0f)
+        if (skipContentAlpha.value != 1f) skipContentAlpha.snapTo(1f)
+    }
+
     Surface(
         modifier = modifier
             .fillMaxWidth()
             .height(barHeight)
+            .graphicsLayer {
+                // Draw-phase only: the drag / swap never recomposes the bar.
+                translationX = skipOffsetX.value
+                alpha = skipContentAlpha.value
+            }
             .glassBar(
                 glass = glass,
                 tintColor = colors.primaryContainer,
                 corners = barAppearance.effectiveCorners,
                 enabled = glassOn
+            )
+            .miniPlayerSkipGesture(
+                enabled = swipeToSkip,
+                skipHandler = skipGestureHandler
             )
             .clickable { openFullPlayer() },
         shape = barAppearance.effectiveCorners.toShape(),

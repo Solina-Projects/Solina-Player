@@ -37,6 +37,20 @@ class VideoViewModel @Inject constructor(
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     /**
+     * Swipe-to-skip on the mini-player bars (round 15, D1): the video bars
+     * (Video section + Home) and the Home music bar all follow the same
+     * "swipe to change track" switch as the floating music bar
+     * ([UserPreferencesRepository.miniPlayerSwipeToSkipFlow], Behaviour →
+     * Player gestures, off by default). Deliberately NOT the video
+     * surface-gestures switch (`videoSwipeGesturesEnabledFlow`): that one
+     * governs seek / brightness / volume on the full video player surface,
+     * a different gesture in a different place.
+     */
+    val miniPlayerSwipeToSkip: StateFlow<Boolean> =
+        userPreferencesRepository.miniPlayerSwipeToSkipFlow
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
+
+    /**
      * Search feedback (2026-11-16): the Video Search browse grid has its own
      * persisted grid/list mode, mirroring the music search genre grid
      * ([PlayerViewModel.isGenreGridView]).

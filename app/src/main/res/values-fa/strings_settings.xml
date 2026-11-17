@@ -213,8 +213,8 @@
     <string name="setcat_player_gestures">ژست‌های پخش‌کننده</string>
     <string name="setcat_tap_bg_closes_title">ضربه به پس‌زمینه پخش‌کننده را می‌بندد</string>
     <string name="setcat_tap_bg_closes_subtitle">برای بستن صفحهٔ پخش‌کننده روی پس‌زمینهٔ تار ضربه بزنید.</string>
-    <string name="setcat_mini_player_swipe_to_skip_title">کشیدن برای تغییر آهنگ</string>
-    <string name="setcat_mini_player_swipe_to_skip_subtitle">مینی‌پخش‌کننده را به چپ بکشید برای آهنگ بعدی و به راست برای آهنگ قبلی. برای رد کردنش به‌جای آن به پایین بکشید.</string>
+    <string name="setcat_mini_player_swipe_to_skip_title">کشیدن برای تغییر آهنگ یا ویدیو</string>
+    <string name="setcat_mini_player_swipe_to_skip_subtitle">هر نوار مینی‌پخش‌کننده را به چپ بکشید برای بعدی و به راست برای قبلی؛ هم موزیک هم ویدیو. در نوار شناور، برای رد کردن به‌جای آن به پایین بکشید.</string>
     <string name="setcat_playback_behavior">پخش</string>
     <string name="setcat_autoplay_on_skip_title">پخش خودکار هنگام رد کردن</string>
     <string name="setcat_autoplay_on_skip_subtitle">وقتی هنگام توقف به آهنگ دیگری می‌روید، پخش به‌صورت خودکار شروع شود.</string>

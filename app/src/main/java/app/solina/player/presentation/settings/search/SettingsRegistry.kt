@@ -933,7 +933,9 @@ object SettingsRegistry {
                 type = SettingType.SWITCH,
                 keywordsStatic = listOf(
                     "mini player", "miniplayer", "swipe", "skip", "next song", "previous song",
-                    "swipe down", "dismiss", "gesture"
+                    "next video", "previous video", "track", "video",
+                    "swipe down", "dismiss", "gesture",
+                    "ویدیو", "آهنگ"
                 ),
                 getValue = { it.miniPlayerSwipeToSkip },
                 onToggle = { viewModel, checked -> viewModel.setMiniPlayerSwipeToSkip(checked) }

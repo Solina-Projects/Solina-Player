@@ -255,7 +255,10 @@ fun SettingsScreen(
                     top = currentTopBarHeightDp + 8.dp,
                     start = 16.dp,
                     end = 16.dp,
-                    bottom = MiniPlayerHeight + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + 8.dp
+                    // Round 15, E4: the 16 dp margin is the single standard
+                    // for every settings list, so the last row never touches
+                    // the floating bar's shadow (was 8 dp here).
+                    bottom = MiniPlayerHeight + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + 16.dp
                 ),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
                 modifier = Modifier.fillMaxSize()
@@ -412,7 +415,11 @@ fun SettingsScreen(
                         navController = navController,
                         contentPadding = PaddingValues(
                             top = 16.dp,
-                            bottom = 16.dp + MiniPlayerHeight,
+                            // Round 15, E4: same 16 dp margin standard as the
+                            // main list, plus the system nav bar inset it was
+                            // missing (the results list sits in the same area
+                            // as the main list, under the same floating bar).
+                            bottom = MiniPlayerHeight + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + 16.dp,
                             start = 16.dp,
                             end = 16.dp
                         ),

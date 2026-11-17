@@ -4,8 +4,11 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -38,6 +41,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import app.solina.player.R
 import app.solina.player.data.preferences.HomeSectionId
+import app.solina.player.presentation.components.MiniPlayerHeight
 import app.solina.player.presentation.viewmodel.HomeCustomizationViewModel
 
 /**
@@ -82,7 +86,17 @@ fun HomeCustomizationScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding),
-            contentPadding = PaddingValues(16.dp),
+            // Round 15, E2: same bug as the Appearance screen — the old
+            // all-round 16 dp let the floating mini-player bar cover the
+            // last rows. Bottom = bar height + system nav bar + 16 dp.
+            contentPadding = PaddingValues(
+                start = 16.dp,
+                end = 16.dp,
+                top = 16.dp,
+                bottom = MiniPlayerHeight +
+                    WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() +
+                    16.dp
+            ),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             item(key = "home_customize_intro") {

@@ -109,6 +109,12 @@ fun NavBarCornerRadiusContent(
     var sliderValue by remember { mutableFloatStateOf(initialRadius.safeRadius()) }
     var hasBeenAdjusted by remember { mutableStateOf(sliderValue != DEFAULT_NAV_BAR_CORNER_RADIUS) }
 
+    // Round 15, E5 (checked, no change): this screen needs no
+    // mini-player bottom padding. Its content is a fixed short Column
+    // (title + subtitle + one bottom-anchored slider card, not a
+    // scrolling list), and the floating mini-player bar is hidden on
+    // this route (MainActivity routesWithHiddenMiniPlayer), so nothing
+    // can slide under the bar here.
     val haptic = LocalHapticFeedback.current
 
     LaunchedEffect(initialRadius) {

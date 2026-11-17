@@ -1,5 +1,6 @@
 package app.solina.player.presentation.components
 
+import androidx.compose.animation.core.Animatable
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -7,12 +8,21 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import app.solina.player.presentation.components.scoped.miniPlayerSkipGesture
+import app.solina.player.presentation.components.scoped.rememberMiniPlayerSkipGestureHandler
 import app.solina.player.presentation.viewmodel.AppearanceViewModel
 import app.solina.player.presentation.viewmodel.PlayerViewModel
 
@@ -35,6 +45,13 @@ import app.solina.player.presentation.viewmodel.PlayerViewModel
  *
  * Hidden when nothing has ever been played (no current song). Tapping
  * the bar opens the full player; the transport buttons work directly.
+ *
+ * Swipe to skip (round 15, D1/D2): swiping the bar left / right steps
+ * to the next / previous song with the floating music bar's shared-axis
+ * swap animation, when the "swipe to change track" switch (Behaviour →
+ * Player gestures) is on. Previous uses forcePreviousSong(), exactly
+ * like the floating bar, so a right-swipe steps back instead of
+ * restarting the current song.
  *
  * Bug-fix (2026-11-17, item 5): tapping the bar did NOT open the full
  * player. The bar only called [PlayerViewModel.expandPlayerSheet], but
@@ -74,16 +91,59 @@ fun HomeMusicPlaybackBar(
     val glass = appearance.glass
     val glassOn = glass.enabled && glass.miniBars
 
+    // Swipe to skip (round 15, D1/D2): the same shared-axis swap as the
+    // floating music bar, via the same MiniPlayerSkipGestureHandler.
+    // Governed by the same "swipe to change track" switch
+    // (Behaviour → Player gestures, off by default).
+    val playerConfig by playerViewModel.playerConfigSlice.collectAsStateWithLifecycle()
+    val swipeToSkip = playerConfig.miniPlayerSwipeToSkip
+    val density = LocalDensity.current
+    val configuration = LocalConfiguration.current
+    val scope = rememberCoroutineScope()
+    val hapticFeedback = LocalHapticFeedback.current
+    val skipOffsetX = remember { Animatable(0f) }
+    val skipContentAlpha = remember { Animatable(1f) }
+    val screenWidthPx = remember(configuration, density) {
+        with(density) { configuration.screenWidthDp.dp.toPx() }
+    }
+    val skipGestureHandler = rememberMiniPlayerSkipGestureHandler(
+        scope = scope,
+        hapticFeedback = hapticFeedback,
+        translationXAnimatable = skipOffsetX,
+        contentAlphaAnimatable = skipContentAlpha,
+        screenWidthPx = screenWidthPx,
+        onSkipToNext = { playerViewModel.nextSong() },
+        // The card has already slid away, so restarting the current track
+        // instead of stepping back would read as the gesture having
+        // failed — same choice as the floating bar.
+        onSkipToPrevious = { playerViewModel.forcePreviousSong() }
+    )
+    // A preference flip mid-gesture would otherwise strand the bar
+    // off-centre or faded out (same reset as the floating bar).
+    LaunchedEffect(swipeToSkip) {
+        if (skipOffsetX.value != 0f) skipOffsetX.snapTo(0f)
+        if (skipContentAlpha.value != 1f) skipContentAlpha.snapTo(1f)
+    }
+
     CompositionLocalProvider(LocalMaterialTheme provides barScheme) {
         Surface(
             modifier = modifier
                 .fillMaxWidth()
                 .height(barHeight)
+                .graphicsLayer {
+                    // Draw-phase only: the drag / swap never recomposes the bar.
+                    translationX = skipOffsetX.value
+                    alpha = skipContentAlpha.value
+                }
                 .glassBar(
                     glass = glass,
                     tintColor = barScheme.primaryContainer,
                     corners = barAppearance.effectiveCorners,
                     enabled = glassOn
+                )
+                .miniPlayerSkipGesture(
+                    enabled = swipeToSkip,
+                    skipHandler = skipGestureHandler
                 )
                 .clickable { onOpenFullPlayer() },
             shape = barAppearance.effectiveCorners.toShape(),

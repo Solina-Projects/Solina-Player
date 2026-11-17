@@ -326,10 +326,13 @@ fun AboutScreen(
             state = lazyListState,
             contentPadding = PaddingValues(
                 top = currentTopBarHeightDp + 8.dp,
+                // Round 15, E4: 16 dp is the single margin standard for
+                // every settings list, so the last row never touches the
+                // floating bar's shadow (was 12 dp here).
                 bottom = MiniPlayerHeight +
                     WindowInsets.navigationBars
                         .asPaddingValues()
-                        .calculateBottomPadding() + 12.dp,
+                        .calculateBottomPadding() + 16.dp,
             ),
             modifier = Modifier.fillMaxSize(),
             horizontalAlignment = Alignment.CenterHorizontally,

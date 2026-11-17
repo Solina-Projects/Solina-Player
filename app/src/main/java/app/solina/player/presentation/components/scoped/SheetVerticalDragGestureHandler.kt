@@ -30,7 +30,7 @@ private const val COLLAPSED_DISMISS_FLING_VELOCITY = 900f
  * Encapsulates vertical drag gesture state and target resolution for the player sheet.
  *
  * The expand/collapse behavior is unchanged from the original inline implementation. When
- * [collapsedDismissEnabledProvider] reports true — the "swipe to change song" mode, where the
+ * [collapsedDismissEnabledProvider] reports true — the "swipe to change track" mode, where the
  * horizontal swipe is taken over by track skipping — a downward drag on the *collapsed* mini
  * player is rerouted to a dismiss instead of rubber-banding against the collapsed stop.
  */
