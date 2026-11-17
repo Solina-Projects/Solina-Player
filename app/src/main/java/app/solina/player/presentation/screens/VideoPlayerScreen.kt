@@ -70,8 +70,6 @@ import androidx.compose.material.icons.rounded.Bedtime
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.ClosedCaption
 import androidx.compose.material.icons.rounded.Equalizer
-import androidx.compose.material.icons.rounded.Fullscreen
-import androidx.compose.material.icons.rounded.FullscreenExit
 import androidx.compose.material.icons.rounded.Headphones
 import androidx.compose.material.icons.rounded.KeyboardArrowLeft
 import androidx.compose.material.icons.rounded.KeyboardArrowRight
@@ -230,8 +228,10 @@ import kotlin.math.roundToInt
  * - ALL bars auto-hide ~3 s after the last interaction while playing, and
  *   a tap anywhere on the video shows them again. The built-in PlayerView
  *   controller is OFF — the bottom transport bar below is custom, exactly
- *   like the reference: seek bar with times, then lock | prev -15s
- *   play/pause +15s next | fullscreen PiP.
+ *   like the reference: seek bar with times, then prev -15s
+ *   play/pause +15s next in the centre, aspect / rotation / PiP on the
+ *   right (landscape: lock far left, rotation 2nd from the right;
+ *   portrait: aspect + PiP only — fullscreen is gone, round 18).
  * - One gesture layer over the video surface, with clear thresholds, so
  *   tap / long-press / swipe-seek / brightness / volume / pinch do not
  *   fight each other: short tap toggles the bars (deferred ~350 ms so a
@@ -358,10 +358,6 @@ fun VideoPlayerScreen(
     // Rotation: null = follow the system, true = landscape, false = portrait.
     // Starts at true: selecting a film plays it horizontal automatically.
     var forcedLandscape by rememberSaveable { mutableStateOf<Boolean?>(true) }
-    // Fullscreen exit restores this (round 17): the forcedLandscape value
-    // from just before fullscreen was entered, so leaving fullscreen goes
-    // back to how the player was — not always to portrait.
-    var preFullscreenLandscape by rememberSaveable { mutableStateOf<Boolean?>(null) }
 
     // ---- Gestures + bars state (2026-11-16) ----
     // All bars auto-hide ~3 s after the last interaction while playing;
@@ -372,6 +368,11 @@ fun VideoPlayerScreen(
     fun poke() {
         interactionTick++
     }
+    // Round 18: a finger on the screen gates the auto-hide timer.
+    // touchActive is true from the surface gesture's first pointer-down
+    // until the gesture ends, and during a row/handle drag; the timer
+    // only counts down once every finger is off the screen, so a long
+    // drag or hold can never hide the bars mid-gesture.
     // Relative scrubbing (Search + Player polish, 2026-11-16): dragging
     // the bottom time bar moves the position at 0.5x — half the finger
     // travel — so scrubbing feels slower and finer. A tap (one big jump)
@@ -535,15 +536,21 @@ fun VideoPlayerScreen(
     val volumeLabel = stringResource(R.string.video_volume)
     val speedOptions = videoPlayerViewModel.availableSpeeds
     // Bottom-bar sizing, orientation-aware (round 17): portrait on a
-    // narrow phone stays compact at 0.8x, but landscape grows to 1.12x
-    // (+40% vs the old 0.8x) with wide 12.8 dp gaps, so the transport
-    // row uses the wide screen instead of huddling in the middle.
-    // Width check (POCO F3): portrait centre 185.6 + 4×6 = 209.6, right
-    // 115.2 + 2×6 = 127.2, total ≈ 337 + 16 padding ≈ 353 dp < 393 dp;
-    // landscape ≈ 552 + 16 ≈ 568 dp < 873 dp.
+    // narrow phone stays compact at 0.8x, but landscape grows to 1.344x
+    // (round 17: 1.12x, +40% vs the old 0.8x; round 18: 1.12 x 1.2)
+    // with wide 12.8 dp gaps, so the transport row uses the wide
+    // screen instead of huddling in the middle.
+    // Round 18: landscape icons 20% bigger again — 1.12 x 1.2 = 1.344x
+    // (buttons 48 -> 64.5 dp, play 56 -> 75.3 dp, +/-15s 40 -> 53.8 dp,
+    // icons 30/36/28/26 -> 40.3/48.4/37.6/34.9 dp). bottomBarScale is
+    // used ONLY by the bottom bar, so changing it here is safe.
+    // Width check (POCO F3): portrait centre 185.6 + 4x6 = 209.6, right
+    // 76.8 + 6 = 82.8, total ~293 + 16 padding ~309 dp < 393 dp;
+    // landscape lock 64.5 + centre 311.8 + 4x12.8 = 363 + right
+    // 193.6 + 2x12.8 = 219.2, total ~647 + 16 ~663 dp < 873 dp.
     val configuration = LocalConfiguration.current
     val bottomBarScale = when {
-        configuration.orientation == Configuration.ORIENTATION_LANDSCAPE -> 1.12f
+        configuration.orientation == Configuration.ORIENTATION_LANDSCAPE -> 1.344f
         configuration.screenWidthDp < 470 -> 0.8f
         else -> 1f
     }
@@ -632,17 +639,23 @@ fun VideoPlayerScreen(
 
     // Auto-hide: hide all bars 3 s after the last interaction, only while
     // playing, and never while a menu/dialog or the speed bar is open.
+    // Round 18: also never while a finger is still on the screen
+    // (touchActive: surface gesture from first pointer-down to gesture
+    // end, or a row/handle drag) or while a seek scrub is in progress
+    // (scrubbing: surface seek drag or the seek-bar slider). Both flags
+    // are keys of the effect, so a new touch/scrub cancels a running
+    // countdown and the 3 s only start once the last finger lifts.
     // Round 17: it also collapses the quick row (controlsExpanded =
     // false), so re-showing the bars always starts collapsed and the
-    // user reopens the row via the always-visible handle. In landscape
-    // the row stays visible regardless — its visibility condition is
-    // `isLandscape || controlsExpanded` — so the collapse cannot hide it.
+    // user reopens the row via the always-visible handle. Round 18:
+    // the row collapses in landscape too — its visibility condition
+    // is just `controlsExpanded` in both orientations.
     val anyMenuOpen = showSpeedMenu || showGridMenu || showSubtitlePanel ||
         showAudioListDialog || showQueueDialog || showBookmarksDialog ||
         showChaptersDialog || showInfoDialog || showTutorialDialog ||
         showDisplayDialog || showAudioDialog || showCustomiseDialog
-    LaunchedEffect(barsVisible, interactionTick, isPlaying, anyMenuOpen, speedMode, speedBarVisible) {
-        if (barsVisible && isPlaying && !anyMenuOpen && !speedMode && !speedBarVisible) {
+    LaunchedEffect(barsVisible, interactionTick, isPlaying, anyMenuOpen, speedMode, speedBarVisible, touchActive, scrubbing) {
+        if (barsVisible && isPlaying && !anyMenuOpen && !speedMode && !speedBarVisible && !touchActive && !scrubbing) {
             delay(3_000)
             barsVisible = false
             controlsExpanded = false
@@ -854,44 +867,6 @@ fun VideoPlayerScreen(
         }
     }
 
-    /**
-     * Fullscreen that actually does something (Search + Player polish,
-     * 2026-11-16): before, the bottom-bar icon only flipped
-     * [VideoPlayerViewModel.isFullscreen], whose orientation effect was
-     * already satisfied by the forced landscape on entry — and nothing
-     * hid the system bars or changed the video size, so the tap looked
-     * dead. Now entering fullscreen forces landscape (the video grows
-     * to the whole screen); exiting restores the pre-fullscreen
-     * orientation (round 17: no longer always back to portrait), with
-     * a toast either way. The system bars are NOT toggled here — they
-     * follow the Compose bars (hidden on the 3 s auto-hide, shown on
-     * tap) via the LaunchedEffect below.
-     */
-    fun toggleFullscreenMode() {
-        val entering = !isFullscreen
-        videoPlayerViewModel.toggleFullscreen()
-        if (entering) {
-            preFullscreenLandscape = forcedLandscape
-            forcedLandscape = true
-        } else {
-            // Only restore when the user didn't change the rotation
-            // while fullscreen: a mid-fullscreen tap is their new
-            // choice and must survive the exit.
-            if (forcedLandscape == true) {
-                forcedLandscape = preFullscreenLandscape
-            }
-            preFullscreenLandscape = null
-        }
-        Toast.makeText(
-            context,
-            context.getString(
-                if (entering) R.string.video_fullscreen else R.string.video_exit_fullscreen
-            ),
-            Toast.LENGTH_SHORT
-        ).show()
-        poke()
-    }
-
     // Round 17, item 2: the system bars follow the Compose bars, not the
     // fullscreen toggle. The player auto-forces landscape on entry
     // (forcedLandscape) without touching isFullscreen, so the
@@ -903,8 +878,10 @@ fun VideoPlayerScreen(
     // set here on every hide so it also applies on the auto-hide path,
     // where fullscreen was never toggled). Keyed on barsVisible AND
     // isFullscreen, so it re-asserts the bars rule whenever either
-    // changes; the fullscreen button now only toggles orientation/size,
-    // not bar visibility. (The old fullscreen-only effect was removed
+    // changes. (Round 18: the fullscreen button + toggle are gone —
+    // the user does not need fullscreen — but isFullscreen and this
+    // effect stay: the orientation effect above still keys on it.)
+    // (The old fullscreen-only effect was removed
     // in the round-17 merge — it fought this one on fullscreen exit.)
     LaunchedEffect(barsVisible, isFullscreen) {
         activity?.window?.let { window ->
@@ -1141,6 +1118,10 @@ fun VideoPlayerScreen(
                         awaitEachGesture {
                             val down = awaitFirstDown()
                             down.consume()
+                            // Round 18: the finger is down — cancel any
+                            // running auto-hide countdown until the
+                            // gesture ends (see the trailing poke()).
+                            touchActive = true
                             var mode = GestureMode.Undecided
                             val slopPx = viewConfiguration.touchSlop
                             var seekStartMs = player?.currentPosition ?: 0L
@@ -1556,6 +1537,9 @@ fun VideoPlayerScreen(
                                     // Nothing to commit.
                                 }
                             }
+                            // Round 18: last finger lifted — the 3 s
+                            // auto-hide countdown starts from zero now.
+                            touchActive = false
                             poke()
                         }
                     }
@@ -1666,17 +1650,17 @@ fun VideoPlayerScreen(
                     // Quick-action row (reference-player redesign):
                     // in landscape it sits under the top bar, left
                     // aligned — equalizer, screenshot, audio,
-                    // aspect, speed circle, then the arrow — and it
-                    // is ALWAYS open there (round 17: visible when
-                    // isLandscape, whatever controlsExpanded is, so
-                    // the auto-hide collapse cannot hide it). Home
-                    // feedback (2026-11-16): while closed in portrait
+                    // speed circle, then the arrow — and it
+                    // collapses like portrait (round 18: visible
+                    // only when controlsExpanded, in both
+                    // orientations; the auto-hide collapse hides
+                    // it). Home feedback (2026-11-16): while closed
                     // the bar is COMPLETELY hidden — no peeking row,
                     // no partial buttons — only the arrow handle below
                     // shows, and tapping it opens the full row (it
                     // scrolls).
                     AnimatedVisibility(
-                        visible = isLandscape || controlsExpanded,
+                        visible = controlsExpanded,
                         enter = slideInHorizontally(
                             initialOffsetX = { it },
                             animationSpec = spring(
@@ -1695,19 +1679,25 @@ fun VideoPlayerScreen(
                         Surface(
                             // Round 17: a horizontal drag / fling on the
                             // row itself closes it (drag right) — same
-                            // settle as the handle. Portrait only; in
-                            // landscape the row is always open. The
-                            // LazyRow still owns scrolling: it consumes
-                            // drags while it can scroll, so this only
-                            // fires from its resting (left-edge) spot.
+                            // settle as the handle. Round 18: enabled in
+                            // landscape too, now that the row collapses
+                            // there. The LazyRow still owns scrolling: it
+                            // consumes drags while it can scroll, so this
+                            // only fires from its resting (left-edge) spot.
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .draggable(
                                     state = rowDragState,
                                     orientation = Orientation.Horizontal,
-                                    enabled = !isLandscape,
-                                    onDragStarted = { rowDragDx = 0f },
-                                    onDragStopped = { velocity -> settleRowDrag(velocity) }
+                                    enabled = true,
+                                    // Round 18: a row drag is a touch in
+                                    // progress — gate the auto-hide timer
+                                    // until the drag settles.
+                                    onDragStarted = { rowDragDx = 0f; touchActive = true },
+                                    onDragStopped = { velocity ->
+                                        touchActive = false
+                                        settleRowDrag(velocity)
+                                    }
                                 ),
                             color = Color.Black.copy(alpha = 0.55f),
                             shape = RoundedCornerShape(
@@ -1718,43 +1708,15 @@ fun VideoPlayerScreen(
                             LazyRow(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(vertical = 8.dp),
+                                    .padding(vertical = 6.dp),
                                 contentPadding = PaddingValues(horizontal = 12.dp),
                                 horizontalArrangement = Arrangement.spacedBy(10.dp)
                             ) {
-                                // Round 17: rotation + lock moved up
-                                // from the bottom bar — first two buttons
-                                // of the quick row, so they are reachable
-                                // in landscape (row always visible) and
-                                // in portrait while the row is open.
-                                item(key = "rotation") {
-                                    VideoRoundControlButton(
-                                        button = VideoControlButton(
-                                            "rotation",
-                                            Icons.Rounded.ScreenRotation,
-                                            R.string.video_screen_rotation
-                                        ),
-                                        isActive = forcedLandscape == true,
-                                        labelOverride = rotationLabel,
-                                        iconOverride = rotationIcon,
-                                        onClick = { cycleRotation() }
-                                    )
-                                }
-                                item(key = "lock") {
-                                    VideoRoundControlButton(
-                                        button = VideoControlButton(
-                                            "lock",
-                                            Icons.Rounded.Lock,
-                                            R.string.video_lock_controls
-                                        ),
-                                        isActive = false,
-                                        labelOverride = null,
-                                        onClick = {
-                                            controlsLocked = true
-                                            poke()
-                                        }
-                                    )
-                                }
+                                // Round 18: rotation + lock were removed
+                                // from the quick row — rotation lives in
+                                // the bottom bar in landscape / top stack
+                                // in portrait, lock in the bottom bar in
+                                // landscape / top stack in portrait.
                                 items(quickRowButtons, key = { it.id }) { button ->
                                     VideoRoundControlButton(
                                         button = button,
@@ -1838,7 +1800,7 @@ fun VideoPlayerScreen(
                                             {
                                                 if (screenshotState == 1) {
                                                     CircularProgressIndicator(
-                                                        modifier = Modifier.size(20.dp),
+                                                        modifier = Modifier.size(16.dp),
                                                         color = Color.White,
                                                         strokeWidth = 2.dp
                                                     )
@@ -1854,21 +1816,19 @@ fun VideoPlayerScreen(
                                 }
                                 // Arrow handle, last in the row: points
                                 // RIGHT while open (LEFT while closed);
-                                // tapping it closes the row. Portrait
-                                // only (round 17): in landscape the row
-                                // is always open and there is no arrow
-                                // handle. The standalone handle outside
-                                // only shows while the row is closed.
-                                if (!isLandscape) {
-                                    item(key = "arrow") {
-                                        VideoRowArrowButton(
-                                            expanded = controlsExpanded,
-                                            onClick = {
-                                                controlsExpanded = !controlsExpanded
-                                                poke()
-                                            }
-                                        )
-                                    }
+                                // tapping it closes the row. Round 18: in
+                                // both orientations now that the row
+                                // collapses in landscape too. The
+                                // standalone handle outside only shows
+                                // while the row is closed.
+                                item(key = "arrow") {
+                                    VideoRowArrowButton(
+                                        expanded = controlsExpanded,
+                                        onClick = {
+                                            controlsExpanded = !controlsExpanded
+                                            poke()
+                                        }
+                                    )
                                 }
                             }
                             // Speed menu, anchored to the speed round button.
@@ -1969,16 +1929,19 @@ fun VideoPlayerScreen(
             // pinned at the top-right edge — just below where the top
             // bar sits (status bar + 84 dp, the same spot it had
             // inside the column) — even after the bars auto-hide, so
-            // the row can always be reopened. Portrait only: in
-            // landscape the row is always open and there is no handle.
-            // Tapping it toggles the row (and shows the bars again if
-            // they were hidden); dragging it left pulls the row out,
-            // dragging it right pushes it away.
+            // the row can always be reopened. Round 18: in both
+            // orientations now that the row collapses in landscape
+            // too. Tapping it toggles the row (and shows the bars
+            // again if they were hidden); dragging it left pulls the
+            // row out, dragging it right pushes it away.
             // Round 17 (item 15): in portrait the handle grows into a
             // top stack — arrow → rotation → lock, top-right under the
-            // three-dot menu. While the row is open the stack hides and
-            // rotation + lock live in the row itself.
-            if (!isLandscape && !controlsExpanded) {
+            // three-dot menu. While the row is open the stack hides
+            // (round 18: rotation + lock no longer live in the row —
+            // in portrait they are only reachable from this stack
+            // while the row is closed, in landscape from the bottom
+            // bar).
+            if (!controlsExpanded) {
                 Column(
                     modifier = Modifier
                         .align(Alignment.TopEnd)
@@ -2000,8 +1963,14 @@ fun VideoPlayerScreen(
                             .draggable(
                                 state = handleDragState,
                                 orientation = Orientation.Horizontal,
-                                onDragStarted = { rowDragDx = 0f },
-                                onDragStopped = { velocity -> settleRowDrag(velocity) }
+                                // Round 18: a handle drag is a touch in
+                                // progress — gate the auto-hide timer
+                                // until the drag settles.
+                                onDragStarted = { rowDragDx = 0f; touchActive = true },
+                                onDragStopped = { velocity ->
+                                    touchActive = false
+                                    settleRowDrag(velocity)
+                                }
                             )
                     ) {
                         Box(contentAlignment = Alignment.Center) {
@@ -2018,6 +1987,20 @@ fun VideoPlayerScreen(
                             )
                         }
                     }
+                }
+            }
+            // Round 18: rotation + lock live under the arrow only in
+            // portrait (top stack); in landscape they live in the
+            // bottom bar, so they must not show up here too.
+            if (!isLandscape && !controlsExpanded) {
+                Column(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .statusBarsPadding()
+                        .padding(top = 132.dp, end = 16.dp),
+                    horizontalAlignment = Alignment.End,
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
                     VideoTopStackButton(
                         icon = rotationIcon,
                         contentDescription = rotationLabel,
@@ -2049,14 +2032,15 @@ fun VideoPlayerScreen(
                 // Bottom transport bar, exactly like the reference: a seek
                 // bar with the current time on the left and the total time
                 // on the right, and below it prev -15s play/pause +15s
-                // next in the centre, aspect + fullscreen +
-                // picture-in-picture on the far right. Round 17: lock
-                // and rotation left this row — they live up top now
-                // (quick row in landscape, top stack under the arrow
-                // in portrait) — and the freed right-group slot is the
-                // aspect/resize button. No button is cut in either
+                // next in the centre, aspect + PiP on the far right in
+                // portrait, aspect + rotation + PiP in landscape (rotation
+                // took the old fullscreen slot, 2nd from the right), lock
+                // far left in landscape only. Round 18: fullscreen is
+                // gone entirely (user: not needed); lock and rotation live
+                // in this row in landscape and in the top stack under the
+                // arrow in portrait. No button is cut in either
                 // orientation: portrait gaps widen to 6 dp, landscape
-                // to 12.8 dp with 1.12x icons.
+                // to 12.8 dp with 1.344x icons.
                 AnimatedVisibility(
                     visible = barsVisible,
                     enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
@@ -2202,6 +2186,27 @@ fun VideoPlayerScreen(
                             verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier.fillMaxWidth()
                         ) {
+                            // Round 18: lock moves to the bottom bar in
+                            // landscape, far left (the slot was empty —
+                            // the row was a weighted centre group + a
+                            // right group). Portrait keeps its lock up
+                            // in the top stack; nothing changes there.
+                            if (isLandscape) {
+                                IconButton(
+                                    onClick = {
+                                        controlsLocked = true
+                                        poke()
+                                    },
+                                    modifier = Modifier.size((48f * bottomBarScale).dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Rounded.Lock,
+                                        contentDescription = stringResource(R.string.video_lock_controls),
+                                        tint = Color.White,
+                                        modifier = Modifier.size((26f * bottomBarScale).dp)
+                                    )
+                                }
+                            }
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(
@@ -2293,9 +2298,16 @@ fun VideoPlayerScreen(
                                 // slot of the old rotation button. Cycles
                                 // FIT → FILL → ZOOM → STRETCH with the
                                 // big centre feedback label, same as the
-                                // quick row's aspect button. Rotation
-                                // lives up top now (quick row / top
-                                // stack), fullscreen + PiP stay here.
+                                // quick row's aspect button. Round 18:
+                                // fullscreen is GONE (user: not needed) —
+                                // the right group is now aspect + PiP in
+                                // portrait, aspect / ROTATION / PiP in
+                                // landscape (rotation takes the old
+                                // fullscreen slot, 2nd from the right;
+                                // the 3-state icon shows the mode, the
+                                // centre label announces it on change).
+                                // Rotation lives up top in portrait
+                                // (top stack under the arrow).
                                 IconButton(
                                     onClick = { cycleAspect() },
                                     modifier = Modifier.size((48f * bottomBarScale).dp)
@@ -2307,20 +2319,18 @@ fun VideoPlayerScreen(
                                         modifier = Modifier.size((28f * bottomBarScale).dp)
                                     )
                                 }
-                                IconButton(
-                                    onClick = { toggleFullscreenMode() },
-                                    modifier = Modifier.size((48f * bottomBarScale).dp)
-                                ) {
-                                    Icon(
-                                        imageVector = if (isFullscreen) {
-                                            Icons.Rounded.FullscreenExit
-                                        } else {
-                                            Icons.Rounded.Fullscreen
-                                        },
-                                        contentDescription = stringResource(R.string.video_fullscreen),
-                                        tint = Color.White,
-                                        modifier = Modifier.size((28f * bottomBarScale).dp)
-                                    )
+                                if (isLandscape) {
+                                    IconButton(
+                                        onClick = { cycleRotation() },
+                                        modifier = Modifier.size((48f * bottomBarScale).dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = rotationIcon,
+                                            contentDescription = rotationLabel,
+                                            tint = Color.White,
+                                            modifier = Modifier.size((28f * bottomBarScale).dp)
+                                        )
+                                    }
                                 }
                                 IconButton(
                                     onClick = { enterPictureInPicture() },
@@ -2712,7 +2722,8 @@ fun VideoPlayerScreen(
 
 /** One round control button: dark circle + icon, small label underneath.
  * Compact (Search + Player polish, 2026-11-16): 46 dp circles, 22 dp
- * icons, 10 sp labels, so more buttons fit on screen at once. */
+ * icons, 10 sp labels, so more buttons fit on screen at once.
+ * Round 18: 0.8x — 36.8 dp circles, 17.6 dp icons, 7 sp labels. */
 @Composable
 private fun VideoRoundControlButton(
     button: VideoControlButton,
@@ -2742,21 +2753,23 @@ private fun VideoRoundControlButton(
     )
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(2.dp),
+        verticalArrangement = Arrangement.spacedBy(1.dp),
         modifier = Modifier
-            .width(56.dp)
+            .width(44.8.dp)
             .graphicsLayer {
                 scaleX = pressScale
                 scaleY = pressScale
             }
     ) {
-        // Ring + circle: the ring is drawn around the 46 dp circle.
+        // Ring + circle: the ring is drawn around the 36.8 dp circle.
+        // Round 18: whole button 0.8x (56 -> 44.8, 52 -> 41.6,
+        // 46 -> 36.8, icons 22 -> 17.6 dp).
         Box(
             contentAlignment = Alignment.Center,
-            modifier = Modifier.size(52.dp)
+            modifier = Modifier.size(41.6.dp)
         ) {
             if (ringProgress != null) {
-                Canvas(modifier = Modifier.size(52.dp)) {
+                Canvas(modifier = Modifier.size(41.6.dp)) {
                     drawArc(
                         color = videoAccentColor,
                         startAngle = -90f,
@@ -2775,7 +2788,7 @@ private fun VideoRoundControlButton(
                 } else {
                     Color.Black.copy(alpha = 0.45f)
                 },
-                modifier = Modifier.size(46.dp)
+                modifier = Modifier.size(36.8.dp)
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     if (customContent != null) {
@@ -2788,7 +2801,7 @@ private fun VideoRoundControlButton(
                             } else {
                                 Color.White
                             },
-                            fontSize = 13.sp,
+                            fontSize = 10.4.sp,
                             fontWeight = FontWeight.Bold,
                             textAlign = TextAlign.Center
                         )
@@ -2812,7 +2825,7 @@ private fun VideoRoundControlButton(
                                 },
                                 contentDescription = null,
                                 tint = Color.White,
-                                modifier = Modifier.size(22.dp)
+                                modifier = Modifier.size(17.6.dp)
                             )
                         }
                     } else {
@@ -2824,7 +2837,7 @@ private fun VideoRoundControlButton(
                             } else {
                                 Color.White
                             },
-                            modifier = Modifier.size(22.dp)
+                            modifier = Modifier.size(17.6.dp)
                         )
                     }
                 }
@@ -2833,7 +2846,7 @@ private fun VideoRoundControlButton(
         Text(
             text = labelOverride ?: stringResource(button.labelRes),
             color = Color.White,
-            fontSize = 10.sp,
+            fontSize = 7.sp,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
             textAlign = TextAlign.Center
@@ -2912,7 +2925,10 @@ private val videoControlButtons = listOf(
     VideoControlButton("audiofx", Icons.Rounded.Headphones, R.string.video_audio_effect),
     VideoControlButton("equalizer", Icons.Rounded.Equalizer, R.string.video_equalizer),
     VideoControlButton("screenshot", Icons.Rounded.PhotoCamera, R.string.video_screenshot),
-    VideoControlButton("aspect", Icons.Rounded.AspectRatio, R.string.video_aspect_ratio),
+    // Round 18: aspect removed from the quick row (it stays on the
+    // bottom bar) — dropping it here also drops it from Customise
+    // Items, so there is no dead toggle. cycleAspect() and the
+    // onControlButtonClick "aspect" case stay for the bottom bar.
     VideoControlButton("background", Icons.Rounded.Headphones, R.string.video_background_play),
     VideoControlButton("speed", Icons.Rounded.Speed, R.string.video_speed)
 )
@@ -2994,21 +3010,22 @@ private fun VideoRowArrowButton(
     expanded: Boolean,
     onClick: () -> Unit
 ) {
+    // Round 18: shrunk 0.8x like the other quick-row buttons.
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(2.dp),
-        modifier = Modifier.width(56.dp)
+        verticalArrangement = Arrangement.spacedBy(1.dp),
+        modifier = Modifier.width(44.8.dp)
     ) {
         Surface(
             onClick = onClick,
             shape = CircleShape,
             color = Color.Black.copy(alpha = 0.45f),
-            modifier = Modifier.size(46.dp)
+            modifier = Modifier.size(36.8.dp)
         ) {
             Box(contentAlignment = Alignment.Center) {
                 VideoControlsArrowIcon(
                     expanded = expanded,
-                    modifier = Modifier.size(22.dp)
+                    modifier = Modifier.size(17.6.dp)
                 )
             }
         }
@@ -3021,7 +3038,7 @@ private fun VideoRowArrowButton(
                 }
             ),
             color = Color.White,
-            fontSize = 10.sp,
+            fontSize = 7.sp,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
             textAlign = TextAlign.Center
