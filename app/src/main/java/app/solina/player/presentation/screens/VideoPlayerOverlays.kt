@@ -10,15 +10,19 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
+import android.content.res.Configuration
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -78,6 +82,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -118,7 +123,9 @@ enum class VideoGridAction {
 private data class GridMenuEntry(
     val action: VideoGridAction,
     val icon: ImageVector,
-    val labelRes: Int
+    val labelRes: Int,
+    /** Short one-line label for the landscape side panel (round 16). */
+    val shortLabelRes: Int? = null
 )
 
 /** The three-dot menu as a 4-column grid sheet, like the reference. */
@@ -132,18 +139,61 @@ fun VideoGridMenuSheet(
     val entries = listOf(
         GridMenuEntry(VideoGridAction.AUDIO, Icons.Rounded.Audiotrack, R.string.video_grid_menu_audio),
         GridMenuEntry(VideoGridAction.SUBTITLE, Icons.Rounded.ClosedCaption, R.string.video_grid_menu_subtitle),
-        GridMenuEntry(VideoGridAction.QUEUE, Icons.Rounded.QueueMusic, R.string.video_grid_menu_queue),
-        GridMenuEntry(VideoGridAction.ASPECT, Icons.Rounded.AspectRatio, R.string.video_grid_menu_aspect),
-        GridMenuEntry(VideoGridAction.DISPLAY, Icons.Rounded.DisplaySettings, R.string.video_grid_menu_display),
+        GridMenuEntry(VideoGridAction.QUEUE, Icons.Rounded.QueueMusic, R.string.video_grid_menu_queue, R.string.video_grid_menu_queue_short),
+        GridMenuEntry(VideoGridAction.ASPECT, Icons.Rounded.AspectRatio, R.string.video_grid_menu_aspect, R.string.video_grid_menu_aspect_short),
+        GridMenuEntry(VideoGridAction.DISPLAY, Icons.Rounded.DisplaySettings, R.string.video_grid_menu_display, R.string.video_grid_menu_display_short),
         GridMenuEntry(VideoGridAction.BOOKMARK, Icons.Rounded.Bookmark, R.string.video_grid_menu_bookmark),
         GridMenuEntry(VideoGridAction.CHAPTER, Icons.Rounded.FormatListBulleted, R.string.video_grid_menu_chapter),
         GridMenuEntry(VideoGridAction.FAVOURITE, Icons.Rounded.Favorite, R.string.video_grid_menu_favourite),
-        GridMenuEntry(VideoGridAction.PLAYLIST, Icons.Rounded.PlaylistAdd, R.string.video_grid_menu_playlist),
+        GridMenuEntry(VideoGridAction.PLAYLIST, Icons.Rounded.PlaylistAdd, R.string.video_grid_menu_playlist, R.string.video_grid_menu_playlist_short),
         GridMenuEntry(VideoGridAction.INFO, Icons.Rounded.Info, R.string.video_grid_menu_info),
         GridMenuEntry(VideoGridAction.SHARE, Icons.Rounded.Share, R.string.video_grid_menu_share),
         GridMenuEntry(VideoGridAction.TUTORIAL, Icons.Rounded.Lightbulb, R.string.video_grid_menu_tutorial),
         GridMenuEntry(VideoGridAction.MORE, Icons.AutoMirrored.Rounded.ArrowForwardIos, R.string.video_grid_menu_more)
     )
+    // Round 16, item 8: in landscape the bottom sheet is a narrow
+    // centred panel whose bottom rows overlap the seek bar and the
+    // transport buttons, so the menu becomes a side panel instead —
+    // the same pattern as the landscape subtitle panel: a scrim to
+    // dismiss plus a panel on the right, with smaller cells and
+    // one-line short labels so nothing wraps. Portrait keeps the
+    // bottom sheet exactly as before.
+    val configuration = LocalConfiguration.current
+    val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+    if (isLandscape) {
+        Box(modifier = Modifier.fillMaxSize()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.45f))
+                    .clickable { onDismiss() }
+            )
+            Box(
+                modifier = Modifier
+                    .align(Alignment.CenterEnd)
+                    .fillMaxWidth(0.42f)
+                    .fillMaxHeight()
+                    .background(Color.Black.copy(alpha = 0.88f))
+                    .statusBarsPadding()
+            ) {
+                VideoGridMenuGrid(
+                    entries = entries,
+                    isFavourite = isFavourite,
+                    columns = 4,
+                    compact = true,
+                    useShortLabels = true,
+                    onEntryClick = { action ->
+                        onDismiss()
+                        onAction(action)
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 12.dp, end = 12.dp, top = 12.dp, bottom = 24.dp)
+                )
+            }
+        }
+        return
+    }
     GlassModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
@@ -157,34 +207,62 @@ fun VideoGridMenuSheet(
             )
         }
     ) {
-        LazyVerticalGrid(
-            columns = GridCells.Fixed(4),
+        VideoGridMenuGrid(
+            entries = entries,
+            isFavourite = isFavourite,
+            columns = 4,
+            compact = false,
+            useShortLabels = false,
+            onEntryClick = { action ->
+                onDismiss()
+                onAction(action)
+            },
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 32.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalArrangement = Arrangement.spacedBy(20.dp)
-        ) {
-            items(entries, key = { it.action }) { entry ->
-                VideoGridMenuCell(
-                    entry = entry,
-                    isFavourite = isFavourite,
-                    onClick = {
-                        onDismiss()
-                        onAction(entry.action)
-                    }
-                )
-            }
+                .padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 32.dp)
+        )
+    }
+}
+
+/** The grid itself, shared by the portrait sheet and the landscape side panel. */
+@Composable
+private fun VideoGridMenuGrid(
+    entries: List<GridMenuEntry>,
+    isFavourite: Boolean,
+    columns: Int,
+    compact: Boolean,
+    useShortLabels: Boolean,
+    onEntryClick: (VideoGridAction) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    LazyVerticalGrid(
+        columns = GridCells.Fixed(columns),
+        modifier = modifier,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(if (compact) 12.dp else 20.dp)
+    ) {
+        items(entries, key = { it.action }) { entry ->
+            VideoGridMenuCell(
+                entry = entry,
+                isFavourite = isFavourite,
+                compact = compact,
+                useShortLabel = useShortLabels,
+                onClick = { onEntryClick(entry.action) }
+            )
         }
     }
 }
 
-/** One cell of the grid menu: round button + label, press-scale feedback. */
+/** One cell of the grid menu: round button + label, press-scale feedback.
+ * [compact] is the landscape side-panel variant (round 16): smaller
+ * button and icon, one-line short label, so nothing wraps. */
 @Composable
 private fun VideoGridMenuCell(
     entry: GridMenuEntry,
     isFavourite: Boolean,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    compact: Boolean = false,
+    useShortLabel: Boolean = false
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val pressed by interactionSource.collectIsPressedAsState()
@@ -232,18 +310,24 @@ private fun VideoGridMenuCell(
     }
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(6.dp),
+        verticalArrangement = Arrangement.spacedBy(if (compact) 4.dp else 6.dp),
         modifier = Modifier.graphicsLayer {
             scaleX = scale
             scaleY = scale
         }
     ) {
+        // Round 16: the compact cell is 48 dp (button 40 dp, icon
+        // 22 dp); the portrait cell stays 72 dp (button 56 dp,
+        // icon 26 dp).
+        val cellSize = if (compact) 48.dp else 72.dp
+        val buttonSize = if (compact) 40.dp else 56.dp
+        val iconSize = if (compact) 22.dp else 26.dp
         Box(
             contentAlignment = Alignment.Center,
-            modifier = Modifier.size(72.dp)
+            modifier = Modifier.size(cellSize)
         ) {
             if (isFavouriteCell && ripple > 0f) {
-                Canvas(modifier = Modifier.size(72.dp)) {
+                Canvas(modifier = Modifier.size(cellSize)) {
                     drawCircle(
                         color = Color(0xFFFF5A5A).copy(alpha = (1f - ripple) * 0.7f),
                         radius = size.minDimension / 2f * (0.55f + ripple * 0.45f),
@@ -256,7 +340,7 @@ private fun VideoGridMenuCell(
                 interactionSource = interactionSource,
                 shape = CircleShape,
                 color = Color.White.copy(alpha = 0.12f),
-                modifier = Modifier.size(56.dp)
+                modifier = Modifier.size(buttonSize)
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Icon(
@@ -268,7 +352,7 @@ private fun VideoGridMenuCell(
                             Color.White
                         },
                         modifier = Modifier
-                            .size(26.dp)
+                            .size(iconSize)
                             .graphicsLayer {
                                 scaleX = popScale
                                 scaleY = popScale
@@ -278,10 +362,12 @@ private fun VideoGridMenuCell(
             }
         }
         Text(
-            text = stringResource(entry.labelRes),
+            text = stringResource(
+                if (useShortLabel) entry.shortLabelRes ?: entry.labelRes else entry.labelRes
+            ),
             color = Color.White,
-            fontSize = 11.sp,
-            maxLines = 2,
+            fontSize = if (compact) 10.sp else 11.sp,
+            maxLines = if (compact) 1 else 2,
             overflow = TextOverflow.Ellipsis,
             textAlign = TextAlign.Center
         )

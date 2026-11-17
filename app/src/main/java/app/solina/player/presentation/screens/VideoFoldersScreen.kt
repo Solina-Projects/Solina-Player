@@ -511,7 +511,13 @@ private fun VideoFilesList(
                     video = video,
                     onClick = {
                         navController.navigateSafely(
-                            Screen.VideoPlayer.createRoute(video.contentUriString)
+                            // Round 16, item 1a: the tapped video starts
+                            // a queue of the whole visible file list, so
+                            // playback auto-advances instead of stopping.
+                            Screen.VideoPlayer.createRoute(
+                                startUri = video.contentUriString,
+                                queueUris = videos.map { it.contentUriString }
+                            )
                         )
                     }
                 )
@@ -534,7 +540,13 @@ private fun VideoFilesList(
                     video = video,
                     onClick = {
                         navController.navigateSafely(
-                            Screen.VideoPlayer.createRoute(video.contentUriString)
+                            // Round 16, item 1a: the tapped video starts
+                            // a queue of the whole visible file list, so
+                            // playback auto-advances instead of stopping.
+                            Screen.VideoPlayer.createRoute(
+                                startUri = video.contentUriString,
+                                queueUris = videos.map { it.contentUriString }
+                            )
                         )
                     }
                 )
@@ -1150,7 +1162,14 @@ fun VideoFolderDetailScreen(
                         video = video,
                         onClick = {
                             navController.navigateSafely(
-                                Screen.VideoPlayer.createRoute(video.contentUriString)
+                                // Round 16, item 1a: the tapped video
+                                // starts a queue of the whole folder, so
+                                // playback auto-advances instead of
+                                // stopping at the end of one video.
+                                Screen.VideoPlayer.createRoute(
+                                    startUri = video.contentUriString,
+                                    queueUris = folderVideos.map { it.contentUriString }
+                                )
                             )
                         }
                     )

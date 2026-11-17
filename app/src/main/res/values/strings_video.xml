@@ -152,12 +152,16 @@
     <string name="video_grid_menu_audio">Audio Track</string>
     <string name="video_grid_menu_subtitle">Subtitle</string>
     <string name="video_grid_menu_queue">Playing Queue</string>
+    <string name="video_grid_menu_queue_short">Queue</string>
     <string name="video_grid_menu_aspect">Aspect Ratio</string>
+    <string name="video_grid_menu_aspect_short">Aspect</string>
     <string name="video_grid_menu_display">Display Settings</string>
+    <string name="video_grid_menu_display_short">Display</string>
     <string name="video_grid_menu_bookmark">Bookmark</string>
     <string name="video_grid_menu_chapter">Chapter</string>
     <string name="video_grid_menu_favourite">Favourite</string>
     <string name="video_grid_menu_playlist">Add To Playlist</string>
+    <string name="video_grid_menu_playlist_short">Playlist</string>
     <string name="video_grid_menu_info">Information</string>
     <string name="video_grid_menu_share">Share</string>
     <string name="video_grid_menu_tutorial">Tutorial</string>

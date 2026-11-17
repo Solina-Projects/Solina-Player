@@ -416,7 +416,7 @@
     <string name="appearance_home_video_bar_title">Home video bar</string>
     <string name="appearance_section_video_bar_title">Video section bar</string>
     <string name="appearance_floating_music_bar_title">Floating music bar</string>
-    <string name="appearance_floating_music_bar_note">Colour only — its size and corners are fixed by the player sheet.</string>
+    <string name="appearance_floating_music_bar_note">Corners shape the collapsed mini bar — the two top corners share one radius and the two bottom corners share one — and fade to square as the player expands. Size stays fixed by the player sheet.</string>
     <string name="appearance_section_colors_title">Section colours</string>
     <string name="appearance_section_home">Home</string>
     <string name="appearance_section_music">Music</string>
@@ -472,6 +472,8 @@
     <string name="appearance_corner_bottom_end">Bottom end corner</string>
     <string name="appearance_gap">Gap between cards</string>
     <string name="appearance_recent_cards_title">Recent cards</string>
+    <string name="appearance_recent_music_cards_title">Recent music cards</string>
+    <string name="appearance_recent_video_cards_title">Recent video cards</string>
     <string name="appearance_your_mix_title">Your Mix card</string>
     <string name="appearance_list_rows_title">List rows</string>
     <string name="appearance_list_rows_note">Library, search and video-list rows. The song row still morphs into a pill while it plays — this only moves its resting corners.</string>

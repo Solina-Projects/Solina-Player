@@ -63,6 +63,7 @@ import app.solina.player.data.preferences.CardAppearance
 import app.solina.player.data.preferences.CornerRadii
 import app.solina.player.data.preferences.GlassPresetNames
 import app.solina.player.data.preferences.GlassStyleNames
+import app.solina.player.data.preferences.RecentCardsAppearance
 import app.solina.player.data.preferences.SeekBarStyleNames
 import app.solina.player.presentation.components.MiniPlayerHeight
 import app.solina.player.presentation.components.appearancePaletteColors
@@ -193,44 +194,24 @@ fun AppearanceCustomizationScreen(
                 )
             }
 
-            // ---- Recently added cards (round 15, wave 2, C3) ----
-            item(key = "appearance_recent_cards") {
-                val recent = appearance.recentCards
-                AppearanceSectionCard(
-                    title = stringResource(R.string.appearance_recent_cards_title),
-                    onReset = { viewModel.resetRecentCards() }
-                ) {
-                    PercentSlider(
-                        label = stringResource(R.string.appearance_size),
-                        value = recent.scalePercent,
-                        range = 80..130,
-                        onChange = {
-                            viewModel.setRecentCards(recent.copy(scalePercent = it))
-                        }
-                    )
-                    CornerControls(
-                        corners = recent.effectiveCorners,
-                        onChange = {
-                            viewModel.setRecentCards(recent.copy(corners = it))
-                        }
-                    )
-                    PercentSlider(
-                        label = stringResource(R.string.appearance_font_size_title),
-                        value = recent.fontScalePercent,
-                        range = 85..125,
-                        onChange = {
-                            viewModel.setRecentCards(recent.copy(fontScalePercent = it))
-                        }
-                    )
-                    DpSlider(
-                        label = stringResource(R.string.appearance_gap),
-                        value = recent.gapDp,
-                        range = 0..16,
-                        onChange = {
-                            viewModel.setRecentCards(recent.copy(gapDp = it))
-                        }
-                    )
-                }
+            // ---- Recently added cards (round 15, wave 2, C3; split
+            // music / video in round 16) ----
+            item(key = "appearance_recent_music_cards") {
+                RecentCardsSection(
+                    title = stringResource(R.string.appearance_recent_music_cards_title),
+                    recent = appearance.effectiveRecentMusicCards,
+                    onChange = { viewModel.setRecentMusicCards(it) },
+                    onReset = { viewModel.resetRecentMusicCards() }
+                )
+            }
+
+            item(key = "appearance_recent_video_cards") {
+                RecentCardsSection(
+                    title = stringResource(R.string.appearance_recent_video_cards_title),
+                    recent = appearance.effectiveRecentVideoCards,
+                    onChange = { viewModel.setRecentVideoCards(it) },
+                    onReset = { viewModel.resetRecentVideoCards() }
+                )
             }
 
             // ---- Your Mix card (round 15, wave 2, C4) ----
@@ -314,8 +295,12 @@ fun AppearanceCustomizationScreen(
                 )
             }
 
-            // ---- Floating music bar (colour only) ----
+            // ---- Floating music bar (round 16): corners now tunable
+            // like the other bars — no show/hide switch (hiding it
+            // would hide the full player) and no size slider (its size
+            // is fixed by the player sheet's layout math). ----
             item(key = "appearance_floating_music_bar") {
+                val floatingBar = appearance.effectiveFloatingMusicBar
                 AppearanceSectionCard(
                     title = stringResource(R.string.appearance_floating_music_bar_title),
                     onReset = { viewModel.resetFloatingMusicBar() }
@@ -326,9 +311,17 @@ fun AppearanceCustomizationScreen(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Spacer(Modifier.height(8.dp))
+                    CornerControls(
+                        corners = floatingBar.effectiveCorners,
+                        onChange = {
+                            viewModel.setFloatingMusicBar(floatingBar.copy(corners = it))
+                        }
+                    )
                     PaletteChips(
-                        selected = appearance.floatingMusicBarPalette,
-                        onSelect = { viewModel.setFloatingMusicBarPalette(it) }
+                        selected = floatingBar.palette,
+                        onSelect = {
+                            viewModel.setFloatingMusicBar(floatingBar.copy(palette = it))
+                        }
                     )
                 }
             }
@@ -749,6 +742,45 @@ private fun CardSection(
         PaletteChips(
             selected = card.palette,
             onSelect = { onChange(card.copy(palette = it)) }
+        )
+    }
+}
+
+/**
+ * One "recently added" row's controls (round 15, wave 2, C3; split
+ * music / video in round 16): size, per-corner radii, font size and
+ * gap. The music and video sections share this layout but write to
+ * their own [RecentCardsAppearance] blocks.
+ */
+@Composable
+private fun RecentCardsSection(
+    title: String,
+    recent: RecentCardsAppearance,
+    onChange: (RecentCardsAppearance) -> Unit,
+    onReset: () -> Unit
+) {
+    AppearanceSectionCard(title = title, onReset = onReset) {
+        PercentSlider(
+            label = stringResource(R.string.appearance_size),
+            value = recent.scalePercent,
+            range = 80..130,
+            onChange = { onChange(recent.copy(scalePercent = it)) }
+        )
+        CornerControls(
+            corners = recent.effectiveCorners,
+            onChange = { onChange(recent.copy(corners = it)) }
+        )
+        PercentSlider(
+            label = stringResource(R.string.appearance_font_size_title),
+            value = recent.fontScalePercent,
+            range = 85..125,
+            onChange = { onChange(recent.copy(fontScalePercent = it)) }
+        )
+        DpSlider(
+            label = stringResource(R.string.appearance_gap),
+            value = recent.gapDp,
+            range = 0..16,
+            onChange = { onChange(recent.copy(gapDp = it)) }
         )
     }
 }

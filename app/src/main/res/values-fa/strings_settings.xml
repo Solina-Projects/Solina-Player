@@ -416,7 +416,7 @@
     <string name="appearance_home_video_bar_title">نوار ویدیو خانه</string>
     <string name="appearance_section_video_bar_title">نوار بخش ویدیو</string>
     <string name="appearance_floating_music_bar_title">نوار شناور موزیک</string>
-    <string name="appearance_floating_music_bar_note">فقط رنگ — اندازه و گوشه‌های آن را چیدمان پخش‌کننده تعیین می‌کند.</string>
+    <string name="appearance_floating_music_bar_note">گوشه‌ها شکل نوار کوچک جمع‌شده را تعیین می‌کنند — دو گوشهٔ بالا یک شعاع و دو گوشهٔ پایین یک شعاع دارند — و با باز شدن پخش‌کننده صفر می‌شوند. اندازه را چیدمان پخش‌کننده تعیین می‌کند.</string>
     <string name="appearance_section_colors_title">رنگ‌های بخش‌ها</string>
     <string name="appearance_section_home">خانه</string>
     <string name="appearance_section_music">موزیک</string>
@@ -472,6 +472,8 @@
     <string name="appearance_corner_bottom_end">گوشهٔ پایین پایان</string>
     <string name="appearance_gap">فاصله بین کارت‌ها</string>
     <string name="appearance_recent_cards_title">کارت‌های اخیر</string>
+    <string name="appearance_recent_music_cards_title">کارت‌های موزیک اخیر</string>
+    <string name="appearance_recent_video_cards_title">کارت‌های ویدیوی اخیر</string>
     <string name="appearance_your_mix_title">کارت میکس شما</string>
     <string name="appearance_list_rows_title">ردیف‌های لیست</string>
     <string name="appearance_list_rows_note">ردیف‌های کتابخانه، جستجو و لیست ویدیو. ردیف آهنگ هنگام پخش هنوز به شکل قرص درمی‌آید — این فقط گوشه‌های حالت عادی آن را تغییر می‌دهد.</string>

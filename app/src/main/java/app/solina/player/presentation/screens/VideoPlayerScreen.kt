@@ -511,7 +511,18 @@ fun VideoPlayerScreen(
             val p = player
             if (p != null) {
                 if (!scrubbing) positionMs = p.currentPosition
-                durationMs = p.duration.coerceAtLeast(0L)
+                // Round 16, item 1b: the total time prefers the playing
+                // video's MediaStore duration over the polled ExoPlayer
+                // duration — p.duration has been observed wrong (e.g.
+                // 24 s for a 2-hour film), which shrank the whole seek
+                // bar. Same fallback the mini bar already uses. Falls
+                // back to the polled duration while the lookup hasn't
+                // landed yet (currentVideo null) or the item has none.
+                // Applied here, at the durationMs source, so every
+                // consumer (seek bar labels, fractions, rolling times)
+                // gets the corrected total.
+                durationMs = currentVideo?.durationMs?.takeIf { it > 0 }
+                    ?: p.duration.coerceAtLeast(0L)
                 isPlaying = p.isPlaying
             }
             delay(250)

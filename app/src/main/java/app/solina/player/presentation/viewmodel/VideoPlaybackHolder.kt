@@ -68,6 +68,16 @@ class VideoPlaybackHolder @Inject constructor(
 
     private var exoPlayer: ExoPlayer? = null
 
+    /**
+     * Decoder mode the live player was built with (round 16, item 1c).
+     * The renderers factory depends on the decoder preference, so the
+     * player is rebuilt only when this differs from [_decoderMode] —
+     * never on a plain video switch. Rebuilding on every switch tore
+     * the PlayerView surface down and re-attached a new player, which
+     * left the previous video's frame frozen on screen.
+     */
+    private var playerDecoderMode: String? = null
+
     /** The live player, or null before the first video is played. */
     val playerOrNull: ExoPlayer?
         get() = exoPlayer
@@ -273,8 +283,14 @@ class VideoPlaybackHolder @Inject constructor(
         // platform selector); "hardware" turns the FFmpeg software
         // renderers off so only platform (hardware) decoders are used;
         // "software" prefers software platform decoders and keeps the
-        // FFmpeg software renderers on. Takes effect on the next video:
-        // the player is rebuilt per new video, never mid-playback.
+        // FFmpeg software renderers on.
+        //
+        // The renderers factory is fixed at build time, so a decoder
+        // change takes effect on the next video — but ONLY a decoder
+        // change rebuilds the player (see [ensurePlayer]). A plain video
+        // switch reuses the live player and swaps the media item, so the
+        // PlayerView surface stays attached (round 16, item 1c: rebuilding
+        // per switch left the previous video's frame frozen on screen).
         val renderersFactory = when (_decoderMode.value) {
             "hardware" -> DefaultRenderersFactory(context)
                 .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_OFF)
@@ -292,6 +308,29 @@ class VideoPlaybackHolder @Inject constructor(
                 volume = _volume.value
                 setPlaybackSpeed(_playbackSpeed.value)
             }
+    }
+
+    /**
+     * One player for the lifetime of the holder (round 16, item 1c).
+     * Returns the live player when it was built with the current decoder
+     * mode; rebuilds it only when there is no player yet or the decoder
+     * preference changed since it was built. Reusing the instance keeps
+     * [_player] emitting the same object, so the PlayerView's
+     * `playerView.player = player` assignment is a no-op and the video
+     * surface is never torn down and re-attached on a video switch —
+     * the re-attach is what left the previous video's frame frozen on
+     * screen. Never rebuilds mid-playback: callers only reach here
+     * when starting a (different) video.
+     */
+    private fun ensurePlayer(): ExoPlayer {
+        val current = exoPlayer
+        if (current != null && playerDecoderMode == _decoderMode.value) return current
+        releasePlayer()
+        val player = buildPlayer()
+        exoPlayer = player
+        _player.value = player
+        playerDecoderMode = _decoderMode.value
+        return player
     }
 
     /** Poll position / duration / playing state for the bars (250 ms). */
@@ -325,16 +364,25 @@ class VideoPlaybackHolder @Inject constructor(
             current.play()
             return
         }
-        releasePlayer()
+        // Different video: reuse the live player (round 16, item 1c) —
+        // swap the media item in place instead of releasing + rebuilding
+        // the player, so the PlayerView surface stays attached and the
+        // new video's frames actually render. Only a decoder-preference
+        // change rebuilds the player (inside ensurePlayer). The stale
+        // position / duration / tracks of the previous video are cleared
+        // here, exactly as releasePlayer() used to do on a switch.
         _queueUris.value = listOf(contentUriString)
-        val player = buildPlayer().apply {
+        _positionMs.value = 0L
+        _durationMs.value = 0L
+        _tracks.value = null
+        ensurePlayer().apply {
             setMediaItem(buildMediaItem(contentUriString))
             prepare()
             if (effectiveStartPositionMs > 0) seekTo(effectiveStartPositionMs)
+            setPlaybackSpeed(_playbackSpeed.value)
+            volume = _volume.value
             play()
         }
-        exoPlayer = player
-        _player.value = player
         _isLoading.value = true
         startPolling()
         scope.launch {
@@ -376,19 +424,27 @@ class VideoPlaybackHolder @Inject constructor(
             current.play()
             return
         }
-        releasePlayer()
+        // Different queue / video: reuse the live player (round 16,
+        // item 1c) — swap the media items in place instead of releasing
+        // + rebuilding, so the PlayerView surface stays attached.
+        // Only a decoder-preference change rebuilds (inside
+        // ensurePlayer). Stale position / duration / tracks are cleared,
+        // exactly as releasePlayer() used to do on a switch.
         _queueUris.value = contentUriStrings
-        val player = buildPlayer().apply {
+        _positionMs.value = 0L
+        _durationMs.value = 0L
+        _tracks.value = null
+        ensurePlayer().apply {
             setMediaItems(
                 contentUriStrings.map { buildMediaItem(it) },
                 wantedIndex,
                 effectiveStartPositionMs.coerceAtLeast(0L)
             )
             prepare()
+            setPlaybackSpeed(_playbackSpeed.value)
+            volume = _volume.value
             play()
         }
-        exoPlayer = player
-        _player.value = player
         _isLoading.value = true
         startPolling()
     }
@@ -509,6 +565,7 @@ class VideoPlaybackHolder @Inject constructor(
         exoPlayer?.release()
         exoPlayer = null
         _player.value = null
+        playerDecoderMode = null
         _tracks.value = null
     }
 }

@@ -147,6 +147,19 @@ fun VideoMiniPlayerBar(
     val barHeight = MiniPlayerHeight * (barAppearance.scalePercent / 100f)
     val fontScale = appearance.fontScalePercent / 100f
 
+    // Round 16, item 1d: ONE snapshot drives the whole bar — title,
+    // uri, position and duration all come from this one VideoItem
+    // (live video, else the resume video looked up in the device
+    // list), so the bar can never show one video's title with
+    // another video's duration. The holder's polled duration is a
+    // different state source — it belongs to whatever the player last
+    // played, and the async title lookup lands at a different time —
+    // so it is only a fallback while the snapshot IS the live video,
+    // never in the resume branch (there it produced e.g. the saved
+    // title + position of one video with the stale polled duration
+    // of the video played before it). The MediaStore query only
+    // returns rows with DURATION > 0, so a snapshot video always
+    // carries its own duration and the fallback is near-dead code.
     // Live video wins; otherwise the saved resume video (looked up in the
     // device list so the thumbnail and duration are available).
     val shownVideo = currentVideo
@@ -156,7 +169,8 @@ fun VideoMiniPlayerBar(
 
     val uri = shownVideo?.contentUriString ?: resumeUri ?: return
     val livePosition = if (currentVideo != null) positionMs else resumePositionMs
-    val liveDuration = shownVideo?.durationMs?.takeIf { it > 0 } ?: durationMs
+    val liveDuration = shownVideo?.durationMs?.takeIf { it > 0 }
+        ?: if (currentVideo != null) durationMs else 0L
     val progress = if (liveDuration > 0) {
         (livePosition.toFloat() / liveDuration).coerceIn(0f, 1f)
     } else {

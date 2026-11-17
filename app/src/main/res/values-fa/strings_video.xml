@@ -152,12 +152,16 @@
     <string name="video_grid_menu_audio">مسیر صدا</string>
     <string name="video_grid_menu_subtitle">زیرنویس</string>
     <string name="video_grid_menu_queue">صف پخش</string>
+    <string name="video_grid_menu_queue_short">صف</string>
     <string name="video_grid_menu_aspect">نسبت تصویر</string>
+    <string name="video_grid_menu_aspect_short">نسبت</string>
     <string name="video_grid_menu_display">تنظیمات نمایش</string>
+    <string name="video_grid_menu_display_short">نمایش</string>
     <string name="video_grid_menu_bookmark">نشانک</string>
     <string name="video_grid_menu_chapter">فصل</string>
     <string name="video_grid_menu_favourite">موردعلاقه</string>
     <string name="video_grid_menu_playlist">افزودن به پلی‌لیست</string>
+    <string name="video_grid_menu_playlist_short">پلی‌لیست</string>
     <string name="video_grid_menu_info">اطلاعات</string>
     <string name="video_grid_menu_share">اشتراک‌گذاری</string>
     <string name="video_grid_menu_tutorial">آموزش</string>

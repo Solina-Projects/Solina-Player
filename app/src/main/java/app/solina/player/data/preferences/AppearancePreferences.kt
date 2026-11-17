@@ -315,6 +315,20 @@ data class ListRowsAppearance(
     val cornerRadiusDp: Int get() = cornerDp.coerceIn(0, 32)
 }
 
+/**
+ * Default floating-bar corners (round 16): today's collapsed mini-bar
+ * shape — top 32 dp (the default nav-bar radius) and bottom 10 dp (the
+ * default nav style's bottom radius). The new floating-bar block
+ * defaults to this so existing users see no change.
+ */
+val FLOATING_MUSIC_BAR_DEFAULT_CORNERS = CornerRadii(
+    topStartDp = 32,
+    topEndDp = 32,
+    bottomStartDp = 10,
+    bottomEndDp = 10,
+    linked = false
+)
+
 @Serializable
 data class AppearanceSettings(
     /** Fixed music bar under "Recently added music" on Home. */
@@ -323,8 +337,24 @@ data class AppearanceSettings(
     val homeVideoBar: BarAppearance = BarAppearance(),
     /** Floating video bar above the bottom bar, in the Video section. */
     val sectionVideoBar: BarAppearance = BarAppearance(),
-    /** Floating music mini-player bar (Music section): colour only — its
-     * size and corners are fixed by the player sheet's layout math. */
+    /**
+     * Floating music mini-player bar (round 16): its corners are now
+     * tunable, like the other bars — [BarAppearance.corners] drives
+     * the collapsed mini bar's top/bottom radii (see
+     * UnifiedPlayerSheetV2). `visible` and `scalePercent` are NOT
+     * used here: hiding the bar would hide the full player, and its
+     * size is fixed by the player sheet's layout math. Null means
+     * "not split out yet" — [migrated] fills it from today's shape
+     * and the stored [floatingMusicBarPalette], so the user's look
+     * never changes.
+     */
+    val floatingMusicBar: BarAppearance? = null,
+    /**
+     * Floating music mini-player bar colour (kept in sync with
+     * [floatingMusicBar]'s palette by [migrated] and the ViewModel —
+     * MainActivity still reads this field, so it stays the single
+     * colour source of truth for the bar).
+     */
     val floatingMusicBarPalette: String = AppearancePaletteNames.DEFAULT,
     /** The two big Music / Video entry cards on Home. */
     val homeCards: CardAppearance = CardAppearance(),
@@ -344,8 +374,19 @@ data class AppearanceSettings(
      * the player.
      */
     val listFontScalePercent: Int = 100,
-    /** Home "Recently added" cards (round 15, wave 2, C3). */
+    /** Home "Recently added" cards (round 15, wave 2, C3). Legacy
+     * shared block — kept so an old stored look still decodes; the
+     * split blocks below win when set (see [migrated]). */
     val recentCards: RecentCardsAppearance = RecentCardsAppearance(),
+    /**
+     * Round 16: the recently-added music cards and video cards are
+     * tuned separately now — independent size, corners, font and gap.
+     * Null means "not split yet" — [migrated] copies the shared
+     * [recentCards] block into both, so the user's current settings
+     * carry over to music and video unchanged.
+     */
+    val recentMusicCards: RecentCardsAppearance? = null,
+    val recentVideoCards: RecentCardsAppearance? = null,
     /** Library / search / video-list row corners (round 15, wave 2, C4). */
     val listRows: ListRowsAppearance = ListRowsAppearance(),
     /**
@@ -363,18 +404,48 @@ data class AppearanceSettings(
     val fontScale: Float get() = (fontScalePercent.coerceIn(85, 125) / 100f)
     val listFontScale: Float get() = (listFontScalePercent.coerceIn(85, 125) / 100f)
 
+    /** The floating music bar: the stored block, or today's shape + palette. */
+    val effectiveFloatingMusicBar: BarAppearance
+        get() = floatingMusicBar ?: BarAppearance(
+            corners = FLOATING_MUSIC_BAR_DEFAULT_CORNERS,
+            palette = floatingMusicBarPalette
+        )
+
+    /** The recently-added music cards: the split block, or the shared one. */
+    val effectiveRecentMusicCards: RecentCardsAppearance
+        get() = recentMusicCards ?: recentCards
+
+    /** The recently-added video cards: the split block, or the shared one. */
+    val effectiveRecentVideoCards: RecentCardsAppearance
+        get() = recentVideoCards ?: recentCards
+
     /**
      * Migrate a stored look to the current model (round 15, wave 2):
      * any per-corner block that is still null gets the old single
      * radius on all four corners, and glass gets its single values on
      * both surface groups. Idempotent — running it twice changes nothing.
+     *
+     * Round 16: the floating music bar and the split recent-cards
+     * blocks are filled in the same way — the floating bar from
+     * today's shape + the stored palette, the recent-cards splits
+     * from the shared block — and the floating-bar palette string is
+     * re-synced from the block, so MainActivity (which reads the
+     * string) and the Appearance screen (which writes the block)
+     * never disagree.
      */
     fun migrated(): AppearanceSettings = copy(
         homeMusicBar = homeMusicBar.migrated(),
         homeVideoBar = homeVideoBar.migrated(),
         sectionVideoBar = sectionVideoBar.migrated(),
+        floatingMusicBar = floatingMusicBar ?: BarAppearance(
+            corners = FLOATING_MUSIC_BAR_DEFAULT_CORNERS,
+            palette = floatingMusicBarPalette
+        ),
+        floatingMusicBarPalette = floatingMusicBar?.palette ?: floatingMusicBarPalette,
         homeCards = homeCards.migrated(),
         recentCards = recentCards.migrated(),
+        recentMusicCards = (recentMusicCards ?: recentCards).migrated(),
+        recentVideoCards = (recentVideoCards ?: recentCards).migrated(),
         yourMixCard = yourMixCard.migrated(),
         glass = glass.migrated()
     )
@@ -491,7 +562,15 @@ class AppearancePreferences @Inject constructor(
         update { it.copy(sectionVideoBar = BarAppearance()) }
 
     suspend fun resetFloatingMusicBar() =
-        update { it.copy(floatingMusicBarPalette = AppearancePaletteNames.DEFAULT) }
+        update {
+            it.copy(
+                floatingMusicBar = BarAppearance(
+                    corners = FLOATING_MUSIC_BAR_DEFAULT_CORNERS,
+                    palette = AppearancePaletteNames.DEFAULT
+                ),
+                floatingMusicBarPalette = AppearancePaletteNames.DEFAULT
+            )
+        }
 
     suspend fun resetHomeCards() =
         update { it.copy(homeCards = CardAppearance()) }
@@ -513,7 +592,19 @@ class AppearancePreferences @Inject constructor(
     }
 
     suspend fun resetRecentCards() =
-        update { it.copy(recentCards = RecentCardsAppearance()) }
+        update {
+            it.copy(
+                recentCards = RecentCardsAppearance(),
+                recentMusicCards = RecentCardsAppearance(),
+                recentVideoCards = RecentCardsAppearance()
+            )
+        }
+
+    suspend fun resetRecentMusicCards() =
+        update { it.copy(recentMusicCards = RecentCardsAppearance()) }
+
+    suspend fun resetRecentVideoCards() =
+        update { it.copy(recentVideoCards = RecentCardsAppearance()) }
 
     suspend fun resetListRows() =
         update { it.copy(listRows = ListRowsAppearance()) }

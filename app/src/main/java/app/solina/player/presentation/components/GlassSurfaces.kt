@@ -17,6 +17,7 @@ import androidx.compose.material3.contentColorFor
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
@@ -50,7 +51,10 @@ import dev.blurengine.mrsluffy.compose.blurSurface
  *   tint-colour picker.
  * - Settings are read INSIDE the `blurSurface { }` block, as the
  *   library docs require (the block runs during the frame, so a
- *   slider drag does not recompose every frame).
+ *   slider drag does not recompose every frame) — and the corner
+ *   [shape] is read there as snapshot state (round 16, item 5), so
+ *   a corner change re-captures the blur with the new shape even
+ *   when no recomposition replaces the modifier element.
  * - NEVER over video: PlayerView is a SurfaceView and no blur
  *   library can capture it — glass over playing video would show a
  *   black hole. Video-player bars stay on the gradient scrim.
@@ -107,6 +111,19 @@ fun Modifier.glassSurface(
     useSheetValues: Boolean = false
 ): Modifier {
     if (!enabled || !glass.enabled) return this
+    // Round 16, item 5: the corner shape (and the rim radius that
+    // follows it) is read as snapshot state INSIDE the blurSurface
+    // block, not as a captured value. BlurSurfaceNode is an
+    // ObserverModifierNode: it observes the state reads made while
+    // the block runs and re-runs applySettings() when one changes
+    // (verified against blur-compose 1.0.0 bytecode — update() also
+    // re-applies settings when the block reference changes, but a
+    // captured `shape` alone only updates on that path, so a corner
+    // drag could move the Surface clip while the blur kept its old
+    // shape). Reading the state here makes the blur re-capture on
+    // every corner change, glass on or off the recomposition path.
+    val shapeState = rememberUpdatedState(shape)
+    val rimCornerState = rememberUpdatedState(rimCornerDp)
     // Read inside the block: slider drags then update the blur
     // without recomposing every animation frame.
     return this.blurSurface {
@@ -130,8 +147,8 @@ fun Modifier.glassSurface(
                     highlight = 0.8f,
                     gloss = 0.16f
                 )
-                cornerRadius(rimCornerDp)
-                this.shape = shape
+                cornerRadius(rimCornerState.value)
+                this.shape = shapeState.value
             }
 
             GlassStyleNames.LIQUID -> {
@@ -142,12 +159,12 @@ fun Modifier.glassSurface(
                     highlight = 0.8f,
                     gloss = 0.16f
                 )
-                cornerRadius(rimCornerDp)
-                this.shape = shape
+                cornerRadius(rimCornerState.value)
+                this.shape = shapeState.value
             }
 
             else -> {
-                this.shape = shape
+                this.shape = shapeState.value
             }
         }
         source?.let { this.source = it }

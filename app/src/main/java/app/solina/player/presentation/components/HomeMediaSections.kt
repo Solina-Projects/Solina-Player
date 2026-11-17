@@ -276,7 +276,8 @@ private fun MediaEntryCard(
  *
  * Round 15, wave 2, C3: the cards are customisable now — width scale,
  * per-corner radii, font scale and gap come from
- * [AppearanceSettings.recentCards]; the numbers above are the defaults.
+ * [AppearanceSettings.effectiveRecentMusicCards]; the numbers above are
+ * the defaults. Round 16: music and video cards have separate blocks.
  */
 @Composable
 fun RecentlyAddedMusicRow(
@@ -288,7 +289,7 @@ fun RecentlyAddedMusicRow(
 ) {
     if (songs.isEmpty()) return
     val appearance by appearanceViewModel.appearance.collectAsStateWithLifecycle()
-    val recent = appearance.recentCards
+    val recent = appearance.effectiveRecentMusicCards
     val cardScale = recent.scale
     val fontScale = recent.fontScale
     val cardCorners = recent.effectiveCorners
@@ -376,6 +377,9 @@ fun RecentlyAddedMusicRow(
  *
  * Round 15, wave 2, C3: the cards are customisable now — see
  * [RecentlyAddedMusicRow]; the numbers above are the defaults.
+ * Round 16: video cards read their own block,
+ * [AppearanceSettings.effectiveRecentVideoCards], so they can be
+ * sized and rounded independently of the music cards.
  */
 @Composable
 fun RecentlyAddedVideosRow(
@@ -387,7 +391,7 @@ fun RecentlyAddedVideosRow(
 ) {
     if (videos.isEmpty()) return
     val appearance by appearanceViewModel.appearance.collectAsStateWithLifecycle()
-    val recent = appearance.recentCards
+    val recent = appearance.effectiveRecentVideoCards
     val cardScale = recent.scale
     val fontScale = recent.fontScale
     val cardCorners = recent.effectiveCorners

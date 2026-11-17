@@ -90,8 +90,23 @@ class AppearanceViewModel @Inject constructor(
     fun setSectionVideoBar(value: BarAppearance) =
         update { it.copy(sectionVideoBar = value) }
 
+    fun setFloatingMusicBar(value: BarAppearance) =
+        update {
+            it.copy(
+                floatingMusicBar = value,
+                // Keep MainActivity's palette string in sync — it reads
+                // the string, the Appearance screen writes the block.
+                floatingMusicBarPalette = value.palette
+            )
+        }
+
     fun setFloatingMusicBarPalette(palette: String) =
-        update { it.copy(floatingMusicBarPalette = palette) }
+        update {
+            it.copy(
+                floatingMusicBarPalette = palette,
+                floatingMusicBar = it.effectiveFloatingMusicBar.copy(palette = palette)
+            )
+        }
 
     fun setHomeCards(value: CardAppearance) =
         update { it.copy(homeCards = value) }
@@ -116,6 +131,14 @@ class AppearanceViewModel @Inject constructor(
 
     fun setRecentCards(value: RecentCardsAppearance) =
         update { it.copy(recentCards = value) }
+
+    /** Round 16: music recent cards, independent of the video ones. */
+    fun setRecentMusicCards(value: RecentCardsAppearance) =
+        update { it.copy(recentMusicCards = value) }
+
+    /** Round 16: video recent cards, independent of the music ones. */
+    fun setRecentVideoCards(value: RecentCardsAppearance) =
+        update { it.copy(recentVideoCards = value) }
 
     fun setListRows(value: ListRowsAppearance) =
         update { it.copy(listRows = value) }
@@ -174,6 +197,8 @@ class AppearanceViewModel @Inject constructor(
     fun resetFloatingMusicBar() = viewModelScope.launch { repository.resetFloatingMusicBar() }
     fun resetHomeCards() = viewModelScope.launch { repository.resetHomeCards() }
     fun resetRecentCards() = viewModelScope.launch { repository.resetRecentCards() }
+    fun resetRecentMusicCards() = viewModelScope.launch { repository.resetRecentMusicCards() }
+    fun resetRecentVideoCards() = viewModelScope.launch { repository.resetRecentVideoCards() }
     fun resetListRows() = viewModelScope.launch { repository.resetListRows() }
     fun resetYourMixCard() = viewModelScope.launch { repository.resetYourMixCard() }
     fun resetSeekBarStyle() = viewModelScope.launch { repository.resetSeekBarStyle() }

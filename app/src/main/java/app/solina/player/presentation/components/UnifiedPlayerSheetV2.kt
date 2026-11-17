@@ -68,6 +68,7 @@ import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.currentBackStackEntryAsState
 import app.solina.player.data.model.Song
+import app.solina.player.data.preferences.NavBarStyle
 import app.solina.player.data.preferences.sanitizeNavBarCornerRadius
 import app.solina.player.presentation.components.scoped.PlayerAlbumNavigationEffect
 import app.solina.player.presentation.components.scoped.PlayerArtistNavigationEffect
@@ -210,6 +211,41 @@ fun UnifiedPlayerSheetV2(
     val playerConfig by playerViewModel.playerConfigSlice.collectAsStateWithLifecycle()
     val navBarCornerRadius = sanitizeNavBarCornerRadius(playerConfig.navBarCornerRadius)
     val navBarStyle = playerConfig.navBarStyle
+
+    // Round 16, item 6: the floating music bar's corner settings.
+    // The sheet's shape carries ONE top radius (both top corners)
+    // and ONE bottom radius (both bottom corners), so the two top
+    // sliders average into one top radius and the two bottom sliders
+    // into one bottom radius — the Appearance screen's note says so.
+    // The radii only shape the COLLAPSED mini bar: the sheet lerps
+    // them to 0 dp as the player expands (see the provider scaling
+    // below), so the expanded player stays square.
+    val floatingBarAppearance by appearanceViewModel.appearance.collectAsStateWithLifecycle()
+    val floatingBarCorners = floatingBarAppearance.effectiveFloatingMusicBar.effectiveCorners
+    val floatingTopRadiusState = rememberUpdatedState(
+        ((floatingBarCorners.topStart + floatingBarCorners.topEnd) / 2).dp
+    )
+    val floatingBottomRadiusState = rememberUpdatedState(
+        ((floatingBarCorners.bottomStart + floatingBarCorners.bottomEnd) / 2).dp
+    )
+    // The sheet's own collapsed targets (mirrors
+    // rememberSheetVisualState — top follows the nav-bar radius in
+    // the default style, 32 dp otherwise; bottom is 10 dp in the
+    // default style, 32 dp otherwise). The wrappers below scale the
+    // providers against these, so a user value of 32/10 reproduces
+    // today's shape exactly.
+    val collapsedSheetTopRadiusState = rememberUpdatedState(
+        if (isNavBarHidden) 32.dp
+        else if (navBarStyle == NavBarStyle.DEFAULT) navBarCornerRadius.dp
+        else if (navBarStyle == NavBarStyle.FULL_WIDTH) 32.dp
+        else navBarCornerRadius.dp
+    )
+    val collapsedSheetBottomRadiusState = rememberUpdatedState(
+        if (isNavBarHidden) 32.dp
+        else if (navBarStyle == NavBarStyle.DEFAULT) 10.dp
+        else if (navBarStyle == NavBarStyle.FULL_WIDTH) 32.dp
+        else navBarCornerRadius.dp
+    )
     val carouselStyle = playerConfig.carouselStyle
     val fullPlayerLoadingTweaks = playerConfig.fullPlayerLoadingTweaks
     val tapBackgroundClosesPlayer = playerConfig.tapBackgroundClosesPlayer
@@ -415,8 +451,35 @@ fun UnifiedPlayerSheetV2(
     val baseBottomPadding = sheetVisualState.baseBottomPadding
     val playerContentAreaHeightPxProvider = sheetVisualState.playerContentAreaHeightPxProvider
     val visualSheetTranslationYProvider = sheetVisualState.visualSheetTranslationYProvider
-    val overallSheetTopCornerRadiusProvider = sheetVisualState.overallSheetTopCornerRadiusProvider
-    val playerContentActualBottomRadiusProvider = sheetVisualState.playerContentActualBottomRadiusProvider
+    // Round 16, item 6: scale the sheet's radius providers by the
+    // user's floating-bar corners. Each provider lerps its collapsed
+    // target to 0 dp as the player expands, so scaling the OUTPUT by
+    // (user target / sheet target) keeps the lerp exact — collapsed
+    // the bar shows the user's corners, expanded it is square, and
+    // mid-drag it tracks the expansion. The corner states are read
+    // through rememberUpdatedState, so a slider drag takes effect
+    // without recomposing the sheet. When the sheet target is 0 dp
+    // the output stays 0 dp: corners stay bounded by the sheet math.
+    val baseTopRadiusProvider = sheetVisualState.overallSheetTopCornerRadiusProvider
+    val baseBottomRadiusProvider = sheetVisualState.playerContentActualBottomRadiusProvider
+    val overallSheetTopCornerRadiusProvider: () -> Dp = remember(baseTopRadiusProvider) {
+        {
+            scaleSheetRadius(
+                base = baseTopRadiusProvider(),
+                sheetTarget = collapsedSheetTopRadiusState.value,
+                userTarget = floatingTopRadiusState.value
+            )
+        }
+    }
+    val playerContentActualBottomRadiusProvider: () -> Dp = remember(baseBottomRadiusProvider) {
+        {
+            scaleSheetRadius(
+                base = baseBottomRadiusProvider(),
+                sheetTarget = collapsedSheetBottomRadiusState.value,
+                userTarget = floatingBottomRadiusState.value
+            )
+        }
+    }
     val currentHorizontalPaddingStartPxProvider = sheetVisualState.currentHorizontalPaddingStartPxProvider
     val currentHorizontalPaddingEndPxProvider = sheetVisualState.currentHorizontalPaddingEndPxProvider
 
@@ -897,4 +960,19 @@ fun UnifiedPlayerSheetV2(
         pendingOverlay = pendingSaveQueueOverlay,
         onDismissOverlay = { sheetModalOverlayController.dismissSaveQueueOverlay() }
     )
+}
+
+/**
+ * Round 16, item 6: rescale one sheet radius by the user's floating-bar
+ * corners. [base] is the sheet provider's output — its collapsed target
+ * lerped towards 0 dp as the player expands — and [sheetTarget] is that
+ * collapsed target. Scaling by (userTarget / sheetTarget) keeps the
+ * lerp exact: collapsed the bar shows the user's corners, expanded it
+ * is square. A zero target or a zero base stays zero, so the corners
+ * never escape the sheet's layout math (and the transient swipe-dismiss
+ * morph, which lerps between two targets, is scaled the same way).
+ */
+private fun scaleSheetRadius(base: Dp, sheetTarget: Dp, userTarget: Dp): Dp {
+    if (base <= 0.dp || sheetTarget <= 0.dp) return 0.dp
+    return (base.value / sheetTarget.value * userTarget.value).dp.coerceAtLeast(0.dp)
 }

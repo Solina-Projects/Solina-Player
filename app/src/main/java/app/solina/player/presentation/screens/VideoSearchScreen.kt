@@ -287,7 +287,15 @@ fun VideoSearchScreen(
                 isGridView = isGridView,
                 onVideoClick = { video ->
                     navController.navigateSafely(
-                        Screen.VideoPlayer.createRoute(video.contentUriString)
+                        // Round 16, item 1a: tapping a result plays the
+                        // whole visible result list as one queue, starting
+                        // at the tapped video — so playback auto-advances
+                        // instead of stopping at the end of one video.
+                        // "Play all" below is unchanged.
+                        Screen.VideoPlayer.createRoute(
+                            startUri = video.contentUriString,
+                            queueUris = results.map { it.contentUriString }
+                        )
                     )
                 },
                 onPlayAll = {
