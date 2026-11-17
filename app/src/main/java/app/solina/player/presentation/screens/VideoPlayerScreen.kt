@@ -31,6 +31,8 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.animation.slideInHorizontally
@@ -61,6 +63,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -119,10 +122,12 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Shadow
@@ -173,6 +178,7 @@ import app.solina.player.utils.PhoneOrientationPolicy
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 import java.net.URLDecoder
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -395,6 +401,13 @@ fun VideoPlayerScreen(
     // while holding pins the speed permanently instead.
     var preHoldSpeed by remember { mutableStateOf(1f) }
     var holdSpeedPinned by remember { mutableStateOf(false) }
+    // Round 19 item 7: the previous hold's speed, re-applied at the
+    // next hold's entry (session only — forgotten when the player
+    // screen is left, like preHoldSpeed; NOT DataStore-persisted).
+    // Persistent speed changes outside a hold (speed-menu dropdown,
+    // quick-row speed circle, chip tap when not holding) leave it
+    // alone. Null until the first hold that slides or pins.
+    var lastHoldSpeed by remember { mutableStateOf<Float?>(null) }
     // Seek preview while dragging (horizontal swipe or the seek slider).
     var seekPreviewMs by remember { mutableLongStateOf(-1L) }
     var seekDeltaText by remember { mutableStateOf<String?>(null) }
@@ -547,10 +560,11 @@ fun VideoPlayerScreen(
     // (buttons 48 -> 64.5 dp, play 56 -> 75.3 dp, +/-15s 40 -> 53.8 dp,
     // icons 30/36/28/26 -> 40.3/48.4/37.6/34.9 dp). bottomBarScale is
     // used ONLY by the bottom bar, so changing it here is safe.
-    // Width check (POCO F3): portrait centre 185.6 + 4x6 = 209.6, right
-    // 76.8 + 6 = 82.8, total ~293 + 16 padding ~309 dp < 393 dp;
-    // landscape lock 64.5 + centre 311.8 + 4x12.8 = 363 + right
-    // 193.6 + 2x12.8 = 219.2, total ~647 + 16 ~663 dp < 873 dp.
+    // Width check (POCO F3): portrait centre 185.6 + 4x12 = 233.6
+    // (round 19 item 6), right 76.8 + 6 = 82.8, total ~316 + 16
+    // padding ~332 dp < 393 dp; landscape lock 64.5 + centre 311.8
+    // + 4x12.8 = 363 + right 193.6 + 2x12.8 = 219.2, total ~647
+    // + 16 ~663 dp < 873 dp.
     val configuration = LocalConfiguration.current
     val bottomBarScale = when {
         configuration.orientation == Configuration.ORIENTATION_LANDSCAPE -> 1.344f
@@ -566,6 +580,11 @@ fun VideoPlayerScreen(
     // Bottom-bar gaps (round 17): 6 dp in portrait (up from 3.2 dp now
     // that rotation + lock left the row), 12.8 dp in landscape.
     val bottomBarGap = if (isLandscape) 12.8.dp else 6.dp
+    // Round 19 item 6: the centre transport group gets wider gaps in
+    // portrait — 12 dp (was 6) — so the five buttons sit less close
+    // together. The right group (aspect + PiP) keeps bottomBarGap.
+    // Landscape centre gaps stay 12.8 dp (user: portrait only).
+    val bottomBarCentreGap = if (isLandscape) 12.8.dp else 12.dp
     // Rotation state, shown wherever the rotation control lives: a
     // phone icon for the locked orientation, the rotating-arrows icon
     // for Auto (sensor follow).
@@ -589,31 +608,195 @@ fun VideoPlayerScreen(
     // resolves to Density.density, a Float, so toPx() would not resolve.)
     val speedStepPx = with(LocalDensity.current) { 60.dp.toPx() }
 
-    // Quick-row drag (round 17): a horizontal drag / fling on the arrow
-    // handle — and on the row itself — opens / closes the row. Drag
-    // left pulls the row out (open), drag right pushes it away (close):
-    // the same direction the arrow points. A short drag past 28 dp or a
-    // fling faster than 500 dp/s settles it; anything less snaps back
-    // (no state change). The handle and the row share one accumulator —
-    // only one finger can drag at a time.
-    var rowDragDx by remember { mutableStateOf(0f) }
-    val rowDragDistancePx = with(LocalDensity.current) { 28.dp.toPx() }
+    // Quick-row drag-to-reveal (round 19, items 3 + 4): the row is a
+    // drawer that opens from the arrow/handle side, and the drag follows
+    // the finger instead of only settling on a threshold.
+    //
+    // The handle sits at the End edge and the row slides out toward it
+    // (exit targetOffsetX = { it } in LTR). Dragging AWAY from the
+    // handle side opens, dragging TOWARD it gathers / closes.
+    // rowOpenSign converts a raw dx / velocity into the open-ward
+    // amount: -1 in LTR (drag left opens), +1 in RTL (drag right opens).
+    // Nothing here hardcodes left / right pixels.
+    //
+    // rowRevealPx is how much of the row is uncovered, in px, from the
+    // arrow end: 0 = closed, rowFullWidthPx = fully open with the last
+    // icon (the in-row arrow) docked against the handle — it can never
+    // go further, the reveal is clamped to the full width. The smallest
+    // resting open amount is rowRevealMinPx: just the arrow + its end
+    // padding, i.e. the gathered-to-the-end state. Resting states are
+    // 0 or >= rowRevealMinPx; a slow release below that snaps closed.
+    //
+    // Slow drags stay exactly where the finger left them (open-ward to
+    // any amount, close-ward gathered to any amount). Fast drags snap
+    // to the end in the fling direction: a fast open-ward fling opens
+    // fully; a fast close-ward fling gathers to the end (arrow docked)
+    // and STOPS there, still open — a SECOND close-ward drag from that
+    // gathered end closes the row (rowGatheredToEnd). controlsExpanded
+    // is true for every resting open state (full or partial), so the
+    // tap-arrow close, the handle hiding and the auto-hide collapse all
+    // keep working unchanged; the row's width is driven by the reveal.
+    //
+    // The full width is exact, not measured: every item (buttons + the
+    // in-row arrow) is a 44.8 dp column, gaps are 10 dp, content
+    // padding is 12 dp each side. With the default 12 buttons that is
+    // 13 x 44.8 + 12 x 10 + 24 = 726.4 dp. (The round-19 brief's
+    // 672 dp counted 12 items and missed the arrow.) The count mirrors
+    // shownButtons below (visibleButtons is collected above, :335).
+    val rowListState = rememberLazyListState()
+    val rowLayoutDirection = LocalLayoutDirection.current
+    val rowOpenSign = if (rowLayoutDirection == LayoutDirection.Rtl) 1f else -1f
+    val rowButtonCount = if (visibleButtons.isEmpty()) {
+        videoControlButtons.size
+    } else {
+        videoControlButtons.count { visibleButtons.contains(it.id) }
+    }
+    val rowFullWidthPx = with(LocalDensity.current) {
+        ((rowButtonCount + 1) * 44.8f + rowButtonCount * 10f + 24f).dp.toPx()
+    }
+    val rowRevealMinPx = with(LocalDensity.current) { 56.8.dp.toPx() }
     val rowDragFlingPx = with(LocalDensity.current) { 500.dp.toPx() }
+    val rowDragDeadZonePx = with(LocalDensity.current) { 4.dp.toPx() }
+    val scope = rememberCoroutineScope()
+    var rowRevealPx by remember { mutableStateOf(0f) }
+    var rowDragActive by remember { mutableStateOf(false) }
+    var rowGatheredToEnd by remember { mutableStateOf(false) }
+    var rowDragStartedOpen by remember { mutableStateOf(false) }
+    var rowDragStartedGathered by remember { mutableStateOf(false) }
+    var rowDragDx by remember { mutableStateOf(0f) }
+    // Width the row's Surface is laid out at: the reveal, clamped to
+    // the docked limits. If the row is logically open but the reveal
+    // is 0 (e.g. restored after process death, where only
+    // controlsExpanded was saved), treat it as fully open rather than
+    // showing an invisible row with a hidden handle.
+    val rowRevealWidthPx = if (controlsExpanded && rowRevealPx <= 0f && !rowDragActive) {
+        rowFullWidthPx
+    } else {
+        rowRevealPx.coerceIn(0f, rowFullWidthPx)
+    }
+    // Repair a desync like the restore above: an open row with no
+    // reveal snaps to fully open (tap-open / drag-settle already set
+    // both together, so this only fires on a real desync).
+    LaunchedEffect(controlsExpanded, rowDragActive) {
+        if (controlsExpanded && rowRevealPx <= 0f && !rowDragActive) {
+            rowRevealPx = rowFullWidthPx
+        }
+    }
+    // Keep the reveal exact if the button set changes (Customise) while
+    // the row is open: without this a shrunken row would keep a stale
+    // reveal above its new full width and the first drag back would
+    // be swallowed by the clamp.
+    LaunchedEffect(rowFullWidthPx) {
+        if (rowRevealPx > rowFullWidthPx) rowRevealPx = rowFullWidthPx
+    }
+    // Follow the finger: open-ward drag grows the reveal, close-ward
+    // shrinks it, clamped to the docked limits (no overshoot past the
+    // arrow docked at the handle, no going below closed).
+    fun onRowRevealDrag(deltaPx: Float) {
+        rowRevealPx = (rowRevealPx + deltaPx * rowOpenSign)
+            .coerceIn(0f, rowFullWidthPx)
+    }
+    fun rowDragDelta(deltaPx: Float) {
+        rowDragDx += deltaPx
+        onRowRevealDrag(deltaPx)
+    }
+    val onRowDragStarted: () -> Unit = {
+        rowDragDx = 0f
+        rowDragStartedOpen = controlsExpanded
+        rowDragStartedGathered = rowGatheredToEnd
+        rowDragActive = true
+        touchActive = true
+        // The handle is reachable while the bars are auto-hidden; a
+        // drag on it must show the bars or the reveal would be
+        // invisible until the drag settles.
+        barsVisible = true
+    }
+    val onRowDragStopped: (Float) -> Unit = { velocity ->
+        rowDragActive = false
+        touchActive = false
+        settleRowDrag(velocity)
+    }
     fun settleRowDrag(velocity: Float) {
-        val open = rowDragDx < -rowDragDistancePx || velocity < -rowDragFlingPx
-        val close = rowDragDx > rowDragDistancePx || velocity > rowDragFlingPx
-        if (open) {
-            controlsExpanded = true
-            barsVisible = true
-            poke()
-        } else if (close) {
-            controlsExpanded = false
-            poke()
+        // Open-ward amounts: positive = dragging / flinging away from
+        // the handle side (opening), negative = toward it (gathering
+        // or closing).
+        val velocityOpen = velocity * rowOpenSign
+        val dragOpen = rowDragDx * rowOpenSign
+        val fastOpen = velocityOpen > rowDragFlingPx
+        val fastClose = velocityOpen < -rowDragFlingPx
+        when {
+            // Second close-ward drag from the gathered end closes.
+            rowDragStartedGathered &&
+                (dragOpen < -rowDragDeadZonePx || fastClose) -> {
+                controlsExpanded = false
+                rowRevealPx = 0f
+                rowGatheredToEnd = false
+                scope.launch { rowListState.scrollToItem(0) }
+                poke()
+            }
+            fastOpen -> {
+                controlsExpanded = true
+                barsVisible = true
+                rowRevealPx = rowFullWidthPx
+                rowGatheredToEnd = false
+                poke()
+            }
+            fastClose && rowDragStartedOpen -> {
+                // Fast close-ward drag: gather to the end (arrow
+                // docked at the handle) and STOP — still open.
+                controlsExpanded = true
+                barsVisible = true
+                rowRevealPx = rowRevealMinPx
+                rowGatheredToEnd = true
+                poke()
+            }
+            fastClose -> {
+                // Fast close-ward drag from closed: nothing to gather.
+                controlsExpanded = false
+                rowRevealPx = 0f
+                rowGatheredToEnd = false
+                poke()
+            }
+            rowRevealPx < rowRevealMinPx &&
+                abs(dragOpen) > rowDragDeadZonePx -> {
+                // Slow release below the smallest usable open amount
+                // (the arrow fully visible): snap closed.
+                controlsExpanded = false
+                rowRevealPx = 0f
+                rowGatheredToEnd = false
+                scope.launch { rowListState.scrollToItem(0) }
+                poke()
+            }
+            else -> {
+                // Slow drag: stay exactly where the finger left it.
+                // A drag that started closed and never reached the
+                // smallest open amount closes instead of resting on a
+                // sliver; a drag that started open and barely moved
+                // snaps back up to the gathered end.
+                if (!rowDragStartedOpen && rowRevealPx < rowRevealMinPx) {
+                    controlsExpanded = false
+                    rowRevealPx = 0f
+                    rowGatheredToEnd = false
+                    scope.launch { rowListState.scrollToItem(0) }
+                    poke()
+                } else {
+                    controlsExpanded = true
+                    barsVisible = true
+                    rowRevealPx = rowRevealPx.coerceIn(
+                        rowRevealMinPx,
+                        rowFullWidthPx
+                    )
+                    rowGatheredToEnd =
+                        rowRevealPx <= rowRevealMinPx + 0.5f
+                    poke()
+                }
+            }
         }
         rowDragDx = 0f
     }
-    val handleDragState = rememberDraggableState { delta -> rowDragDx += delta }
-    val rowDragState = rememberDraggableState { delta -> rowDragDx += delta }
+    val handleDragState = rememberDraggableState { delta -> rowDragDelta(delta) }
+    val rowDragState = rememberDraggableState { delta -> rowDragDelta(delta) }
+    val arrowDragState = rememberDraggableState { delta -> rowDragDelta(delta) }
 
     // Position / duration / playing state, polled for the custom bottom
     // bar (the built-in PlayerView controller is off now).
@@ -662,7 +845,22 @@ fun VideoPlayerScreen(
             delay(3_000)
             barsVisible = false
             controlsExpanded = false
+            // Round 19: the row's width is driven by the reveal, so
+            // collapsing must clear it too, or the row would stay
+            // visible through the reveal. Scroll resets so the next
+            // tap-open starts at the first button, as before.
+            rowRevealPx = 0f
+            rowGatheredToEnd = false
+            rowListState.scrollToItem(0)
         }
+    }
+
+    // Round 19, item 1: whenever the bars hide — auto-hide above or the
+    // manual tap toggle — the quick row must close too, so it cannot
+    // spring back open on the next tap-show. One place, keyed only on
+    // barsVisible, covers both paths.
+    LaunchedEffect(barsVisible) {
+        if (!barsVisible) controlsExpanded = false
     }
 
     // Round 17, item 1: keep the screen on ONLY while the video is
@@ -913,6 +1111,19 @@ fun VideoPlayerScreen(
     // shows every visible button. (It used to show five priority
     // buttons + the arrow while collapsed.)
     val quickRowButtons = shownButtons
+
+    // Round 19, item 3: while the row is only partially revealed, keep
+    // it scrolled to its end so the in-row arrow stays docked at the
+    // handle side — the reveal uncovers the row from the arrow end.
+    // Fully open, the scroll is left alone: a drag-open keeps the
+    // arrow end in view (and the row stays scrollable), a tap-open
+    // keeps today's start. Runs only when the reveal changes, so the
+    // user's own scrolling of a partially open row is not fought.
+    LaunchedEffect(rowRevealPx) {
+        if (rowRevealPx > 0f && rowRevealPx < rowFullWidthPx) {
+            rowListState.scrollToItem(quickRowButtons.size)
+        }
+    }
 
     /** One place for every round control button's action. */
     fun onControlButtonClick(button: VideoControlButton) {
@@ -1205,6 +1416,19 @@ fun VideoPlayerScreen(
                                         preHoldSpeed =
                                             videoPlayerViewModel.playbackSpeed.value
                                         holdSpeedPinned = false
+                                        // Round 19 item 7: re-apply the
+                                        // previous hold's speed — and
+                                        // re-derive speedIndex from it.
+                                        // speedIndex was initialised at
+                                        // pointer-down from the old speed;
+                                        // without this the first slide step
+                                        // would jump from the wrong index.
+                                        lastHoldSpeed?.let { remembered ->
+                                            applySpeed(remembered)
+                                            speedIndex = speedOptions
+                                                .indexOfFirst { it == remembered }
+                                                .coerceAtLeast(0)
+                                        }
                                         speedMode = true
                                         speedBarVisible = true
                                         barsVisible = true
@@ -1515,6 +1739,18 @@ fun VideoPlayerScreen(
                                     // permanently). The bar hides at once,
                                     // no 2 s linger.
                                     speedMode = false
+                                    // Round 19 item 7: remember this
+                                    // hold's speed BEFORE the restore —
+                                    // a slide to a different speed, or a
+                                    // chip tapped while holding (pinned),
+                                    // is what the next hold re-applies. A
+                                    // hold with no slide and no pin leaves
+                                    // it unchanged.
+                                    val holdSpeed =
+                                        videoPlayerViewModel.playbackSpeed.value
+                                    if (holdSpeedPinned || holdSpeed != preHoldSpeed) {
+                                        lastHoldSpeed = holdSpeed
+                                    }
                                     if (!holdSpeedPinned &&
                                         videoPlayerViewModel.playbackSpeed.value !=
                                         preHoldSpeed
@@ -1651,44 +1887,87 @@ fun VideoPlayerScreen(
                         }
                     }
                     // Quick-action row (reference-player redesign):
-                    // in landscape it sits under the top bar, left
-                    // aligned — equalizer, screenshot, audio,
-                    // speed circle, then the arrow — and it
-                    // collapses like portrait (round 18: visible
-                    // only when controlsExpanded, in both
-                    // orientations; the auto-hide collapse hides
-                    // it). Home feedback (2026-11-16): while closed
-                    // the bar is COMPLETELY hidden — no peeking row,
-                    // no partial buttons — only the arrow handle below
-                    // shows, and tapping it opens the full row (it
-                    // scrolls).
+                    // in landscape it sits under the top bar, RIGHT
+                    // aligned to the arrow/handle edge — the pill
+                    // wraps its buttons, no empty dark bar (round
+                    // 19, item 4). It collapses like portrait
+                    // (round 18: visible only when controlsExpanded,
+                    // in both orientations; the auto-hide collapse
+                    // hides it). Home feedback (2026-11-16): while
+                    // closed the bar is COMPLETELY hidden — no
+                    // peeking row, no partial buttons — only the
+                    // arrow handle below shows, and tapping it opens
+                    // the full row (it scrolls). Round 19: it is also
+                    // visible while a drag is in progress, so an
+                    // opening drag can uncover it progressively —
+                    // the reveal follows the finger (see the row-drag
+                    // block above).
                     AnimatedVisibility(
-                        visible = controlsExpanded,
-                        enter = slideInHorizontally(
-                            initialOffsetX = { it },
-                            animationSpec = spring(
-                                dampingRatio = Spring.DampingRatioNoBouncy,
-                                stiffness = Spring.StiffnessMediumLow
-                            )
-                        ) + fadeIn(),
-                        exit = slideOutHorizontally(
-                            targetOffsetX = { it },
-                            animationSpec = spring(
-                                dampingRatio = Spring.DampingRatioNoBouncy,
-                                stiffness = Spring.StiffnessMediumLow
-                            )
-                        ) + fadeOut()
+                        visible = controlsExpanded || rowRevealPx > 0f || rowDragActive,
+                        // While a drag is driving the reveal, the
+                        // slide-in must not run — it would fight the
+                        // finger. Tap-open keeps the old spring slide.
+                        // The slide direction follows the handle side
+                        // (End edge): from the right in LTR, from the
+                        // left in RTL. A drag-settle to closed leaves
+                        // a zero-width row, so there is nothing to
+                        // slide out — exit None then.
+                        enter = if (rowDragActive) {
+                            EnterTransition.None
+                        } else {
+                            slideInHorizontally(
+                                initialOffsetX = {
+                                    if (rowLayoutDirection == LayoutDirection.Rtl) -it else it
+                                },
+                                animationSpec = spring(
+                                    dampingRatio = Spring.DampingRatioNoBouncy,
+                                    stiffness = Spring.StiffnessMediumLow
+                                )
+                            ) + fadeIn()
+                        },
+                        exit = if (rowRevealPx <= 0f) {
+                            ExitTransition.None
+                        } else {
+                            slideOutHorizontally(
+                                targetOffsetX = {
+                                    if (rowLayoutDirection == LayoutDirection.Rtl) -it else it
+                                },
+                                animationSpec = spring(
+                                    dampingRatio = Spring.DampingRatioNoBouncy,
+                                    stiffness = Spring.StiffnessMediumLow
+                                )
+                            ) + fadeOut()
+                        }
                     ) {
+                        // Round 19, item 4: the pill wraps its content
+                        // and hugs the handle (End) edge — the dark bar
+                        // is exactly as wide as its buttons, with no
+                        // empty space on either side. The top bar above
+                        // stays full-width; only this row changes.
+                        Box(
+                            modifier = Modifier.fillMaxWidth(),
+                            contentAlignment = Alignment.CenterEnd
+                        ) {
                         Surface(
                             // Round 17: a horizontal drag / fling on the
-                            // row itself closes it (drag right) — same
-                            // settle as the handle. Round 18: enabled in
-                            // landscape too, now that the row collapses
-                            // there. The LazyRow still owns scrolling: it
-                            // consumes drags while it can scroll, so this
-                            // only fires from its resting (left-edge) spot.
+                            // row itself closes it — same settle as the
+                            // handle. Round 18: enabled in landscape
+                            // too, now that the row collapses there.
+                            // The LazyRow still owns scrolling: it
+                            // consumes drags while it can scroll, so
+                            // this only fires from its resting
+                            // (scroll-start) spot. The real drag target
+                            // is the in-row arrow below (round 19): its
+                            // own draggable wins over the LazyRow
+                            // scroll, so the reveal follows the finger
+                            // even while the row can scroll.
                             modifier = Modifier
-                                .fillMaxWidth()
+                                .width(
+                                    with(LocalDensity.current) {
+                                        rowRevealWidthPx.toDp()
+                                    }
+                                )
+                                .clipToBounds()
                                 .draggable(
                                     state = rowDragState,
                                     orientation = Orientation.Horizontal,
@@ -1696,11 +1975,8 @@ fun VideoPlayerScreen(
                                     // Round 18: a row drag is a touch in
                                     // progress — gate the auto-hide timer
                                     // until the drag settles.
-                                    onDragStarted = { rowDragDx = 0f; touchActive = true },
-                                    onDragStopped = { velocity ->
-                                        touchActive = false
-                                        settleRowDrag(velocity)
-                                    }
+                                    onDragStarted = onRowDragStarted,
+                                    onDragStopped = onRowDragStopped
                                 ),
                             color = Color.Black.copy(alpha = 0.55f),
                             shape = RoundedCornerShape(
@@ -1709,6 +1985,7 @@ fun VideoPlayerScreen(
                             )
                         ) {
                             LazyRow(
+                                state = rowListState,
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(vertical = 6.dp),
@@ -1818,8 +2095,17 @@ fun VideoPlayerScreen(
                                     )
                                 }
                                 // Arrow handle, last in the row: points
-                                // RIGHT while open (LEFT while closed);
-                                // tapping it closes the row. Round 18: in
+                                // RIGHT while open (LEFT while closed).
+                                // Tapping it toggles the row (round 19:
+                                // opening also sets the reveal to full,
+                                // closing clears it and resets the
+                                // scroll). Dragging it drives the reveal
+                                // (round 19, item 3): open-ward the row
+                                // uncovers following the finger up to
+                                // fully open, close-ward it gathers —
+                                // its own draggable wins over the
+                                // LazyRow scroll, so the drag works even
+                                // while the row can scroll. Round 18: in
                                 // both orientations now that the row
                                 // collapses in landscape too. The
                                 // standalone handle outside only shows
@@ -1829,32 +2115,53 @@ fun VideoPlayerScreen(
                                         expanded = controlsExpanded,
                                         onClick = {
                                             controlsExpanded = !controlsExpanded
+                                            if (controlsExpanded) {
+                                                rowRevealPx = rowFullWidthPx
+                                                rowGatheredToEnd = false
+                                            } else {
+                                                rowRevealPx = 0f
+                                                rowGatheredToEnd = false
+                                                scope.launch {
+                                                    rowListState.scrollToItem(0)
+                                                }
+                                            }
                                             poke()
-                                        }
-                                    )
-                                }
-                            }
-                            // Speed menu, anchored to the speed round button.
-                            DropdownMenu(
-                                expanded = showSpeedMenu,
-                                onDismissRequest = { showSpeedMenu = false },
-                                containerColor = Color.Black.copy(alpha = 0.75f)
-                            ) {
-                                speedOptions.forEach { speed ->
-                                    DropdownMenuItem(
-                                        text = {
-                                            Text(
-                                                text = formatSpeedLabel(speed),
-                                                color = Color.White
-                                            )
                                         },
-                                        onClick = {
-                                            applySpeed(speed)
-                                            showSpeedMenu = false
-                                        }
+                                        modifier = Modifier.draggable(
+                                            state = arrowDragState,
+                                            orientation = Orientation.Horizontal,
+                                            onDragStarted = onRowDragStarted,
+                                            onDragStopped = onRowDragStopped
+                                        )
                                     )
                                 }
                             }
+                        }
+                        // Speed menu, anchored to the speed round button.
+                        // Round 19: moved out of the Surface so it stays
+                        // anchored to the full-width row area — the pill
+                        // is now only as wide as its buttons, and the
+                        // menu must not shift with it.
+                        DropdownMenu(
+                            expanded = showSpeedMenu,
+                            onDismissRequest = { showSpeedMenu = false },
+                            containerColor = Color.Black.copy(alpha = 0.75f)
+                        ) {
+                            speedOptions.forEach { speed ->
+                                DropdownMenuItem(
+                                    text = {
+                                        Text(
+                                            text = formatSpeedLabel(speed),
+                                            color = Color.White
+                                        )
+                                    },
+                                    onClick = {
+                                        applySpeed(speed)
+                                        showSpeedMenu = false
+                                    }
+                                )
+                            }
+                        }
                         }
                     }
                     // (Round 17: the arrow handle used to live here,
@@ -1931,12 +2238,14 @@ fun VideoPlayerScreen(
             // the row is closed this small translucent circle stays
             // pinned at the top-right edge — just below where the top
             // bar sits (status bar + 84 dp, the same spot it had
-            // inside the column) — even after the bars auto-hide, so
-            // the row can always be reopened. Round 18: in both
-            // orientations now that the row collapses in landscape
-            // too. Tapping it toggles the row (and shows the bars
-            // again if they were hidden); dragging it left pulls the
-            // row out, dragging it right pushes it away.
+            // inside the column). Round 19, item 2: it hides with the
+            // bars now — a surface tap re-shows the bars and the handle
+            // comes back with them, so the row can be reopened from
+            // there. Round 18: in both orientations now that the row
+            // collapses in landscape too. Tapping it toggles the row
+            // (and shows the bars again if they were hidden); dragging
+            // it left pulls the row out, dragging it right pushes it
+            // away.
             // Round 17 (item 15): in portrait the handle grows into a
             // top stack — arrow → rotation → lock, top-right under the
             // three-dot menu. While the row is open the stack hides
@@ -1944,7 +2253,7 @@ fun VideoPlayerScreen(
             // in portrait they are only reachable from this stack
             // while the row is closed, in landscape from the bottom
             // bar).
-            if (!controlsExpanded) {
+            if (barsVisible && !controlsExpanded) {
                 Column(
                     modifier = Modifier
                         .align(Alignment.TopEnd)
@@ -1956,7 +2265,12 @@ fun VideoPlayerScreen(
                     Surface(
                         onClick = {
                             controlsExpanded = !controlsExpanded
-                            if (controlsExpanded) barsVisible = true
+                            if (controlsExpanded) {
+                                barsVisible = true
+                                // Round 19: tap-open is a full open.
+                                rowRevealPx = rowFullWidthPx
+                                rowGatheredToEnd = false
+                            }
                             poke()
                         },
                         shape = CircleShape,
@@ -1968,12 +2282,11 @@ fun VideoPlayerScreen(
                                 orientation = Orientation.Horizontal,
                                 // Round 18: a handle drag is a touch in
                                 // progress — gate the auto-hide timer
-                                // until the drag settles.
-                                onDragStarted = { rowDragDx = 0f; touchActive = true },
-                                onDragStopped = { velocity ->
-                                    touchActive = false
-                                    settleRowDrag(velocity)
-                                }
+                                // until the drag settles. Round 19: the
+                                // drag also drives the reveal (shared
+                                // start / stop with the row and arrow).
+                                onDragStarted = onRowDragStarted,
+                                onDragStopped = onRowDragStopped
                             )
                     ) {
                         Box(contentAlignment = Alignment.Center) {
@@ -1995,7 +2308,12 @@ fun VideoPlayerScreen(
             // Round 18: rotation + lock live under the arrow only in
             // portrait (top stack); in landscape they live in the
             // bottom bar, so they must not show up here too.
-            if (!isLandscape && !controlsExpanded) {
+            // Round 19, item 5: the stack hides with the bars too.
+            // Round 19, item 3: they also hide once the row starts
+            // revealing — they sit where the row's right end emerges
+            // and would collide with it (during an opening drag the
+            // handle above stays: it is the thing being dragged).
+            if (barsVisible && !isLandscape && !controlsExpanded && rowRevealPx <= 0f) {
                 Column(
                     modifier = Modifier
                         .align(Alignment.TopEnd)
@@ -2213,7 +2531,7 @@ fun VideoPlayerScreen(
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(
-                                    bottomBarGap,
+                                    bottomBarCentreGap,
                                     Alignment.CenterHorizontally
                                 ),
                                 modifier = Modifier.weight(1f)
@@ -2499,6 +2817,9 @@ fun VideoPlayerScreen(
                     VideoGridAction.TUTORIAL -> showTutorialDialog = true
                     VideoGridAction.MORE -> {
                         controlsExpanded = true
+                        // Round 19: opening from the grid is a full open.
+                        rowRevealPx = rowFullWidthPx
+                        rowGatheredToEnd = false
                         poke()
                     }
                 }
@@ -3011,13 +3332,17 @@ private fun VideoControlsArrowIcon(
 @Composable
 private fun VideoRowArrowButton(
     expanded: Boolean,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    // Round 19, item 3: the drag that drives the row's reveal is
+    // attached here (the caller passes a horizontal draggable) — the
+    // arrow is the handle once the row is open.
+    modifier: Modifier = Modifier
 ) {
     // Round 18: shrunk 0.8x like the other quick-row buttons.
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(1.dp),
-        modifier = Modifier.width(44.8.dp)
+        modifier = modifier.width(44.8.dp)
     ) {
         Surface(
             onClick = onClick,
