@@ -1,6 +1,7 @@
 package app.solina.player.presentation.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -18,7 +19,10 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.RestartAlt
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -26,6 +30,7 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
@@ -34,6 +39,9 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -48,8 +56,11 @@ import app.solina.player.data.preferences.AppearancePaletteNames
 import app.solina.player.data.preferences.AppearancePresetNames
 import app.solina.player.data.preferences.AppThemeMode
 import app.solina.player.data.preferences.BarAppearance
+import app.solina.player.data.preferences.CardAppearance
+import app.solina.player.data.preferences.CornerRadii
 import app.solina.player.data.preferences.GlassPresetNames
 import app.solina.player.data.preferences.GlassStyleNames
+import app.solina.player.data.preferences.SeekBarStyleNames
 import app.solina.player.presentation.components.appearancePaletteColors
 import app.solina.player.presentation.viewmodel.AppearanceViewModel
 
@@ -70,6 +81,20 @@ fun AppearanceCustomizationScreen(
 ) {
     val appearance by viewModel.appearance.collectAsStateWithLifecycle()
     val appThemeMode by viewModel.appThemeMode.collectAsStateWithLifecycle()
+    // Round 15, wave 2, C7: user-saved looks.
+    val savedPresets by viewModel.savedPresets.collectAsStateWithLifecycle()
+    val presetNoticeRes by viewModel.presetNoticeRes.collectAsStateWithLifecycle()
+    var showSaveLookDialog by remember { mutableStateOf(false) }
+
+    if (showSaveLookDialog) {
+        SaveLookDialog(
+            onDismiss = { showSaveLookDialog = false },
+            onSave = { name ->
+                viewModel.saveCurrentLook(name)
+                showSaveLookDialog = false
+            }
+        )
+    }
 
     Scaffold(
         topBar = {
@@ -145,32 +170,101 @@ fun AppearanceCustomizationScreen(
 
             // ---- Home cards ----
             item(key = "appearance_home_cards") {
-                val cards = appearance.homeCards
-                AppearanceSectionCard(
+                CardSection(
                     title = stringResource(R.string.appearance_home_cards_title),
+                    card = appearance.homeCards,
+                    onChange = { viewModel.setHomeCards(it) },
                     onReset = { viewModel.resetHomeCards() }
+                )
+            }
+
+            // ---- Recently added cards (round 15, wave 2, C3) ----
+            item(key = "appearance_recent_cards") {
+                val recent = appearance.recentCards
+                AppearanceSectionCard(
+                    title = stringResource(R.string.appearance_recent_cards_title),
+                    onReset = { viewModel.resetRecentCards() }
                 ) {
                     PercentSlider(
                         label = stringResource(R.string.appearance_size),
-                        value = cards.scalePercent,
-                        range = 85..115,
+                        value = recent.scalePercent,
+                        range = 80..130,
                         onChange = {
-                            viewModel.setHomeCards(cards.copy(scalePercent = it))
+                            viewModel.setRecentCards(recent.copy(scalePercent = it))
+                        }
+                    )
+                    CornerControls(
+                        corners = recent.effectiveCorners,
+                        onChange = {
+                            viewModel.setRecentCards(recent.copy(corners = it))
+                        }
+                    )
+                    PercentSlider(
+                        label = stringResource(R.string.appearance_font_size_title),
+                        value = recent.fontScalePercent,
+                        range = 85..125,
+                        onChange = {
+                            viewModel.setRecentCards(recent.copy(fontScalePercent = it))
                         }
                     )
                     DpSlider(
-                        label = stringResource(R.string.appearance_corners),
-                        value = cards.cornerDp,
-                        range = 0..32,
+                        label = stringResource(R.string.appearance_gap),
+                        value = recent.gapDp,
+                        range = 0..16,
                         onChange = {
-                            viewModel.setHomeCards(cards.copy(cornerDp = it))
+                            viewModel.setRecentCards(recent.copy(gapDp = it))
                         }
                     )
-                    PaletteChips(
-                        selected = cards.palette,
-                        onSelect = {
-                            viewModel.setHomeCards(cards.copy(palette = it))
+                }
+            }
+
+            // ---- Your Mix card (round 15, wave 2, C4) ----
+            item(key = "appearance_your_mix_card") {
+                CardSection(
+                    title = stringResource(R.string.appearance_your_mix_title),
+                    card = appearance.yourMixCard,
+                    onChange = { viewModel.setYourMixCard(it) },
+                    onReset = { viewModel.resetYourMixCard() }
+                )
+            }
+
+            // ---- List rows (round 15, wave 2, C4) ----
+            item(key = "appearance_list_rows") {
+                val rows = appearance.listRows
+                AppearanceSectionCard(
+                    title = stringResource(R.string.appearance_list_rows_title),
+                    onReset = { viewModel.resetListRows() }
+                ) {
+                    DpSlider(
+                        label = stringResource(R.string.appearance_corners),
+                        value = rows.cornerDp,
+                        range = 0..32,
+                        onChange = {
+                            viewModel.setListRows(rows.copy(cornerDp = it))
                         }
+                    )
+                    Text(
+                        text = stringResource(R.string.appearance_list_rows_note),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
+            // ---- Seek bar style (round 15, wave 2, C4) ----
+            item(key = "appearance_seek_bar") {
+                AppearanceSectionCard(
+                    title = stringResource(R.string.appearance_seek_bar_title),
+                    onReset = { viewModel.resetSeekBarStyle() }
+                ) {
+                    ChoiceChips(
+                        options = listOf(
+                            SeekBarStyleNames.WAVY to stringResource(R.string.appearance_seek_bar_wavy),
+                            SeekBarStyleNames.CLASSIC to stringResource(R.string.appearance_seek_bar_classic)
+                        ),
+                        selected = appearance.seekBarStyle,
+                        onSelect = { viewModel.setSeekBarStyle(it) },
+                        label = null
                     )
                 }
             }
@@ -302,20 +396,55 @@ fun AppearanceCustomizationScreen(
                         label = stringResource(R.string.appearance_glass_style)
                     )
                     Spacer(Modifier.height(8.dp))
+                    // Round 15, wave 2, C5: mini-bars and sheets/dialogs
+                    // have their own blur radius + tint. Saturation
+                    // stays one global value.
+                    Text(
+                        text = stringResource(R.string.appearance_glass_mini_bars),
+                        style = MaterialTheme.typography.bodyMedium
+                    )
                     DpSlider(
                         label = stringResource(R.string.appearance_glass_radius),
-                        value = glass.radiusDp,
+                        value = glass.miniBarRadius,
                         range = 0..40,
-                        onChange = { viewModel.setGlass(glass.copy(radiusDp = it)) },
+                        onChange = {
+                            viewModel.setGlass(glass.copy(miniBarRadiusDp = it))
+                        },
                         enabled = glass.enabled
                     )
                     PercentSlider(
                         label = stringResource(R.string.appearance_glass_tint),
-                        value = glass.tintPercent,
+                        value = (glass.miniBarTintAlpha * 100).toInt(),
                         range = 0..60,
-                        onChange = { viewModel.setGlass(glass.copy(tintPercent = it)) },
+                        onChange = {
+                            viewModel.setGlass(glass.copy(miniBarTintPercent = it))
+                        },
                         enabled = glass.enabled
                     )
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        text = stringResource(R.string.appearance_glass_sheets_group),
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    DpSlider(
+                        label = stringResource(R.string.appearance_glass_radius),
+                        value = glass.sheetRadius,
+                        range = 0..40,
+                        onChange = {
+                            viewModel.setGlass(glass.copy(sheetRadiusDp = it))
+                        },
+                        enabled = glass.enabled
+                    )
+                    PercentSlider(
+                        label = stringResource(R.string.appearance_glass_tint),
+                        value = (glass.sheetTintAlpha * 100).toInt(),
+                        range = 0..60,
+                        onChange = {
+                            viewModel.setGlass(glass.copy(sheetTintPercent = it))
+                        },
+                        enabled = glass.enabled
+                    )
+                    Spacer(Modifier.height(8.dp))
                     PercentSlider(
                         label = stringResource(R.string.appearance_glass_saturation),
                         value = glass.saturationPercent,
@@ -395,17 +524,91 @@ fun AppearanceCustomizationScreen(
                         range = 85..125,
                         onChange = { viewModel.setFontScalePercent(it) }
                     )
+                    PercentSlider(
+                        label = stringResource(R.string.appearance_list_font_size_title),
+                        value = appearance.listFontScalePercent,
+                        range = 85..125,
+                        onChange = { viewModel.setListFontScalePercent(it) }
+                    )
+                }
+            }
+
+            // ---- Saved looks (round 15, wave 2, C7) ----
+            item(key = "appearance_saved_presets") {
+                AppearanceSectionCard(
+                    title = stringResource(R.string.appearance_saved_presets_title),
+                    onReset = null
+                ) {
+                    Text(
+                        text = stringResource(R.string.appearance_saved_preset_hint),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    Button(
+                        onClick = {
+                            viewModel.clearPresetNotice()
+                            showSaveLookDialog = true
+                        }
+                    ) {
+                        Text(text = stringResource(R.string.appearance_save_current_look))
+                    }
+                    if (presetNoticeRes != null) {
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            text = stringResource(presetNoticeRes!!),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                    if (savedPresets.isEmpty()) {
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            text = stringResource(R.string.appearance_saved_preset_empty),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    } else {
+                        Spacer(Modifier.height(8.dp))
+                        for (preset in savedPresets) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        viewModel.applySavedPreset(preset.name)
+                                    },
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text(
+                                    text = preset.name,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                IconButton(
+                                    onClick = { viewModel.deleteSavedPreset(preset.name) }
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Rounded.Delete,
+                                        contentDescription = stringResource(
+                                            R.string.appearance_saved_preset_delete
+                                        )
+                                    )
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
     }
 }
 
-/** One settings group: a card with a title, a reset button and content. */
+/** One settings group: a card with a title, an optional reset button and content. */
 @Composable
 private fun AppearanceSectionCard(
     title: String,
-    onReset: () -> Unit,
+    onReset: (() -> Unit)?,
     resetLabel: String? = null,
     content: @Composable () -> Unit
 ) {
@@ -426,11 +629,13 @@ private fun AppearanceSectionCard(
                     text = title,
                     style = MaterialTheme.typography.titleMedium
                 )
-                TextButton(onClick = onReset) {
-                    Text(
-                        text = resetLabel
-                            ?: stringResource(R.string.appearance_reset_section)
-                    )
+                if (onReset != null) {
+                    TextButton(onClick = onReset) {
+                        Text(
+                            text = resetLabel
+                                ?: stringResource(R.string.appearance_reset_section)
+                        )
+                    }
                 }
             }
             Spacer(Modifier.height(4.dp))
@@ -494,11 +699,9 @@ private fun BarSection(
             onChange = { onChange(bar.copy(scalePercent = it)) },
             enabled = bar.visible
         )
-        DpSlider(
-            label = stringResource(R.string.appearance_corners),
-            value = bar.cornerDp,
-            range = 0..32,
-            onChange = { onChange(bar.copy(cornerDp = it)) },
+        CornerControls(
+            corners = bar.effectiveCorners,
+            onChange = { onChange(bar.copy(corners = it)) },
             enabled = bar.visible
         )
         PaletteChips(
@@ -507,6 +710,174 @@ private fun BarSection(
             enabled = bar.visible
         )
     }
+}
+
+/** One card's controls: size, corners, colour. */
+@Composable
+private fun CardSection(
+    title: String,
+    card: CardAppearance,
+    onChange: (CardAppearance) -> Unit,
+    onReset: () -> Unit
+) {
+    AppearanceSectionCard(title = title, onReset = onReset) {
+        PercentSlider(
+            label = stringResource(R.string.appearance_size),
+            value = card.scalePercent,
+            range = 85..115,
+            onChange = { onChange(card.copy(scalePercent = it)) }
+        )
+        CornerControls(
+            corners = card.effectiveCorners,
+            onChange = { onChange(card.copy(corners = it)) }
+        )
+        PaletteChips(
+            selected = card.palette,
+            onSelect = { onChange(card.copy(palette = it)) }
+        )
+    }
+}
+
+/**
+ * Per-corner radius controls (round 15, wave 2, C1): a "link all
+ * corners" switch — one slider when linked, four sliders (top start /
+ * top end / bottom start / bottom end) when unlinked. Turning the link
+ * back on collapses the four values into the top-start value.
+ */
+@Composable
+private fun CornerControls(
+    corners: CornerRadii,
+    onChange: (CornerRadii) -> Unit,
+    enabled: Boolean = true
+) {
+    Column {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(
+                text = stringResource(R.string.appearance_corners_link_all),
+                style = MaterialTheme.typography.bodyMedium
+            )
+            Switch(
+                checked = corners.linked,
+                onCheckedChange = { linked ->
+                    onChange(
+                        if (linked) corners.withAll(corners.topStart).copy(linked = true)
+                        else corners.copy(linked = false)
+                    )
+                },
+                enabled = enabled
+            )
+        }
+        if (corners.linked) {
+            DpSlider(
+                label = stringResource(R.string.appearance_corners),
+                value = corners.topStart,
+                range = 0..32,
+                onChange = { onChange(corners.withAll(it)) },
+                enabled = enabled
+            )
+        } else {
+            DpSlider(
+                label = stringResource(R.string.appearance_corner_top_start),
+                value = corners.topStart,
+                range = 0..32,
+                onChange = { onChange(corners.copy(topStartDp = it)) },
+                enabled = enabled
+            )
+            DpSlider(
+                label = stringResource(R.string.appearance_corner_top_end),
+                value = corners.topEnd,
+                range = 0..32,
+                onChange = { onChange(corners.copy(topEndDp = it)) },
+                enabled = enabled
+            )
+            DpSlider(
+                label = stringResource(R.string.appearance_corner_bottom_start),
+                value = corners.bottomStart,
+                range = 0..32,
+                onChange = { onChange(corners.copy(bottomStartDp = it)) },
+                enabled = enabled
+            )
+            DpSlider(
+                label = stringResource(R.string.appearance_corner_bottom_end),
+                value = corners.bottomEnd,
+                range = 0..32,
+                onChange = { onChange(corners.copy(bottomEndDp = it)) },
+                enabled = enabled
+            )
+        }
+    }
+}
+
+/**
+ * "Save current look" dialog (round 15, wave 2, C7): the same
+ * AlertDialog + OutlinedTextField pattern as the equalizer's
+ * [SavePresetDialog], with appearance strings. An empty name is
+ * refused in the dialog; a full list (10 looks) is refused by the
+ * ViewModel with a notice.
+ */
+@Composable
+private fun SaveLookDialog(
+    onDismiss: () -> Unit,
+    onSave: (String) -> Unit
+) {
+    var name by remember { mutableStateOf("") }
+    var isError by remember { mutableStateOf(false) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(text = stringResource(R.string.appearance_save_look_title)) },
+        text = {
+            Column {
+                Text(
+                    text = stringResource(R.string.appearance_save_look_body),
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.padding(bottom = 16.dp)
+                )
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = {
+                        name = it
+                        isError = false
+                    },
+                    label = { Text(stringResource(R.string.appearance_preset_name_label)) },
+                    singleLine = true,
+                    isError = isError,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                if (isError) {
+                    Text(
+                        text = stringResource(R.string.error_name_empty),
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.labelSmall,
+                        modifier = Modifier.padding(top = 4.dp)
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    if (name.isBlank()) {
+                        isError = true
+                    } else {
+                        onSave(name.trim())
+                        onDismiss()
+                    }
+                }
+            ) {
+                Text(stringResource(R.string.action_save))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.cancel))
+            }
+        }
+    )
 }
 
 @OptIn(ExperimentalLayoutApi::class)

@@ -464,6 +464,35 @@
     <string name="appearance_glass_preset_liquid">مایع</string>
     <string name="appearance_glass_video_note">نوارهای پخش‌کننده ویدیو ساده می‌مانند: ویدیو را نمی‌توان تار کرد، پس شیشه روی ویدیوی در حال پخش یک حفره سیاه نشان می‌دهد.</string>
 
+    <!-- شخصی‌سازی بیشتر (دور ۱۵، موج ۲، موارد C1 تا C5 و C7) -->
+    <string name="appearance_corners_link_all">یک شعاع برای همه گوشه‌ها</string>
+    <string name="appearance_corner_top_start">گوشهٔ بالا شروع</string>
+    <string name="appearance_corner_top_end">گوشهٔ بالا پایان</string>
+    <string name="appearance_corner_bottom_start">گوشهٔ پایین شروع</string>
+    <string name="appearance_corner_bottom_end">گوشهٔ پایین پایان</string>
+    <string name="appearance_gap">فاصله بین کارت‌ها</string>
+    <string name="appearance_recent_cards_title">کارت‌های اخیر</string>
+    <string name="appearance_your_mix_title">کارت میکس شما</string>
+    <string name="appearance_list_rows_title">ردیف‌های لیست</string>
+    <string name="appearance_list_rows_note">ردیف‌های کتابخانه، جستجو و لیست ویدیو. ردیف آهنگ هنگام پخش هنوز به شکل قرص درمی‌آید — این فقط گوشه‌های حالت عادی آن را تغییر می‌دهد.</string>
+    <string name="appearance_list_font_size_title">اندازه فونت لیست</string>
+    <string name="appearance_seek_bar_title">سبک نوار پیشرفت</string>
+    <string name="appearance_seek_bar_wavy">موجی</string>
+    <string name="appearance_seek_bar_classic">کلاسیک</string>
+    <string name="appearance_glass_sheets_group">شیت‌ها و دیالوگ‌ها</string>
+    <string name="appearance_saved_presets_title">ظاهرهای ذخیره‌شده شما</string>
+    <string name="appearance_saved_preset_hint">برای اعمال، روی یک ظاهر ضربه بزنید. ذخیره با نامی که قبلاً استفاده کرده‌اید، آن ظاهر را بازنویسی می‌کند.</string>
+    <string name="appearance_save_current_look">ذخیره ظاهر فعلی</string>
+    <string name="appearance_save_look_title">ذخیره ظاهر فعلی</string>
+    <string name="appearance_save_look_body">برای این ظاهر یک نام بگذارید. بعداً می‌توانید دوباره از همین لیست اعمالش کنید.</string>
+    <string name="appearance_preset_name_label">نام ظاهر</string>
+    <string name="appearance_saved_preset_saved">ظاهر ذخیره شد</string>
+    <string name="appearance_saved_preset_applied">ظاهر اعمال شد</string>
+    <string name="appearance_saved_preset_deleted">ظاهر حذف شد</string>
+    <string name="appearance_saved_preset_empty">هنوز ظاهری ذخیره نشده. ظاهر را تنظیم کن و اینجا ذخیره‌اش کن.</string>
+    <string name="appearance_saved_preset_limit">۱۰ ظاهر ذخیره‌شده داری. برای ذخیره ظاهر جدید یکی را حذف کن.</string>
+    <string name="appearance_saved_preset_delete">حذف ظاهر</string>
+
     <!-- Settings reorg + Video settings (round 15, wave 1, 2026-11-17) -->
     <string name="settings_category_video_title">ویدیو</string>
     <string name="settings_category_video_subtitle">نسبت تصویر، رمزگشا، زیرنویس، سرعت و ادامهٔ پخش</string>

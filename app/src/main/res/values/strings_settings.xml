@@ -464,6 +464,35 @@
     <string name="appearance_glass_preset_liquid">Liquid</string>
     <string name="appearance_glass_video_note">Video-player bars stay solid: video can\'t be blurred, so glass over playing video would show a black hole.</string>
 
+    <!-- More customisation (round 15, wave 2, C1–C5, C7) -->
+    <string name="appearance_corners_link_all">Same radius for all corners</string>
+    <string name="appearance_corner_top_start">Top start corner</string>
+    <string name="appearance_corner_top_end">Top end corner</string>
+    <string name="appearance_corner_bottom_start">Bottom start corner</string>
+    <string name="appearance_corner_bottom_end">Bottom end corner</string>
+    <string name="appearance_gap">Gap between cards</string>
+    <string name="appearance_recent_cards_title">Recent cards</string>
+    <string name="appearance_your_mix_title">Your Mix card</string>
+    <string name="appearance_list_rows_title">List rows</string>
+    <string name="appearance_list_rows_note">Library, search and video-list rows. The song row still morphs into a pill while it plays — this only moves its resting corners.</string>
+    <string name="appearance_list_font_size_title">List font size</string>
+    <string name="appearance_seek_bar_title">Seek bar style</string>
+    <string name="appearance_seek_bar_wavy">Wavy</string>
+    <string name="appearance_seek_bar_classic">Classic</string>
+    <string name="appearance_glass_sheets_group">Sheets &amp; dialogs</string>
+    <string name="appearance_saved_presets_title">Your saved looks</string>
+    <string name="appearance_saved_preset_hint">Tap a look to apply it. Saving with a name you already used overwrites that look.</string>
+    <string name="appearance_save_current_look">Save current look</string>
+    <string name="appearance_save_look_title">Save current look</string>
+    <string name="appearance_save_look_body">Give this look a name. You can apply it again later from this list.</string>
+    <string name="appearance_preset_name_label">Look name</string>
+    <string name="appearance_saved_preset_saved">Look saved</string>
+    <string name="appearance_saved_preset_applied">Look applied</string>
+    <string name="appearance_saved_preset_deleted">Look deleted</string>
+    <string name="appearance_saved_preset_empty">No saved looks yet. Tune the appearance, then save it here.</string>
+    <string name="appearance_saved_preset_limit">You already have 10 saved looks. Delete one to save a new look.</string>
+    <string name="appearance_saved_preset_delete">Delete look</string>
+
     <!-- Settings reorg + Video settings (round 15, wave 1, 2026-11-17) -->
     <string name="settings_category_video_title">Video</string>
     <string name="settings_category_video_subtitle">Aspect, decoder, subtitles, speed and resume</string>

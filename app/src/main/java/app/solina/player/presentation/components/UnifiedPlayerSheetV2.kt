@@ -820,7 +820,9 @@ fun UnifiedPlayerSheetV2(
                                 onSongInfoClick = { song -> sheetActionHandlers.onSelectedSongForInfoChange(song) },
                                 // Glass & blur (blur-engine test build): the
                                 // floating bar's glass settings.
-                                glass = appearance.glass
+                                glass = appearance.glass,
+                                // Round 15, wave 2: font scale + seek-bar style.
+                                appearance = appearance
                             )
                         }
                     }
@@ -844,7 +846,9 @@ fun UnifiedPlayerSheetV2(
                     onQueueDrag = sheetActionHandlers.dragQueueBy,
                     onQueueRelease = sheetActionHandlers.endQueueDrag,
                     // Glass & blur (blur-engine test build).
-                    glass = appearance.glass
+                    glass = appearance.glass,
+                    // Round 15, wave 2: font scale + seek-bar style.
+                    appearance = appearance
                 )
             }
 

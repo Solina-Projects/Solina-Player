@@ -175,7 +175,7 @@ fun MediaEntryCards(
                 modifier = Modifier.weight(1f),
                 cardScale = cardScale,
                 fontScale = fontScale,
-                cornerDp = cardAppearance.cornerDp
+                corners = cardAppearance.effectiveCorners
             )
             MediaEntryCard(
                 title = stringResource(R.string.home_video_card_title),
@@ -196,7 +196,7 @@ fun MediaEntryCards(
                 modifier = Modifier.weight(1f),
                 cardScale = cardScale,
                 fontScale = fontScale,
-                cornerDp = cardAppearance.cornerDp
+                corners = cardAppearance.effectiveCorners
             )
         }
     }
@@ -214,11 +214,12 @@ private fun MediaEntryCard(
     modifier: Modifier = Modifier,
     cardScale: Float = 1f,
     fontScale: Float = 1f,
-    cornerDp: Int = 20
+    corners: app.solina.player.data.preferences.CornerRadii =
+        app.solina.player.data.preferences.CornerRadii.all(20)
 ) {
     Card(
         modifier = modifier.clickable(onClick = onClick),
-        shape = RoundedCornerShape(cornerDp.dp),
+        shape = corners.toShape(),
         colors = CardDefaults.cardColors(
             containerColor = containerColor,
             contentColor = contentColor
@@ -272,15 +273,29 @@ private fun MediaEntryCard(
  * artwork 120→84 dp — and fonts 20% smaller (title 14→11 sp,
  * artist 12→10 sp, header 22→18 sp). Home only: the Library rows
  * keep their old sizes.
+ *
+ * Round 15, wave 2, C3: the cards are customisable now — width scale,
+ * per-corner radii, font scale and gap come from
+ * [AppearanceSettings.recentCards]; the numbers above are the defaults.
  */
 @Composable
 fun RecentlyAddedMusicRow(
     songs: List<Song>,
     onSongClick: (Song) -> Unit,
     onOpenAllClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    appearanceViewModel: AppearanceViewModel = hiltViewModel()
 ) {
     if (songs.isEmpty()) return
+    val appearance by appearanceViewModel.appearance.collectAsStateWithLifecycle()
+    val recent = appearance.recentCards
+    val cardScale = recent.scale
+    val fontScale = recent.fontScale
+    val cardCorners = recent.effectiveCorners
+    // The artwork sits inside the card with its own padding, so its
+    // corners follow the card's, pulled in by the same 4 dp as before
+    // (14 dp card / 10 dp thumb).
+    val thumbCorners = cardCorners.insetBy(4)
     Column(modifier = modifier.fillMaxWidth()) {
         Row(
             modifier = Modifier
@@ -304,14 +319,14 @@ fun RecentlyAddedMusicRow(
         Spacer(Modifier.height(6.dp))
         LazyRow(
             contentPadding = PaddingValues(horizontal = 16.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            horizontalArrangement = Arrangement.spacedBy(recent.gap.dp)
         ) {
             items(songs, key = { it.id }) { song ->
                 Card(
                     modifier = Modifier
-                        .width(104.dp)
+                        .width(104.dp * cardScale)
                         .clickable { onSongClick(song) },
-                    shape = RoundedCornerShape(14.dp),
+                    shape = cardCorners.toShape(),
                     colors = CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.surfaceContainer
                     ),
@@ -322,21 +337,25 @@ fun RecentlyAddedMusicRow(
                             model = song.albumArtUriString,
                             contentDescription = null,
                             contentScale = ContentScale.Crop,
-                            shape = RoundedCornerShape(10.dp),
+                            shape = thumbCorners.toShape(),
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(84.dp)
+                                .height(84.dp * cardScale)
                         )
                         Spacer(Modifier.height(6.dp))
                         Text(
                             text = song.title,
-                            style = MaterialTheme.typography.titleSmall.copy(fontSize = 11.sp),
+                            style = MaterialTheme.typography.titleSmall.copy(
+                                fontSize = 11.sp * fontScale
+                            ),
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
                         Text(
                             text = song.displayArtist,
-                            style = MaterialTheme.typography.bodySmall.copy(fontSize = 10.sp),
+                            style = MaterialTheme.typography.bodySmall.copy(
+                                fontSize = 10.sp * fontScale
+                            ),
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
@@ -354,15 +373,25 @@ fun RecentlyAddedMusicRow(
  * thumbnails 96→67 dp, play icon 36→25 dp — and fonts 20% smaller
  * (title 14→11 sp, subtitle 12→10 sp, header 22→18 sp, duration
  * 11→9 sp). Home only: the Library rows keep their old sizes.
+ *
+ * Round 15, wave 2, C3: the cards are customisable now — see
+ * [RecentlyAddedMusicRow]; the numbers above are the defaults.
  */
 @Composable
 fun RecentlyAddedVideosRow(
     videos: List<VideoItem>,
     onVideoClick: (VideoItem) -> Unit,
     onOpenAllClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    appearanceViewModel: AppearanceViewModel = hiltViewModel()
 ) {
     if (videos.isEmpty()) return
+    val appearance by appearanceViewModel.appearance.collectAsStateWithLifecycle()
+    val recent = appearance.recentCards
+    val cardScale = recent.scale
+    val fontScale = recent.fontScale
+    val cardCorners = recent.effectiveCorners
+    val thumbCorners = cardCorners.insetBy(4)
     Column(modifier = modifier.fillMaxWidth()) {
         Row(
             modifier = Modifier
@@ -386,14 +415,14 @@ fun RecentlyAddedVideosRow(
         Spacer(Modifier.height(6.dp))
         LazyRow(
             contentPadding = PaddingValues(horizontal = 16.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            horizontalArrangement = Arrangement.spacedBy(recent.gap.dp)
         ) {
             items(videos, key = { it.id }) { video ->
                 Card(
                     modifier = Modifier
-                        .width(118.dp)
+                        .width(118.dp * cardScale)
                         .clickable { onVideoClick(video) },
-                    shape = RoundedCornerShape(14.dp),
+                    shape = cardCorners.toShape(),
                     colors = CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.surfaceContainer
                     ),
@@ -405,8 +434,8 @@ fun RecentlyAddedVideosRow(
                                 video = video,
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .height(67.dp)
-                                    .clip(RoundedCornerShape(10.dp))
+                                    .height(67.dp * cardScale)
+                                    .clip(thumbCorners.toShape())
                             )
                             Box(
                                 modifier = Modifier
@@ -420,7 +449,9 @@ fun RecentlyAddedVideosRow(
                             ) {
                                 Text(
                                     text = formatDuration(video.durationMs),
-                                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        fontSize = 9.sp * fontScale
+                                    ),
                                     color = MaterialTheme.colorScheme.surface
                                 )
                             }
@@ -430,19 +461,23 @@ fun RecentlyAddedVideosRow(
                                 tint = MaterialTheme.colorScheme.surface,
                                 modifier = Modifier
                                     .align(Alignment.Center)
-                                    .size(25.dp)
+                                    .size(25.dp * cardScale)
                             )
                         }
                         Spacer(Modifier.height(6.dp))
                         Text(
                             text = video.displayTitle,
-                            style = MaterialTheme.typography.titleSmall.copy(fontSize = 11.sp),
+                            style = MaterialTheme.typography.titleSmall.copy(
+                                fontSize = 11.sp * fontScale
+                            ),
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
                         Text(
                             text = video.mimeType ?: stringResource(R.string.video_title),
-                            style = MaterialTheme.typography.bodySmall.copy(fontSize = 10.sp),
+                            style = MaterialTheme.typography.bodySmall.copy(
+                                fontSize = 10.sp * fontScale
+                            ),
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis

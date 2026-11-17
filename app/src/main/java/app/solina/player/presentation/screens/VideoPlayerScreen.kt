@@ -161,6 +161,8 @@ import androidx.media3.ui.CaptionStyleCompat
 import androidx.media3.ui.PlayerView
 import androidx.navigation.NavController
 import app.solina.player.R
+import app.solina.player.data.preferences.SeekBarStyleNames
+import app.solina.player.presentation.viewmodel.AppearanceViewModel
 import app.solina.player.presentation.viewmodel.VideoPlayerViewModel
 import app.solina.player.utils.PhoneOrientationPolicy
 import kotlinx.coroutines.currentCoroutineContext
@@ -274,8 +276,11 @@ fun VideoPlayerScreen(
     videoUri: String,
     videoQueue: List<String> = emptyList(),
     startPositionMs: Long = 0L,
-    videoPlayerViewModel: VideoPlayerViewModel = hiltViewModel()
+    videoPlayerViewModel: VideoPlayerViewModel = hiltViewModel(),
+    // Round 15, wave 2, C4: seek-bar style (wavy / classic).
+    appearanceViewModel: AppearanceViewModel = hiltViewModel()
 ) {
+    val appearance by appearanceViewModel.appearance.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val activity = context as? Activity
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -1639,67 +1644,90 @@ fun VideoPlayerScreen(
                             // short line only while dragging). Tap jumps straight
                             // to the tapped point, drag scrubs at 0.5x — the same
                             // scrub behaviour as before, only the look changed.
-                            WavySliderExpressive(
-                                value = {
-                                    if (durationMs > 0) {
-                                        displayPositionMs.toFloat() / durationMs
-                                    } else {
-                                        0f
-                                    }
-                                },
-                                onValueChange = { fraction ->
-                                    scrubbing = true
-                                    val duration = durationMs
-                                    if (duration > 0) {
-                                        val anchorFraction = scrubAnchorFraction
-                                        if (anchorFraction == null) {
-                                            // First move of this scrub: a
-                                            // big jump is a tap — seek
-                                            // straight to the tapped point.
-                                            // A small move starts a 0.5x
-                                            // relative drag from here.
-                                            val currentFraction =
-                                                positionMs.toFloat() / duration
-                                            if (abs(fraction - currentFraction) > 0.25f) {
-                                                scrubAnchorFraction = fraction
-                                                scrubAnchorMs =
-                                                    (fraction * duration).toLong()
-                                                seekPreviewMs =
-                                                    (fraction * duration).toLong()
-                                            } else {
-                                                scrubAnchorFraction = fraction
-                                                scrubAnchorMs = positionMs
-                                                seekPreviewMs = positionMs
-                                            }
+                            // Round 15, wave 2, C4: seek-bar style —
+                            // wavy or classic. The scrub behaviour (tap
+                            // jumps straight to the tapped point, drag
+                            // scrubs at 0.5x) is the same for both; only
+                            // the slider component changes.
+                            val seekFraction = if (durationMs > 0) {
+                                displayPositionMs.toFloat() / durationMs
+                            } else {
+                                0f
+                            }
+                            val onSeekFractionChange: (Float) -> Unit = { fraction ->
+                                scrubbing = true
+                                val duration = durationMs
+                                if (duration > 0) {
+                                    val anchorFraction = scrubAnchorFraction
+                                    if (anchorFraction == null) {
+                                        // First move of this scrub: a
+                                        // big jump is a tap — seek
+                                        // straight to the tapped point.
+                                        // A small move starts a 0.5x
+                                        // relative drag from here.
+                                        val currentFraction =
+                                            positionMs.toFloat() / duration
+                                        if (abs(fraction - currentFraction) > 0.25f) {
+                                            scrubAnchorFraction = fraction
+                                            scrubAnchorMs =
+                                                (fraction * duration).toLong()
+                                            seekPreviewMs =
+                                                (fraction * duration).toLong()
                                         } else {
-                                            val delta = ((fraction - anchorFraction) *
-                                                duration * 0.5f).toLong()
-                                            seekPreviewMs = (scrubAnchorMs + delta)
-                                                .coerceIn(0L, duration)
+                                            scrubAnchorFraction = fraction
+                                            scrubAnchorMs = positionMs
+                                            seekPreviewMs = positionMs
                                         }
+                                    } else {
+                                        val delta = ((fraction - anchorFraction) *
+                                            duration * 0.5f).toLong()
+                                        seekPreviewMs = (scrubAnchorMs + delta)
+                                            .coerceIn(0L, duration)
                                     }
-                                },
-                                onValueChangeFinished = {
-                                    scrubbing = false
-                                    scrubAnchorFraction = null
-                                    if (seekPreviewMs >= 0) {
-                                        videoPlayerViewModel.seekTo(seekPreviewMs)
-                                        positionMs = seekPreviewMs
-                                        seekPreviewMs = -1L
-                                    }
-                                    poke()
-                                },
-                                enabled = durationMs > 0,
-                                activeTrackColor = Color(0xFF8FB8FF),
-                                inactiveTrackColor = Color.White.copy(alpha = 0.4f),
-                                thumbColor = Color.White,
-                                isPlaying = isPlaying,
-                                thumbRadius = 7.dp,
-                                thumbLineHeightWhenInteracting = 16.dp,
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .padding(horizontal = 8.dp)
-                            )
+                                }
+                            }
+                            val onSeekFractionFinished: () -> Unit = {
+                                scrubbing = false
+                                scrubAnchorFraction = null
+                                if (seekPreviewMs >= 0) {
+                                    videoPlayerViewModel.seekTo(seekPreviewMs)
+                                    positionMs = seekPreviewMs
+                                    seekPreviewMs = -1L
+                                }
+                                poke()
+                            }
+                            if (appearance.seekBarStyle == SeekBarStyleNames.CLASSIC) {
+                                Slider(
+                                    value = seekFraction,
+                                    onValueChange = onSeekFractionChange,
+                                    onValueChangeFinished = onSeekFractionFinished,
+                                    enabled = durationMs > 0,
+                                    colors = SliderDefaults.colors(
+                                        thumbColor = Color.White,
+                                        activeTrackColor = Color(0xFF8FB8FF),
+                                        inactiveTrackColor = Color.White.copy(alpha = 0.4f)
+                                    ),
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .padding(horizontal = 8.dp)
+                                )
+                            } else {
+                                WavySliderExpressive(
+                                    value = { seekFraction },
+                                    onValueChange = onSeekFractionChange,
+                                    onValueChangeFinished = onSeekFractionFinished,
+                                    enabled = durationMs > 0,
+                                    activeTrackColor = Color(0xFF8FB8FF),
+                                    inactiveTrackColor = Color.White.copy(alpha = 0.4f),
+                                    thumbColor = Color.White,
+                                    isPlaying = isPlaying,
+                                    thumbRadius = 7.dp,
+                                    thumbLineHeightWhenInteracting = 16.dp,
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .padding(horizontal = 8.dp)
+                                )
+                            }
                             // R15 F1: plain Text — same reason as the
                             // current-time text above (250 ms poll, RTL).
                             CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {

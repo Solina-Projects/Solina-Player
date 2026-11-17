@@ -101,14 +101,22 @@ fun Modifier.glassSurface(
     // R15 F7: minimum tint for this surface (0 = the user's slider
     // value as-is). Bars use 0.25 so text over a busy blurred list
     // never sits on a near-invisible pill.
-    minTintAlpha: Float = 0f
+    minTintAlpha: Float = 0f,
+    // Round 15, wave 2, C5: mini-bars and sheets/dialogs have their
+    // own blur radius + tint. Bars pass false, sheets/dialogs true.
+    useSheetValues: Boolean = false
 ): Modifier {
     if (!enabled || !glass.enabled) return this
     // Read inside the block: slider drags then update the blur
     // without recomposing every animation frame.
     return this.blurSurface {
-        val effectiveTintAlpha = maxOf(glass.tintAlpha, minTintAlpha)
-        radius = glass.radius.dp
+        // Per-surface values (C5): the bar sliders drive the mini
+        // bars, the sheet sliders drive sheets/dialogs; saturation
+        // and refraction stay global.
+        val groupRadius = if (useSheetValues) glass.sheetRadius else glass.miniBarRadius
+        val groupTintAlpha = if (useSheetValues) glass.sheetTintAlpha else glass.miniBarTintAlpha
+        val effectiveTintAlpha = maxOf(groupTintAlpha, minTintAlpha)
+        radius = groupRadius.dp
         tint(tintColor.copy(alpha = effectiveTintAlpha))
         saturation = glass.saturation
         when (glass.style) {
@@ -165,6 +173,27 @@ fun Modifier.glassBar(
     minTintAlpha = 0.25f
 )
 
+/** Glass for a playback bar with per-corner radii (round 15, wave 2, C1). */
+@Composable
+fun Modifier.glassBar(
+    glass: GlassAppearance,
+    tintColor: Color,
+    corners: app.solina.player.data.preferences.CornerRadii,
+    enabled: Boolean
+): Modifier = glassSurface(
+    glass = glass,
+    tintColor = tintColor,
+    enabled = enabled,
+    shape = corners.toShape(),
+    rimCornerDp = maxOf(
+        corners.topStart,
+        corners.topEnd,
+        corners.bottomStart,
+        corners.bottomEnd
+    ).dp,
+    minTintAlpha = 0.25f
+)
+
 /** Glass for a bottom sheet: rounded on top only, capturing the activity behind it. */
 @Composable
 fun Modifier.glassSheet(
@@ -179,7 +208,9 @@ fun Modifier.glassSheet(
         enabled = enabled,
         shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
         rimCornerDp = 28.dp,
-        source = activityView
+        source = activityView,
+        // Round 15, wave 2, C5: sheets use the sheet radius/tint group.
+        useSheetValues = true
     )
 }
 
@@ -197,7 +228,9 @@ fun Modifier.glassDialog(
         enabled = enabled,
         shape = RoundedCornerShape(28.dp),
         rimCornerDp = 28.dp,
-        source = activityView
+        source = activityView,
+        // Round 15, wave 2, C5: dialogs use the sheet radius/tint group.
+        useSheetValues = true
     )
 }
 

@@ -78,6 +78,7 @@ import app.solina.player.presentation.components.VideoThumbnail
 import app.solina.player.presentation.components.rememberRevealedKeys
 import app.solina.player.presentation.navigation.Screen
 import app.solina.player.presentation.navigation.navigateSafely
+import app.solina.player.presentation.viewmodel.AppearanceViewModel
 import app.solina.player.presentation.viewmodel.VideoViewModel
 import app.solina.player.utils.formatDuration
 import java.net.URLDecoder
@@ -741,13 +742,18 @@ private fun VideoFolderGridCard(
 @Composable
 private fun VideoFileRow(
     video: VideoItem,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    // Round 15, wave 2, C2 + C4: row corners + list font size from the
+    // appearance settings (same controls as the music library rows).
+    appearanceViewModel: AppearanceViewModel = hiltViewModel()
 ) {
+    val appearance by appearanceViewModel.appearance.collectAsStateWithLifecycle()
+    val listFontScale = appearance.listFontScale
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick),
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(appearance.listRows.cornerRadiusDp.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainer
         ),
@@ -765,20 +771,26 @@ private fun VideoFileRow(
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = video.displayTitle,
-                    style = MaterialTheme.typography.titleMedium,
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        fontSize = MaterialTheme.typography.titleMedium.fontSize * listFontScale
+                    ),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
                 Spacer(Modifier.height(4.dp))
                 Text(
                     text = formatDuration(video.durationMs),
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = MaterialTheme.typography.bodyMedium.copy(
+                        fontSize = MaterialTheme.typography.bodyMedium.fontSize * listFontScale
+                    ),
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 if (video.mimeType != null) {
                     Text(
                         text = video.mimeType,
-                        style = MaterialTheme.typography.bodySmall,
+                        style = MaterialTheme.typography.bodySmall.copy(
+                            fontSize = MaterialTheme.typography.bodySmall.fontSize * listFontScale
+                        ),
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis

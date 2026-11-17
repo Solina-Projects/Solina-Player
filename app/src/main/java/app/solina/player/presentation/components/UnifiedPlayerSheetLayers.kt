@@ -30,6 +30,7 @@ import androidx.compose.ui.unit.lerp
 import androidx.compose.ui.util.lerp
 import androidx.compose.ui.zIndex
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import app.solina.player.data.preferences.AppearanceSettings
 import androidx.media3.common.util.UnstableApi
 import app.solina.player.data.model.Song
 import app.solina.player.data.preferences.FullPlayerLoadingTweaks
@@ -77,7 +78,10 @@ internal fun BoxScope.UnifiedPlayerMiniAndFullLayers(
     onSongInfoClick: (Song) -> Unit = {},
     // Glass & blur (blur-engine test build, 2026-11-17): the floating
     // bar's glass settings, passed down from UnifiedPlayerSheetV2.
-    glass: GlassAppearance = GlassAppearance()
+    glass: GlassAppearance = GlassAppearance(),
+    // Round 15, wave 2: the whole appearance (font scale, seek-bar
+    // style) for the full player, passed down the same way.
+    appearance: AppearanceSettings = AppearanceSettings()
 ) {
     currentSong?.let { currentSongNonNull ->
         miniPlayerScheme?.let { readyScheme ->
@@ -275,7 +279,8 @@ internal fun BoxScope.UnifiedPlayerMiniAndFullLayers(
                         onRepeatToggle = onRepeatToggle,
                         onFavoriteToggle = onFavoriteToggle,
                         onSongInfoClick = onSongInfoClick,
-                        glass = glass
+                        glass = glass,
+                        appearance = appearance
                     )
                 }
             }
@@ -303,7 +308,10 @@ internal fun UnifiedPlayerPrewarmLayer(
     onQueueDrag: (Float) -> Unit,
     onQueueRelease: (Float, Float) -> Unit,
     // Glass & blur (blur-engine test build, 2026-11-17).
-    glass: GlassAppearance = GlassAppearance()
+    glass: GlassAppearance = GlassAppearance(),
+    // Round 15, wave 2: the whole appearance (font scale, seek-bar
+    // style) for the full player, passed down the same way.
+    appearance: AppearanceSettings = AppearanceSettings()
 ) {
     if (prewarmFullPlayer && currentSong != null) {
         val currentPlaybackQueue by playerViewModel.queueFlow
@@ -370,7 +378,8 @@ internal fun UnifiedPlayerPrewarmLayer(
                     onShuffleToggle = onShuffleToggle,
                     onRepeatToggle = onRepeatToggle,
                     onFavoriteToggle = onFavoriteToggle,
-                    glass = glass
+                    glass = glass,
+                    appearance = appearance
                 )
             }
         }

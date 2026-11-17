@@ -32,7 +32,9 @@ import androidx.compose.ui.draw.blur
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.layout.ContentScale
+import app.solina.player.data.preferences.AppearanceSettings
 import app.solina.player.data.preferences.GlassAppearance
+import app.solina.player.data.preferences.SeekBarStyleNames
 import app.solina.player.presentation.components.SmartImage
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -250,7 +252,11 @@ fun FullPlayerContent(
     onSongInfoClick: (Song) -> Unit = {},
     // Glass & blur (blur-engine test build, 2026-11-17): the Now
     // Playing backdrop settings, passed down from the sheet layers.
-    glass: GlassAppearance = GlassAppearance()
+    glass: GlassAppearance = GlassAppearance(),
+    // Round 15, wave 2: the whole appearance (font scale for the
+    // title/artist metadata, seek-bar style). Defaults keep every
+    // other caller compiling unchanged.
+    appearance: AppearanceSettings = AppearanceSettings()
 ) {
     var retainedSong by remember { mutableStateOf(currentSong) }
     LaunchedEffect(currentSong?.id) {
@@ -609,7 +615,9 @@ fun FullPlayerContent(
             playerOnBaseColor = playerOnBaseColor,
             allowRealtimeUpdates = allowRealtimeUpdates,
             isSheetDragGestureActive = isSheetDragGestureActive,
-            loadingTweaks = loadingTweaks
+            loadingTweaks = loadingTweaks,
+            // Round 15, wave 2, C4: wavy or classic seek bar.
+            seekBarStyle = appearance.seekBarStyle
         )
     }
 
@@ -660,7 +668,9 @@ fun FullPlayerContent(
             onQueueClick = onSongMetadataQueueClick,
             onArtistClick = onSongMetadataArtistClick,
             isPlayingProvider = isPlayingProvider,
-            isLyricsActive = isFoldableTwoPane && foldableRightPane == FoldableRightPane.LYRICS
+            isLyricsActive = isFoldableTwoPane && foldableRightPane == FoldableRightPane.LYRICS,
+            // Round 15, wave 2, C2: title/artist follow the main font scale.
+            fontScale = appearance.fontScale
         )
     }
 
@@ -686,7 +696,9 @@ fun FullPlayerContent(
             chipContentColor = playerAccentColor,
             onQueueClick = onSongMetadataQueueClick,
             onArtistClick = onSongMetadataArtistClick,
-            isPlayingProvider = isPlayingProvider
+            isPlayingProvider = isPlayingProvider,
+            // Round 15, wave 2, C2: title/artist follow the main font scale.
+            fontScale = appearance.fontScale
         )
     }
 
@@ -932,7 +944,9 @@ fun FullPlayerContent(
                             contentDescription = null,
                             modifier = Modifier
                                 .fillMaxSize()
-                                .blur(glass.radius.dp),
+                                // Round 15, wave 2, C5: the backdrop
+                                // blur follows the sheet radius group.
+                                .blur(glass.sheetRadius.dp),
                             shape = RectangleShape,
                             contentScale = ContentScale.Crop,
                             targetSize = coil.size.Size(400, 400),
@@ -1341,7 +1355,9 @@ private fun FullPlayerProgressSection(
     playerOnBaseColor: Color,
     allowRealtimeUpdates: Boolean,
     isSheetDragGestureActive: Boolean,
-    loadingTweaks: FullPlayerLoadingTweaks
+    loadingTweaks: FullPlayerLoadingTweaks,
+    // Round 15, wave 2, C4: wavy or classic seek bar.
+    seekBarStyle: String = SeekBarStyleNames.WAVY
 ) {
     val isMetadataForCurrentSong = playbackMetadataMediaId == song.id
     val audioMimeType = if (isMetadataForCurrentSong) {
@@ -1379,7 +1395,9 @@ private fun FullPlayerProgressSection(
         timeTextColor = playerOnBaseColor,
         allowRealtimeUpdates = allowRealtimeUpdates,
         isSheetDragGestureActive = isSheetDragGestureActive,
-        loadingTweaks = loadingTweaks
+        loadingTweaks = loadingTweaks,
+        // Round 15, wave 2, C4: wavy or classic seek bar.
+        seekBarStyle = seekBarStyle
     )
 }
 
@@ -1450,7 +1468,9 @@ private fun FullPlayerSongMetadataSection(
     onQueueClick: () -> Unit,
     onArtistClick: () -> Unit,
     isPlayingProvider: () -> Boolean = { true },
-    isLyricsActive: Boolean = false
+    isLyricsActive: Boolean = false,
+    // Round 15, wave 2, C2: title/artist follow the main font scale.
+    fontScale: Float = 1f
 ) {
     val shouldDelay = loadingTweaks.delayAll || loadingTweaks.delaySongMetadata
 
@@ -1496,7 +1516,10 @@ private fun FullPlayerSongMetadataSection(
             onClickQueue = onQueueClick,
             onClickArtist = onArtistClick,
             isPlayingProvider = isPlayingProvider,
-            isLyricsActive = isLyricsActive
+            isLyricsActive = isLyricsActive,
+            // Round 15, wave 2, C2: the title/artist metadata follow
+            // the main font size scale.
+            fontScale = fontScale
         )
     }
 }
@@ -1731,7 +1754,9 @@ private fun SongMetadataDisplaySection(
     onClickArtist: () -> Unit,
     modifier: Modifier = Modifier,
     isPlayingProvider: () -> Boolean = { true },
-    isLyricsActive: Boolean = false
+    isLyricsActive: Boolean = false,
+    // Round 15, wave 2, C2: title/artist follow the main font scale.
+    fontScale: Float = 1f
 ) {
     Row(
         modifier
@@ -1755,7 +1780,8 @@ private fun SongMetadataDisplaySection(
                 modifier = Modifier
                     .weight(1f)
                     .align(Alignment.CenterVertically),
-                isPlayingProvider = isPlayingProvider
+                isPlayingProvider = isPlayingProvider,
+                fontScale = fontScale
             )
         }
         
@@ -1914,6 +1940,8 @@ private fun PlayerProgressBarSection(
     allowRealtimeUpdates: Boolean = true,
     isSheetDragGestureActive: Boolean = false,
     loadingTweaks: FullPlayerLoadingTweaks? = null,
+    // Round 15, wave 2, C4: wavy or classic seek bar.
+    seekBarStyle: String = SeekBarStyleNames.WAVY,
     modifier: Modifier = Modifier
 ) {
     val progressSectionHorizontalInset = 0.dp
@@ -2072,7 +2100,8 @@ private fun PlayerProgressBarSection(
                     interactionSource = interactionSource,
                     isPlaying = shouldAnimateWavyProgress,
                     isVisible = isVisible,
-                    trackEdgePadding = progressSectionHorizontalInset
+                    trackEdgePadding = progressSectionHorizontalInset,
+                    seekBarStyle = seekBarStyle
                 )
             }
 
@@ -2099,7 +2128,9 @@ private fun EfficientSlider(
     interactionSource: MutableInteractionSource,
     isPlaying: Boolean,
     isVisible: Boolean,
-    trackEdgePadding: Dp
+    trackEdgePadding: Dp,
+    // Round 15, wave 2, C4: wavy or classic seek bar.
+    seekBarStyle: String = SeekBarStyleNames.WAVY
 ) {
     val haptics = LocalHapticFeedback.current
     val currentOnValueChange = rememberUpdatedState(onValueChange)
@@ -2114,6 +2145,29 @@ private fun EfficientSlider(
             }
             currentOnValueChange.value(newValue)
         }
+    }
+
+    // Classic: a plain M3 Slider with the same seek behaviour (tap
+    // jumps, drag scrubs, haptic steps) — only the look changes.
+    // animatedProgressState already reflects the drag value while
+    // dragging, so committing its current value on release is exact.
+    if (seekBarStyle == SeekBarStyleNames.CLASSIC) {
+        androidx.compose.material3.Slider(
+            value = valueState.value,
+            onValueChange = onValueChangeWithHaptics,
+            onValueChangeFinished = { onValueCommit(valueState.value) },
+            valueRange = 0f..1f,
+            interactionSource = interactionSource,
+            colors = androidx.compose.material3.SliderDefaults.colors(
+                thumbColor = thumbColor,
+                activeTrackColor = activeTrackColor,
+                inactiveTrackColor = inactiveTrackColor
+            ),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 8.dp, horizontal = 0.dp)
+        )
+        return
     }
 
     WavySliderExpressive(
@@ -2384,7 +2438,9 @@ private fun PlayerSongInfo(
     playerViewModel: PlayerViewModel,
     onClickArtist: () -> Unit,
     modifier: Modifier = Modifier,
-    isPlayingProvider: () -> Boolean = { true }
+    isPlayingProvider: () -> Boolean = { true },
+    // Round 15, wave 2, C2: title/artist follow the main font scale.
+    fontScale: Float = 1f
 ) {
     val coroutineScope = rememberCoroutineScope()
     var isNavigatingToArtist by remember { mutableStateOf(false) }
@@ -2394,11 +2450,13 @@ private fun PlayerSongInfo(
     val titleStyle = MaterialTheme.typography.headlineSmall.copy(
         fontWeight = FontWeight.Bold,
         fontFamily = RoundedSans,
+        fontSize = MaterialTheme.typography.headlineSmall.fontSize * fontScale,
         color = textColor
     )
 
     val artistStyle = MaterialTheme.typography.titleMedium.copy(
         letterSpacing = 0.sp,
+        fontSize = MaterialTheme.typography.titleMedium.fontSize * fontScale,
         color = artistTextColor
     )
 

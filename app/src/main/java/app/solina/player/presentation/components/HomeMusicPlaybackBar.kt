@@ -3,7 +3,6 @@ package app.solina.player.presentation.components
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
@@ -83,11 +82,11 @@ fun HomeMusicPlaybackBar(
                 .glassBar(
                     glass = glass,
                     tintColor = barScheme.primaryContainer,
-                    cornerDp = barAppearance.cornerDp,
+                    corners = barAppearance.effectiveCorners,
                     enabled = glassOn
                 )
                 .clickable { onOpenFullPlayer() },
-            shape = RoundedCornerShape(barAppearance.cornerDp.dp),
+            shape = barAppearance.effectiveCorners.toShape(),
             color = if (glassOn) Color.Transparent else barScheme.primaryContainer,
             shadowElevation = 4.dp
         ) {

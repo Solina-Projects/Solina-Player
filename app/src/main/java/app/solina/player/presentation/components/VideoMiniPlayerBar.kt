@@ -207,11 +207,11 @@ fun VideoMiniPlayerBar(
             .glassBar(
                 glass = glass,
                 tintColor = colors.primaryContainer,
-                cornerDp = barAppearance.cornerDp,
+                corners = barAppearance.effectiveCorners,
                 enabled = glassOn
             )
             .clickable { openFullPlayer() },
-        shape = RoundedCornerShape(barAppearance.cornerDp.dp),
+        shape = barAppearance.effectiveCorners.toShape(),
         color = if (glassOn) Color.Transparent else colors.primaryContainer,
         shadowElevation = 4.dp
     ) {
