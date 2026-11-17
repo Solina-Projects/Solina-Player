@@ -31,6 +31,7 @@ import androidx.compose.ui.util.lerp
 import androidx.compose.ui.zIndex
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.solina.player.data.preferences.AppearanceSettings
+import app.solina.player.data.preferences.CornerRadii
 import androidx.media3.common.util.UnstableApi
 import app.solina.player.data.model.Song
 import app.solina.player.data.preferences.FullPlayerLoadingTweaks
@@ -93,6 +94,29 @@ internal fun BoxScope.UnifiedPlayerMiniAndFullLayers(
                         if (playerContentExpansionFraction.value < 0.5f) 1f else 0f
                     }
                 }
+                // Round 16 follow-up: the glass pill follows the
+                // floating bar's corners — the same averaged
+                // top/bottom values the sheet's radius providers use
+                // (V2 scales them with the expansion; the pill fades
+                // out by half expansion, so the collapsed values are
+                // the ones that matter). The old hardcoded 32 clipped
+                // against the sheet: with user corners below 32 the
+                // pill's corners showed sheet background instead of
+                // blur. At the default (top 32 / bottom 10) this
+                // reproduces the old top radius exactly.
+                val floatingCorners =
+                    appearance.effectiveFloatingMusicBar.effectiveCorners
+                val pillTopRadiusDp =
+                    (floatingCorners.topStartDp + floatingCorners.topEndDp) / 2
+                val pillBottomRadiusDp =
+                    (floatingCorners.bottomStartDp + floatingCorners.bottomEndDp) / 2
+                val pillCorners = CornerRadii(
+                    topStartDp = pillTopRadiusDp,
+                    topEndDp = pillTopRadiusDp,
+                    bottomStartDp = pillBottomRadiusDp,
+                    bottomEndDp = pillBottomRadiusDp,
+                    linked = floatingCorners.linked
+                )
                 Box(
                     modifier = Modifier
                         .align(Alignment.TopCenter)
@@ -109,7 +133,7 @@ internal fun BoxScope.UnifiedPlayerMiniAndFullLayers(
                         .glassBar(
                             glass = glass,
                             tintColor = readyScheme.primaryContainer,
-                            cornerDp = 32,
+                            corners = pillCorners,
                             enabled = glass.enabled && glass.miniBars
                         )
                         .graphicsLayer {
