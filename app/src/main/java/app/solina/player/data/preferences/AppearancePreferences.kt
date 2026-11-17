@@ -57,6 +57,74 @@ object AppearanceFontFamilies {
     val ALL = listOf(ROUNDED, VAZIRMATN, SYSTEM)
 }
 
+/**
+ * Glass styles (blur-engine test build, 2026-11-17). "frosted" is plain
+ * blur + tint; "liquid" adds the rim light / refraction glass; "clear"
+ * is a tiny radius with strong refraction (glasswork's "clear glass":
+ * sharp content, bent at the edges).
+ */
+object GlassStyleNames {
+    const val FROSTED = "frosted"
+    const val LIQUID = "liquid"
+    const val CLEAR = "clear"
+
+    val ALL = listOf(FROSTED, LIQUID, CLEAR)
+}
+
+/** Ready-made glass looks: a preset is just a whole [GlassAppearance]. */
+object GlassPresetNames {
+    const val OFF = "off"
+    const val SUBTLE = "subtle"
+    const val FROSTED = "frosted"
+    const val LIQUID = "liquid"
+
+    val ALL = listOf(OFF, SUBTLE, FROSTED, LIQUID)
+}
+
+/**
+ * Glass & blur (blur-engine test build, 2026-11-17): frosted / liquid
+ * glass surfaces, driven by blur-engine's `blurSurface` (RenderEffect
+ * GPU path on API 31+). DEFAULT OFF — glass costs a capture + blur
+ * per surface per frame, and the user must opt in per the test plan.
+ *
+ * Per-surface toggles: mini-player bars, bottom sheets, dialogs &
+ * menus, and the Now Playing background (a static, one-shot blur of
+ * the album art — no per-frame cost). Video-player bars are
+ * deliberately NOT here: video renders on a SurfaceView, which no
+ * blur library can capture, so glass over playing video would show
+ * a black hole; those bars stay on the gradient scrim. Home cards
+ * are skipped too: Home's background is a flat colour and glass
+ * over a flat colour only looks grey.
+ *
+ * The tint colour is NOT stored here: glass tint comes from the
+ * bar/section palette colour at [tintPercent] alpha, so the pink
+ * brand look survives. Refraction is an AGSL shader that only
+ * exists on API 33+; on API 31/32 blur-engine degrades gracefully
+ * to blur + tint + rim light, no crash.
+ */
+@Serializable
+data class GlassAppearance(
+    val enabled: Boolean = false,
+    val miniBars: Boolean = true,
+    val sheets: Boolean = true,
+    val dialogs: Boolean = true,
+    val nowPlayingBackground: Boolean = true,
+    val radiusDp: Int = 24,
+    val tintPercent: Int = 20,
+    val saturationPercent: Int = 130,
+    val style: String = GlassStyleNames.FROSTED,
+    val refractionDp: Int = 14
+) {
+    /** Blur radius, 0–40 dp. */
+    val radius: Int get() = radiusDp.coerceIn(0, 40)
+    /** Tint opacity, 0–60%. */
+    val tintAlpha: Float get() = (tintPercent.coerceIn(0, 60) / 100f)
+    /** Saturation, 100–160% (1.0–1.6x; glasswork's Lumno glass is 1.6–1.8x). */
+    val saturation: Float get() = (saturationPercent.coerceIn(100, 160) / 100f)
+    /** Refraction distance, 0–26 dp (liquid / clear glass only, API 33+). */
+    val refraction: Int get() = refractionDp.coerceIn(0, 26)
+}
+
 /** Ready-made looks: a preset is just a whole [AppearanceSettings]. */
 object AppearancePresetNames {
     const val DEFAULT = "default"
@@ -112,7 +180,9 @@ data class AppearanceSettings(
     /** App-wide font family (applied through the theme typography). */
     val fontFamily: String = AppearanceFontFamilies.ROUNDED,
     /** Font size scale for the customisable surfaces (85–125%). */
-    val fontScalePercent: Int = 100
+    val fontScalePercent: Int = 100,
+    /** Glass & blur (blur-engine test build): default OFF. */
+    val glass: GlassAppearance = GlassAppearance()
 ) {
     val fontScale: Float get() = (fontScalePercent.coerceIn(85, 125) / 100f)
 }
@@ -158,6 +228,36 @@ class AppearancePreferences @Inject constructor(
             )
 
             else -> AppearanceSettings()
+        }
+
+        /** A glass preset touches ONLY the glass block (other settings stay). */
+        fun glassPresetSettings(preset: String): GlassAppearance = when (preset) {
+            GlassPresetNames.SUBTLE -> GlassAppearance(
+                enabled = true,
+                radiusDp = 16,
+                tintPercent = 15,
+                saturationPercent = 120,
+                style = GlassStyleNames.FROSTED
+            )
+
+            GlassPresetNames.FROSTED -> GlassAppearance(
+                enabled = true,
+                radiusDp = 28,
+                tintPercent = 25,
+                saturationPercent = 130,
+                style = GlassStyleNames.FROSTED
+            )
+
+            GlassPresetNames.LIQUID -> GlassAppearance(
+                enabled = true,
+                radiusDp = 28,
+                tintPercent = 14,
+                saturationPercent = 130,
+                style = GlassStyleNames.LIQUID,
+                refractionDp = 14
+            )
+
+            else -> GlassAppearance()
         }
     }
 
@@ -212,6 +312,8 @@ class AppearancePreferences @Inject constructor(
             fontScalePercent = 100
         )
     }
+
+    suspend fun resetGlass() = update { it.copy(glass = GlassAppearance()) }
 
     suspend fun resetAll() {
         dataStore.edit { preferences ->

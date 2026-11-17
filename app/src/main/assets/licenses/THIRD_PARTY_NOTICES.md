@@ -38,6 +38,7 @@ The full text of every license listed here is bundled in `licenses/texts/`.
 | Vorbis Java | Nick Burch (Gagravarr) | Apache 2.0 |
 | JSyn (via Media3 MIDI) | Phil Burk · `https://github.com/philburk/jsyn` | Apache 2.0 |
 | Wavy Slider | Mahdi Hosseinzadeh (Mahozad) | Apache 2.0 |
+| blur-engine (`blur-compose`) | MrSluffy · `https://github.com/MrSluffy/blur-engine` | Apache 2.0 |
 | Compose Reorderable | Calvin Liang | Apache 2.0 |
 | Capturable | Shreyas Patil | MIT License |
 | Smooth Corner Rect Android Compose | racra · `https://github.com/racra/smooth-corner-rect-android-compose` | MIT License |

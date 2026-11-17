@@ -40,6 +40,7 @@ import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButtonDefaults
+import app.solina.player.presentation.components.GlassModalBottomSheet
 import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -331,7 +332,7 @@ fun OptionSelectionSheet(
         optionDescriptions: Map<String, String> = emptyMap(),
         disabledOptionKeys: Set<String> = emptySet()
 ) {
-    androidx.compose.material3.ModalBottomSheet(
+    GlassModalBottomSheet(
         onDismissRequest = onDismiss,
         containerColor = MaterialTheme.colorScheme.surface,
         contentColor = MaterialTheme.colorScheme.onSurface

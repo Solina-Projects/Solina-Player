@@ -50,7 +50,7 @@ fun StreamingProviderSheet(
     val providerSegmentContainerShape = RoundedCornerShape(20.dp)
     val providerSegmentItemShape = RoundedCornerShape(8.dp)
 
-    ModalBottomSheet(
+    GlassModalBottomSheet(
         onDismissRequest = onDismissRequest,
         sheetState = sheetState,
         shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),

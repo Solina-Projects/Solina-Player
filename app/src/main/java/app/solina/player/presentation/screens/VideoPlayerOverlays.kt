@@ -51,7 +51,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
+import app.solina.player.presentation.components.GlassModalBottomSheet
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
@@ -66,6 +66,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import app.solina.player.presentation.components.glassDialog
+import app.solina.player.presentation.viewmodel.AppearanceViewModel
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -140,7 +144,7 @@ fun VideoGridMenuSheet(
         GridMenuEntry(VideoGridAction.TUTORIAL, Icons.Rounded.Lightbulb, R.string.video_grid_menu_tutorial),
         GridMenuEntry(VideoGridAction.MORE, Icons.AutoMirrored.Rounded.ArrowForwardIos, R.string.video_grid_menu_more)
     )
-    ModalBottomSheet(
+    GlassModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
         containerColor = Color.Black.copy(alpha = 0.88f),
@@ -302,7 +306,7 @@ fun VideoSubtitlePanelSheet(
     onBackground: (Int) -> Unit,
     onDismiss: () -> Unit
 ) {
-    ModalBottomSheet(
+    GlassModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
         containerColor = Color.Black.copy(alpha = 0.88f),
@@ -540,11 +544,26 @@ private fun VideoPlayerDialog(
     onDismissRequest: () -> Unit,
     title: String,
     onConfirm: (() -> Unit)? = null,
+    appearanceViewModel: AppearanceViewModel = hiltViewModel(),
     content: @Composable () -> Unit
 ) {
+    // Glass & blur (blur-engine test build, 2026-11-17): the dialog
+    // becomes a glass card when the master switch and the dialogs
+    // toggle are on. Note the video behind it is a SurfaceView, which
+    // no blur library can capture — over video the glass shows its
+    // tint over a dark backdrop (the video area stays a hole in the
+    // capture); over the library it blurs for real.
+    val appearance by appearanceViewModel.appearance.collectAsStateWithLifecycle()
+    val glass = appearance.glass
+    val glassOn = glass.enabled && glass.dialogs
     AlertDialog(
         onDismissRequest = onDismissRequest,
-        containerColor = Color.Black.copy(alpha = 0.88f),
+        modifier = Modifier.glassDialog(
+            glass = glass,
+            tintColor = Color.Black,
+            enabled = glassOn
+        ),
+        containerColor = if (glassOn) Color.Transparent else Color.Black.copy(alpha = 0.88f),
         titleContentColor = Color.White,
         textContentColor = Color.White,
         title = { Text(text = title) },

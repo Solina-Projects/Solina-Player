@@ -4,6 +4,7 @@ import android.widget.Toast
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateColorAsState
 import androidx.compose.animation.core.keyframes
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
@@ -61,6 +62,8 @@ import androidx.media3.common.util.UnstableApi
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import app.solina.player.presentation.viewmodel.AppearanceViewModel
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -129,7 +132,11 @@ fun UnifiedPlayerSheetV2(
     containerWidth: Dp = Dp.Unspecified,
     // Appearance customisation (bug-fix round 2026-11-17, item 6):
     // a chosen floating-music-bar colour; null = follow the theme.
-    miniPlayerSchemeOverride: ColorScheme? = null
+    miniPlayerSchemeOverride: ColorScheme? = null,
+    // Glass & blur (blur-engine test build, 2026-11-17): the floating
+    // bar's glass settings; also drives the player-area background
+    // transparency below.
+    appearanceViewModel: AppearanceViewModel = hiltViewModel()
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -586,6 +593,22 @@ fun UnifiedPlayerSheetV2(
     val miniReadyAlpha = sheetThemeState.miniReadyAlpha
     val miniAppearScale = sheetThemeState.miniAppearScale
     val playerAreaBackground = sheetThemeState.playerAreaBackground
+    // Glass & blur (blur-engine test build, 2026-11-17): the pill
+    // background of the floating mini bar IS this player-area
+    // background, so for the glass to show through it must go
+    // transparent while the sheet is collapsed. The colour animates
+    // (no pop) and flips back to solid as the full player expands —
+    // the mini bar has already faded out by then.
+    val appearance by appearanceViewModel.appearance.collectAsStateWithLifecycle()
+    val floatingGlassOn = appearance.glass.enabled && appearance.glass.miniBars
+    val animatedPlayerAreaBackground by animateColorAsState(
+        targetValue = if (floatingGlassOn && playerContentExpansionFraction.value < 0.5f) {
+            Color.Transparent
+        } else {
+            playerAreaBackground
+        },
+        label = "playerAreaBackground"
+    )
     val isDragging = sheetBackAndDragState.isDragging
     val visualCardShadowElevation by remember(showQueueSheet, miniReadyAlpha, isDragging) {
         derivedStateOf {
@@ -708,7 +731,7 @@ fun UnifiedPlayerSheetV2(
                                 clip = false
                             )
                             .background(
-                                color = playerAreaBackground,
+                                color = animatedPlayerAreaBackground,
                                 shape = sheetInteractionState.playerShadowShape
                             )
                             .clip(sheetInteractionState.playerShadowShape)
@@ -794,7 +817,10 @@ fun UnifiedPlayerSheetV2(
                                 onQueueDragStart = sheetActionHandlers.beginQueueDrag,
                                 onQueueDrag = sheetActionHandlers.dragQueueBy,
                                 onQueueRelease = sheetActionHandlers.endQueueDrag,
-                                onSongInfoClick = { song -> sheetActionHandlers.onSelectedSongForInfoChange(song) }
+                                onSongInfoClick = { song -> sheetActionHandlers.onSelectedSongForInfoChange(song) },
+                                // Glass & blur (blur-engine test build): the
+                                // floating bar's glass settings.
+                                glass = appearance.glass
                             )
                         }
                     }
@@ -816,7 +842,9 @@ fun UnifiedPlayerSheetV2(
                     onShowQueueClicked = sheetActionHandlers.openQueueSheet,
                     onQueueDragStart = sheetActionHandlers.beginQueueDrag,
                     onQueueDrag = sheetActionHandlers.dragQueueBy,
-                    onQueueRelease = sheetActionHandlers.endQueueDrag
+                    onQueueRelease = sheetActionHandlers.endQueueDrag,
+                    // Glass & blur (blur-engine test build).
+                    glass = appearance.glass
                 )
             }
 

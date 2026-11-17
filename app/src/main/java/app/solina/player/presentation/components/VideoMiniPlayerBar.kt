@@ -181,6 +181,12 @@ fun VideoMiniPlayerBar(
     val colors = effectivePalette(barAppearance.palette, sectionPaletteName)
         ?.let { MaterialTheme.colorScheme.withPalette(it) }
         ?: MaterialTheme.colorScheme
+    // Glass & blur (blur-engine test build, 2026-11-17): when the
+    // master switch and the mini-bars toggle are on, the pill goes
+    // transparent and the blur behind it shows through, tinted with
+    // the bar's own palette colour so the pink look survives.
+    val glass = appearance.glass
+    val glassOn = glass.enabled && glass.miniBars
     val hapticFeedback = LocalHapticFeedback.current
     val previousInteraction = remember { MutableInteractionSource() }
     val playPauseInteraction = remember { MutableInteractionSource() }
@@ -196,9 +202,15 @@ fun VideoMiniPlayerBar(
         modifier = modifier
             .fillMaxWidth()
             .height(barHeight)
+            .glassBar(
+                glass = glass,
+                tintColor = colors.primaryContainer,
+                cornerDp = barAppearance.cornerDp,
+                enabled = glassOn
+            )
             .clickable { openFullPlayer() },
         shape = RoundedCornerShape(barAppearance.cornerDp.dp),
-        color = colors.primaryContainer,
+        color = if (glassOn) Color.Transparent else colors.primaryContainer,
         shadowElevation = 4.dp
     ) {
         Box(modifier = Modifier.fillMaxSize()) {

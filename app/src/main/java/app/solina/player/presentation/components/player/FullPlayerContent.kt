@@ -28,6 +28,11 @@ import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.ui.draw.blur
+import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.layout.ContentScale
+import app.solina.player.data.preferences.GlassAppearance
+import app.solina.player.presentation.components.SmartImage
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.aspectRatio
@@ -241,7 +246,10 @@ fun FullPlayerContent(
     onShuffleToggle: () -> Unit,
     onRepeatToggle: () -> Unit,
     onFavoriteToggle: () -> Unit,
-    onSongInfoClick: (Song) -> Unit = {}
+    onSongInfoClick: (Song) -> Unit = {},
+    // Glass & blur (blur-engine test build, 2026-11-17): the Now
+    // Playing backdrop settings, passed down from the sheet layers.
+    glass: GlassAppearance = GlassAppearance()
 ) {
     var retainedSong by remember { mutableStateOf(currentSong) }
     LaunchedEffect(currentSong?.id) {
@@ -887,6 +895,33 @@ fun FullPlayerContent(
                 .fillMaxSize()
                 .graphicsLayer { alpha = contentAlpha }
         ) {
+            // Glass & blur (blur-engine test build, 2026-11-17):
+            // Now Playing background — a static, one-shot blur of the
+            // album art as the backdrop. Native Modifier.blur (one GPU
+            // blur per artwork change, no per-frame capture), darkened
+            // so the text stays readable. Off by default; no art means
+            // no backdrop, the normal background shows instead.
+            val artUri = song.albumArtUriString?.takeIf { it.isNotBlank() }
+            if (glass.enabled && glass.nowPlayingBackground && artUri != null) {
+                Box(modifier = Modifier.fillMaxSize()) {
+                    SmartImage(
+                        model = artUri,
+                        contentDescription = null,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .blur(glass.radius.dp),
+                        shape = RectangleShape,
+                        contentScale = ContentScale.Crop,
+                        targetSize = coil.size.Size(400, 400),
+                        placeHolderBackgroundColor = Color.Transparent
+                    )
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(Color.Black.copy(alpha = 0.45f))
+                    )
+                }
+            }
             if (isFoldableTwoPane) {
                 FullPlayerTwoPaneFoldableContent(
                     paddingValues = paddingValues,

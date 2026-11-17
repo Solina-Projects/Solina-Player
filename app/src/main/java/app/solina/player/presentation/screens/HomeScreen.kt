@@ -43,7 +43,7 @@ import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
+import app.solina.player.presentation.components.GlassModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -899,7 +899,7 @@ fun HomeScreen(
         }
     }
     if (showOptionsBottomSheet) {
-        ModalBottomSheet(
+        GlassModalBottomSheet(
             onDismissRequest = { showOptionsBottomSheet = false },
             sheetState = sheetState
         ) {
@@ -918,7 +918,7 @@ fun HomeScreen(
         }
     }
     if (showChangelogBottomSheet) {
-        ModalBottomSheet(
+        GlassModalBottomSheet(
             onDismissRequest = { showChangelogBottomSheet = false },
             sheetState = sheetState
         ) {
@@ -926,7 +926,7 @@ fun HomeScreen(
         }
     }
     if (showBetaInfoBottomSheet) {
-        ModalBottomSheet(
+        GlassModalBottomSheet(
             onDismissRequest = { showBetaInfoBottomSheet = false },
             sheetState = betaSheetState,
         ) {

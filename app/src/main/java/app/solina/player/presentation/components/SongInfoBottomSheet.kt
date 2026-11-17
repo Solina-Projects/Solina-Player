@@ -336,7 +336,7 @@ fun SongInfoBottomSheet(
         heightAnimationEnabled = true
     }
 
-    ModalBottomSheet(
+    GlassModalBottomSheet(
         onDismissRequest = {
             if (!showEditSheet) {
                 onDismiss()

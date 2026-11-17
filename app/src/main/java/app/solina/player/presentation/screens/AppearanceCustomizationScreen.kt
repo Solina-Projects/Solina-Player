@@ -48,6 +48,8 @@ import app.solina.player.data.preferences.AppearancePaletteNames
 import app.solina.player.data.preferences.AppearancePresetNames
 import app.solina.player.data.preferences.AppThemeMode
 import app.solina.player.data.preferences.BarAppearance
+import app.solina.player.data.preferences.GlassPresetNames
+import app.solina.player.data.preferences.GlassStyleNames
 import app.solina.player.presentation.components.appearancePaletteColors
 import app.solina.player.presentation.viewmodel.AppearanceViewModel
 
@@ -222,6 +224,128 @@ fun AppearanceCustomizationScreen(
                 }
             }
 
+            // ---- Glass & blur (blur-engine test build, 2026-11-17) ----
+            item(key = "appearance_glass") {
+                val glass = appearance.glass
+                AppearanceSectionCard(
+                    title = stringResource(R.string.appearance_glass_title),
+                    onReset = { viewModel.resetGlass() }
+                ) {
+                    Text(
+                        text = stringResource(R.string.appearance_glass_subtitle),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            text = stringResource(R.string.appearance_glass_enable),
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                        Switch(
+                            checked = glass.enabled,
+                            onCheckedChange = {
+                                viewModel.setGlass(glass.copy(enabled = it))
+                            }
+                        )
+                    }
+                    ChoiceChips(
+                        options = listOf(
+                            GlassPresetNames.OFF to stringResource(R.string.appearance_glass_preset_off),
+                            GlassPresetNames.SUBTLE to stringResource(R.string.appearance_glass_preset_subtle),
+                            GlassPresetNames.FROSTED to stringResource(R.string.appearance_glass_preset_frosted),
+                            GlassPresetNames.LIQUID to stringResource(R.string.appearance_glass_preset_liquid)
+                        ),
+                        selected = null,
+                        onSelect = { viewModel.applyGlassPreset(it) },
+                        label = stringResource(R.string.appearance_glass_preset_title)
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    GlassToggleRow(
+                        label = stringResource(R.string.appearance_glass_mini_bars),
+                        checked = glass.miniBars,
+                        enabled = glass.enabled,
+                        onChange = { viewModel.setGlass(glass.copy(miniBars = it)) }
+                    )
+                    GlassToggleRow(
+                        label = stringResource(R.string.appearance_glass_sheets),
+                        checked = glass.sheets,
+                        enabled = glass.enabled,
+                        onChange = { viewModel.setGlass(glass.copy(sheets = it)) }
+                    )
+                    GlassToggleRow(
+                        label = stringResource(R.string.appearance_glass_dialogs),
+                        checked = glass.dialogs,
+                        enabled = glass.enabled,
+                        onChange = { viewModel.setGlass(glass.copy(dialogs = it)) }
+                    )
+                    GlassToggleRow(
+                        label = stringResource(R.string.appearance_glass_now_playing),
+                        checked = glass.nowPlayingBackground,
+                        enabled = glass.enabled,
+                        onChange = {
+                            viewModel.setGlass(glass.copy(nowPlayingBackground = it))
+                        }
+                    )
+                    ChoiceChips(
+                        options = listOf(
+                            GlassStyleNames.FROSTED to stringResource(R.string.appearance_glass_style_frosted),
+                            GlassStyleNames.LIQUID to stringResource(R.string.appearance_glass_style_liquid),
+                            GlassStyleNames.CLEAR to stringResource(R.string.appearance_glass_style_clear)
+                        ),
+                        selected = glass.style,
+                        onSelect = { viewModel.setGlass(glass.copy(style = it)) },
+                        label = stringResource(R.string.appearance_glass_style)
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    DpSlider(
+                        label = stringResource(R.string.appearance_glass_radius),
+                        value = glass.radiusDp,
+                        range = 0..40,
+                        onChange = { viewModel.setGlass(glass.copy(radiusDp = it)) },
+                        enabled = glass.enabled
+                    )
+                    PercentSlider(
+                        label = stringResource(R.string.appearance_glass_tint),
+                        value = glass.tintPercent,
+                        range = 0..60,
+                        onChange = { viewModel.setGlass(glass.copy(tintPercent = it)) },
+                        enabled = glass.enabled
+                    )
+                    PercentSlider(
+                        label = stringResource(R.string.appearance_glass_saturation),
+                        value = glass.saturationPercent,
+                        range = 100..160,
+                        onChange = {
+                            viewModel.setGlass(glass.copy(saturationPercent = it))
+                        },
+                        enabled = glass.enabled
+                    )
+                    DpSlider(
+                        label = stringResource(R.string.appearance_glass_refraction),
+                        value = glass.refractionDp,
+                        range = 0..26,
+                        onChange = { viewModel.setGlass(glass.copy(refractionDp = it)) },
+                        enabled = glass.enabled && glass.style == GlassStyleNames.LIQUID
+                    )
+                    Text(
+                        text = stringResource(R.string.appearance_glass_refraction_note),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        text = stringResource(R.string.appearance_glass_video_note),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
             // ---- Section colours ----
             item(key = "appearance_section_colors") {
                 AppearanceSectionCard(
@@ -312,6 +436,31 @@ private fun AppearanceSectionCard(
             Spacer(Modifier.height(4.dp))
             content()
         }
+    }
+}
+
+/** One glass per-surface toggle: label + switch. */
+@Composable
+private fun GlassToggleRow(
+    label: String,
+    checked: Boolean,
+    enabled: Boolean,
+    onChange: (Boolean) -> Unit
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyMedium
+        )
+        Switch(
+            checked = checked,
+            onCheckedChange = onChange,
+            enabled = enabled
+        )
     }
 }
 

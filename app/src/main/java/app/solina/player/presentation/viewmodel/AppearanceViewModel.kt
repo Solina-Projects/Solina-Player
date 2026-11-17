@@ -6,6 +6,7 @@ import app.solina.player.data.preferences.AppearancePreferences
 import app.solina.player.data.preferences.AppearanceSettings
 import app.solina.player.data.preferences.BarAppearance
 import app.solina.player.data.preferences.CardAppearance
+import app.solina.player.data.preferences.GlassAppearance
 import app.solina.player.data.preferences.ThemePreferencesRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
@@ -84,6 +85,13 @@ class AppearanceViewModel @Inject constructor(
     fun setFontScalePercent(percent: Int) =
         update { it.copy(fontScalePercent = percent.coerceIn(85, 125)) }
 
+    fun setGlass(value: GlassAppearance) =
+        update { it.copy(glass = value) }
+
+    fun applyGlassPreset(preset: String) = update {
+        it.copy(glass = AppearancePreferences.glassPresetSettings(preset))
+    }
+
     fun resetHomeMusicBar() = viewModelScope.launch { repository.resetHomeMusicBar() }
     fun resetHomeVideoBar() = viewModelScope.launch { repository.resetHomeVideoBar() }
     fun resetSectionVideoBar() = viewModelScope.launch { repository.resetSectionVideoBar() }
@@ -91,5 +99,6 @@ class AppearanceViewModel @Inject constructor(
     fun resetHomeCards() = viewModelScope.launch { repository.resetHomeCards() }
     fun resetSectionColors() = viewModelScope.launch { repository.resetSectionColors() }
     fun resetTypography() = viewModelScope.launch { repository.resetTypography() }
+    fun resetGlass() = viewModelScope.launch { repository.resetGlass() }
     fun resetAll() = viewModelScope.launch { repository.resetAll() }
 }

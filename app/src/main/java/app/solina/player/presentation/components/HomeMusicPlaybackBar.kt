@@ -10,6 +10,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -67,15 +68,27 @@ fun HomeMusicPlaybackBar(
     val barScheme = effectivePalette(barAppearance.palette, appearance.homeSectionPalette)
         ?.let { MaterialTheme.colorScheme.withPalette(it) }
         ?: MaterialTheme.colorScheme
+    // Glass & blur (blur-engine test build, 2026-11-17): when the
+    // master switch and the mini-bars toggle are on, the pill goes
+    // transparent and the blur behind it shows through, tinted with
+    // the bar's own palette colour so the pink look survives.
+    val glass = appearance.glass
+    val glassOn = glass.enabled && glass.miniBars
 
     CompositionLocalProvider(LocalMaterialTheme provides barScheme) {
         Surface(
             modifier = modifier
                 .fillMaxWidth()
                 .height(barHeight)
+                .glassBar(
+                    glass = glass,
+                    tintColor = barScheme.primaryContainer,
+                    cornerDp = barAppearance.cornerDp,
+                    enabled = glassOn
+                )
                 .clickable { onOpenFullPlayer() },
             shape = RoundedCornerShape(barAppearance.cornerDp.dp),
-            color = barScheme.primaryContainer,
+            color = if (glassOn) Color.Transparent else barScheme.primaryContainer,
             shadowElevation = 4.dp
         ) {
             MiniPlayerContentInternal(

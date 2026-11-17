@@ -439,4 +439,28 @@
     <string name="appearance_palette_purple">بنفش</string>
     <string name="appearance_palette_orange">نارنجی</string>
     <string name="appearance_palette_teal">فیروزه‌ای</string>
+
+    <!-- شیشه و تاری (بیلد تست blur-engine) -->
+    <string name="appearance_glass_title">شیشه و تاری</string>
+    <string name="appearance_glass_subtitle">سطح‌های شیشه‌ای مات و مایع. پیش‌فرض خاموش است — شیشه برای هر سطح یک تاری هزینه دارد، پس فقط جایی که دوست داری روشنش کن.</string>
+    <string name="appearance_glass_enable">افکت‌های شیشه‌ای</string>
+    <string name="appearance_glass_mini_bars">نوارهای مینی‌پلیر</string>
+    <string name="appearance_glass_sheets">شیت‌های پایینی</string>
+    <string name="appearance_glass_dialogs">دیالوگ‌ها و منوها</string>
+    <string name="appearance_glass_now_playing">پس‌زمینه در حال پخش</string>
+    <string name="appearance_glass_radius">شدت تاری</string>
+    <string name="appearance_glass_tint">شدت رنگ</string>
+    <string name="appearance_glass_saturation">اشباع رنگ</string>
+    <string name="appearance_glass_refraction">شکست نور</string>
+    <string name="appearance_glass_refraction_note">فقط شیشه مایع · اندروید ۱۳ به بالا</string>
+    <string name="appearance_glass_style">سبک شیشه</string>
+    <string name="appearance_glass_style_frosted">مات</string>
+    <string name="appearance_glass_style_liquid">شیشه مایع</string>
+    <string name="appearance_glass_style_clear">شیشه شفاف</string>
+    <string name="appearance_glass_preset_title">آماده‌های شیشه</string>
+    <string name="appearance_glass_preset_off">خاموش</string>
+    <string name="appearance_glass_preset_subtle">ملایم</string>
+    <string name="appearance_glass_preset_frosted">مات</string>
+    <string name="appearance_glass_preset_liquid">مایع</string>
+    <string name="appearance_glass_video_note">نوارهای پخش‌کننده ویدیو ساده می‌مانند: ویدیو را نمی‌توان تار کرد، پس شیشه روی ویدیوی در حال پخش یک حفره سیاه نشان می‌دهد.</string>
 </resources>

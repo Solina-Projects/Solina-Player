@@ -33,6 +33,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.media3.common.util.UnstableApi
 import app.solina.player.data.model.Song
 import app.solina.player.data.preferences.FullPlayerLoadingTweaks
+import app.solina.player.data.preferences.GlassAppearance
 import app.solina.player.presentation.components.player.FullPlayerContent
 import app.solina.player.presentation.components.scoped.FullPlayerVisualState
 import app.solina.player.presentation.components.scoped.miniPlayerLayerOffsetXPx
@@ -73,7 +74,10 @@ internal fun BoxScope.UnifiedPlayerMiniAndFullLayers(
     onQueueDragStart: () -> Unit,
     onQueueDrag: (Float) -> Unit,
     onQueueRelease: (Float, Float) -> Unit,
-    onSongInfoClick: (Song) -> Unit = {}
+    onSongInfoClick: (Song) -> Unit = {},
+    // Glass & blur (blur-engine test build, 2026-11-17): the floating
+    // bar's glass settings, passed down from UnifiedPlayerSheetV2.
+    glass: GlassAppearance = GlassAppearance()
 ) {
     currentSong?.let { currentSongNonNull ->
         miniPlayerScheme?.let { readyScheme ->
@@ -90,6 +94,20 @@ internal fun BoxScope.UnifiedPlayerMiniAndFullLayers(
                         .align(Alignment.TopCenter)
                         .fillMaxWidth()
                         .height(MiniPlayerHeight)
+                        // Glass & blur (blur-engine test build,
+                        // 2026-11-17): the floating mini bar is a glass
+                        // pill when the master switch and the mini-bars
+                        // toggle are on. Its background is the player
+                        // area background, which V2 already fades to
+                        // transparent while collapsed, so the blur of
+                        // the list behind shows through, tinted with
+                        // the bar's own palette colour.
+                        .glassBar(
+                            glass = glass,
+                            tintColor = readyScheme.primaryContainer,
+                            cornerDp = 32,
+                            enabled = glass.enabled && glass.miniBars
+                        )
                         .graphicsLayer {
                             alpha = (1f - playerContentExpansionFraction.value * 2f)
                                 .coerceIn(0f, 1f)
@@ -255,7 +273,8 @@ internal fun BoxScope.UnifiedPlayerMiniAndFullLayers(
                         onShuffleToggle = onShuffleToggle,
                         onRepeatToggle = onRepeatToggle,
                         onFavoriteToggle = onFavoriteToggle,
-                        onSongInfoClick = onSongInfoClick
+                        onSongInfoClick = onSongInfoClick,
+                        glass = glass
                     )
                 }
             }
@@ -281,7 +300,9 @@ internal fun UnifiedPlayerPrewarmLayer(
     onShowQueueClicked: () -> Unit,
     onQueueDragStart: () -> Unit,
     onQueueDrag: (Float) -> Unit,
-    onQueueRelease: (Float, Float) -> Unit
+    onQueueRelease: (Float, Float) -> Unit,
+    // Glass & blur (blur-engine test build, 2026-11-17).
+    glass: GlassAppearance = GlassAppearance()
 ) {
     if (prewarmFullPlayer && currentSong != null) {
         val currentPlaybackQueue by playerViewModel.queueFlow
@@ -347,7 +368,8 @@ internal fun UnifiedPlayerPrewarmLayer(
                     onCollapse = {},
                     onShuffleToggle = onShuffleToggle,
                     onRepeatToggle = onRepeatToggle,
-                    onFavoriteToggle = onFavoriteToggle
+                    onFavoriteToggle = onFavoriteToggle,
+                    glass = glass
                 )
             }
         }

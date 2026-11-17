@@ -439,4 +439,28 @@
     <string name="appearance_palette_purple">Purple</string>
     <string name="appearance_palette_orange">Orange</string>
     <string name="appearance_palette_teal">Teal</string>
+
+    <!-- Glass & blur (blur-engine test build) -->
+    <string name="appearance_glass_title">Glass &amp; blur</string>
+    <string name="appearance_glass_subtitle">Frosted and liquid-glass surfaces. Off by default — glass costs a blur per surface, so turn it on only where you like it.</string>
+    <string name="appearance_glass_enable">Glass effects</string>
+    <string name="appearance_glass_mini_bars">Mini-player bars</string>
+    <string name="appearance_glass_sheets">Bottom sheets</string>
+    <string name="appearance_glass_dialogs">Dialogs &amp; menus</string>
+    <string name="appearance_glass_now_playing">Now Playing background</string>
+    <string name="appearance_glass_radius">Blur radius</string>
+    <string name="appearance_glass_tint">Tint strength</string>
+    <string name="appearance_glass_saturation">Saturation</string>
+    <string name="appearance_glass_refraction">Refraction</string>
+    <string name="appearance_glass_refraction_note">Liquid glass only · Android 13+</string>
+    <string name="appearance_glass_style">Glass style</string>
+    <string name="appearance_glass_style_frosted">Frosted</string>
+    <string name="appearance_glass_style_liquid">Liquid glass</string>
+    <string name="appearance_glass_style_clear">Clear glass</string>
+    <string name="appearance_glass_preset_title">Glass presets</string>
+    <string name="appearance_glass_preset_off">Off</string>
+    <string name="appearance_glass_preset_subtle">Subtle</string>
+    <string name="appearance_glass_preset_frosted">Frosted</string>
+    <string name="appearance_glass_preset_liquid">Liquid</string>
+    <string name="appearance_glass_video_note">Video-player bars stay solid: video can\'t be blurred, so glass over playing video would show a black hole.</string>
 </resources>
