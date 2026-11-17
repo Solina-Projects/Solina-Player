@@ -101,7 +101,8 @@ fun HomeMusicPlaybackBar(
                 onNext = { playerViewModel.nextSong() },
                 modifier = Modifier.fillMaxWidth(),
                 canScroll = stablePlayerState.isPlaying,
-                contentHeight = barHeight
+                contentHeight = barHeight,
+                glassOn = glassOn
             )
         }
     }

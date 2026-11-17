@@ -12,6 +12,7 @@ import androidx.media3.common.Tracks
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.mediacodec.MediaCodecSelector
 import app.solina.player.data.model.ExternalVideoSubtitle
 import app.solina.player.data.model.VideoItem
 import app.solina.player.data.preferences.UserPreferencesRepository
@@ -100,6 +101,16 @@ class VideoPlaybackHolder @Inject constructor(
     private val _playbackSpeed = MutableStateFlow(1f)
     val playbackSpeed: StateFlow<Float> = _playbackSpeed.asStateFlow()
 
+    /**
+     * Decoder choice (round 15, wave 1, B2) and resume behaviour (B5),
+     * from the Video settings category. Cached here so [buildPlayer] and
+     * [play]/[playQueue] can read them synchronously; defaults match
+     * today's behaviour ("auto" / "always") until the DataStore value
+     * loads.
+     */
+    private val _decoderMode = MutableStateFlow("auto")
+    private val _resumeBehaviour = MutableStateFlow("always")
+
     private val _volume = MutableStateFlow(1f)
     val volume: StateFlow<Float> = _volume.asStateFlow()
 
@@ -179,6 +190,16 @@ class VideoPlaybackHolder @Inject constructor(
             _playbackSpeed.value = userPreferencesRepository.videoPlaybackSpeedFlow.first()
             _volume.value = userPreferencesRepository.videoVolumeFlow.first()
         }
+        // Decoder choice and resume behaviour (Video settings, round 15):
+        // collected continuously, not just once — the holder outlives the
+        // settings screen, and the choice must apply to the next video
+        // played after the user changes it.
+        scope.launch {
+            userPreferencesRepository.videoDecoderModeFlow.collect { _decoderMode.value = it }
+        }
+        scope.launch {
+            userPreferencesRepository.videoResumeBehaviourFlow.collect { _resumeBehaviour.value = it }
+        }
         // External subtitle files picked earlier, keyed by video URI.
         scope.launch {
             externalSubtitles.value = userPreferencesRepository
@@ -237,9 +258,32 @@ class VideoPlaybackHolder @Inject constructor(
         return label
     }
 
+    /**
+     * Resume entry points pass a saved position here. "start over" zeroes
+     * it; "ask" has no resume prompt anywhere in the app yet, so it falls
+     * back to today's always-resume behaviour (stated in the setting's
+     * description rather than faking a dialog).
+     */
+    private fun effectiveStartPositionMs(requestedStartPositionMs: Long): Long =
+        if (_resumeBehaviour.value == "start_over") 0L else requestedStartPositionMs
+
     private fun buildPlayer(): ExoPlayer {
-        val renderersFactory = DefaultRenderersFactory(context)
-            .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON)
+        // Decoder choice (round 15, wave 1, B2) — standard Media3:
+        // "auto" is today's setup (FFmpeg extension renderers on, default
+        // platform selector); "hardware" turns the FFmpeg software
+        // renderers off so only platform (hardware) decoders are used;
+        // "software" prefers software platform decoders and keeps the
+        // FFmpeg software renderers on. Takes effect on the next video:
+        // the player is rebuilt per new video, never mid-playback.
+        val renderersFactory = when (_decoderMode.value) {
+            "hardware" -> DefaultRenderersFactory(context)
+                .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_OFF)
+            "software" -> DefaultRenderersFactory(context)
+                .setMediaCodecSelector(MediaCodecSelector.PREFER_SOFTWARE)
+                .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON)
+            else -> DefaultRenderersFactory(context)
+                .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON)
+        }
         return ExoPlayer.Builder(context)
             .setRenderersFactory(renderersFactory)
             .build()
@@ -267,15 +311,16 @@ class VideoPlaybackHolder @Inject constructor(
     }
 
     fun play(contentUriString: String, startPositionMs: Long = 0L) {
+        val effectiveStartPositionMs = effectiveStartPositionMs(startPositionMs)
         val current = exoPlayer
         if (_currentVideo.value?.contentUriString == contentUriString && current != null) {
             // Same video, player already alive (e.g. reopened from the mini
             // bar): don't rebuild, just resume — seeking only when the
             // requested position is actually different (a resume point).
-            if (startPositionMs > 0 &&
-                abs(current.currentPosition - startPositionMs) > 1_000L
+            if (effectiveStartPositionMs > 0 &&
+                abs(current.currentPosition - effectiveStartPositionMs) > 1_000L
             ) {
-                current.seekTo(startPositionMs)
+                current.seekTo(effectiveStartPositionMs)
             }
             current.play()
             return
@@ -285,7 +330,7 @@ class VideoPlaybackHolder @Inject constructor(
         val player = buildPlayer().apply {
             setMediaItem(buildMediaItem(contentUriString))
             prepare()
-            if (startPositionMs > 0) seekTo(startPositionMs)
+            if (effectiveStartPositionMs > 0) seekTo(effectiveStartPositionMs)
             play()
         }
         exoPlayer = player
@@ -318,14 +363,15 @@ class VideoPlaybackHolder @Inject constructor(
             return
         }
         val wantedIndex = startIndex.coerceIn(0, contentUriStrings.lastIndex)
+        val effectiveStartPositionMs = effectiveStartPositionMs(startPositionMs)
         val current = exoPlayer
         if (current != null && _queueUris.value == contentUriStrings &&
             current.currentMediaItemIndex == wantedIndex
         ) {
-            if (startPositionMs > 0 &&
-                abs(current.currentPosition - startPositionMs) > 1_000L
+            if (effectiveStartPositionMs > 0 &&
+                abs(current.currentPosition - effectiveStartPositionMs) > 1_000L
             ) {
-                current.seekTo(startPositionMs)
+                current.seekTo(effectiveStartPositionMs)
             }
             current.play()
             return
@@ -336,7 +382,7 @@ class VideoPlaybackHolder @Inject constructor(
             setMediaItems(
                 contentUriStrings.map { buildMediaItem(it) },
                 wantedIndex,
-                startPositionMs.coerceAtLeast(0L)
+                effectiveStartPositionMs.coerceAtLeast(0L)
             )
             prepare()
             play()

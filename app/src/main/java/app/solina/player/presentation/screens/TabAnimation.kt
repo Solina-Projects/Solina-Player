@@ -33,8 +33,14 @@ import kotlin.math.abs
 fun TabAnimation(
     modifier: Modifier = Modifier,
     index: Int,
-    selectedColor: Color = MaterialTheme.colorScheme.primary,
-    onSelectedColor: Color = MaterialTheme.colorScheme.onPrimary,
+    // Selected pill uses the container pair, not primary/onPrimary: with a
+    // dynamic (wallpaper) scheme a pale wallpaper yields a pale primary, and
+    // white onPrimary on it is unreadable (light-on-light). The container
+    // roles are contrast-guaranteed in both light and dark schemes, so the
+    // selected tab stays readable whatever the wallpaper is. The overall
+    // theme and dynamic colour are untouched — only the tab pill changes.
+    selectedColor: Color = MaterialTheme.colorScheme.primaryContainer,
+    onSelectedColor: Color = MaterialTheme.colorScheme.onPrimaryContainer,
     unselectedColor: Color = MaterialTheme.colorScheme.surface,
     onUnselectedColor: Color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.9f),
     title: String,

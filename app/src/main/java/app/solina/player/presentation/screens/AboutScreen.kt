@@ -3,6 +3,7 @@ package app.solina.player.presentation.screens
 import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
+import android.widget.Toast
 import androidx.annotation.DrawableRes
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -59,10 +60,14 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.BiasAlignment
 import androidx.compose.ui.Modifier
@@ -106,6 +111,7 @@ import app.solina.player.presentation.components.SmartImage
 import app.solina.player.presentation.navigation.Screen
 import app.solina.player.presentation.navigation.navigateSafely
 import app.solina.player.presentation.viewmodel.PlayerViewModel
+import app.solina.player.presentation.viewmodel.SettingsViewModel
 import kotlinx.coroutines.launch
 import racra.compose.smooth_corner_rect_library.AbsoluteSmoothCornerShape
 import kotlin.math.roundToInt
@@ -167,8 +173,39 @@ fun AboutScreen(
     navController: NavController,
     viewModel: PlayerViewModel,
     onNavigationIconClick: () -> Unit,
+    settingsViewModel: SettingsViewModel = hiltViewModel(),
 ) {
     val context = LocalContext.current
+    val settingsUiState by settingsViewModel.uiState.collectAsStateWithLifecycle()
+
+    // Developer-mode unlock (round 15, wave 1, A3): 7 taps on the version
+    // pill. Taps more than 3 s apart restart the count; long-press still
+    // opens the Easter egg. Persisted in DataStore, so it survives
+    // restarts — there is intentionally no lock again here.
+    var devTapCount by remember { mutableIntStateOf(0) }
+    var lastDevTapMs by remember { mutableLongStateOf(0L) }
+    fun onVersionTap() {
+        val now = System.currentTimeMillis()
+        devTapCount = if (now - lastDevTapMs > 3_000L) 1 else devTapCount + 1
+        lastDevTapMs = now
+        if (devTapCount >= 7) {
+            devTapCount = 0
+            if (settingsUiState.developerModeEnabled) {
+                Toast.makeText(
+                    context,
+                    context.getString(R.string.setcat_developer_mode_already),
+                    Toast.LENGTH_SHORT
+                ).show()
+            } else {
+                settingsViewModel.setDeveloperModeEnabled(true)
+                Toast.makeText(
+                    context,
+                    context.getString(R.string.setcat_developer_mode_enabled),
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+        }
+    }
     val versionName: String = try {
         val packageInfo = context.packageManager.getPackageInfo(context.packageName, 0)
         packageInfo.versionName ?: "N/A"
@@ -303,6 +340,7 @@ fun AboutScreen(
                     onVersionLongPress = {
                         navController.navigateSafely(Screen.EasterEgg.route)
                     },
+                    onVersionTap = { onVersionTap() },
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp)
@@ -387,6 +425,7 @@ fun AboutScreen(
 private fun AboutHeroCard(
     versionName: String,
     onVersionLongPress: () -> Unit,
+    onVersionTap: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val heroShape = AbsoluteSmoothCornerShape(30.dp, 60)
@@ -453,6 +492,7 @@ private fun AboutHeroCard(
                         .background(MaterialTheme.colorScheme.tertiaryContainer)
                         .pointerInput(Unit) {
                             detectTapGestures(
+                                onTap = { onVersionTap() },
                                 onLongPress = {
                                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                     onVersionLongPress()

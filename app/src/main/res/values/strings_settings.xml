@@ -463,4 +463,44 @@
     <string name="appearance_glass_preset_frosted">Frosted</string>
     <string name="appearance_glass_preset_liquid">Liquid</string>
     <string name="appearance_glass_video_note">Video-player bars stay solid: video can\'t be blurred, so glass over playing video would show a black hole.</string>
+
+    <!-- Settings reorg + Video settings (round 15, wave 1, 2026-11-17) -->
+    <string name="settings_category_video_title">Video</string>
+    <string name="settings_category_video_subtitle">Aspect, decoder, subtitles, speed and resume</string>
+    <string name="setcat_appearance_customise_section">Customise</string>
+    <string name="setcat_lyrics_sources_section">Lyrics sources</string>
+    <string name="setcat_lyrics_display_section">Lyrics display</string>
+    <string name="setcat_video_playback_section">Playback</string>
+    <string name="setcat_video_subtitles_section">Subtitles</string>
+    <string name="setcat_video_aspect_title">Default aspect</string>
+    <string name="setcat_video_aspect_desc">How videos fit the screen when they start playing.</string>
+    <string name="setcat_video_decoder_title">Decoder</string>
+    <string name="setcat_video_decoder_desc">Auto lets the player choose. Hardware uses the device decoder; Software decodes on the CPU. Applies to the next video you play.</string>
+    <string name="setcat_video_decoder_auto">Auto</string>
+    <string name="setcat_video_decoder_hardware">Hardware</string>
+    <string name="setcat_video_decoder_software">Software</string>
+    <string name="setcat_video_default_speed_title">Default speed</string>
+    <string name="setcat_video_default_speed_desc">Speed new videos start at. Changing the speed during playback still works as before.</string>
+    <string name="setcat_video_resume_title">Resume behaviour</string>
+    <string name="setcat_video_resume_desc">What happens when you reopen a video you left halfway. “Ask” falls back to resuming for now — there is no resume prompt yet.</string>
+    <string name="setcat_video_resume_always">Always resume</string>
+    <string name="setcat_video_resume_ask">Ask every time</string>
+    <string name="setcat_video_resume_start_over">Start over</string>
+    <string name="setcat_video_background_title">Background playback</string>
+    <string name="setcat_video_background_desc">Keep the video’s audio playing when the app goes to the background, like music.</string>
+    <string name="setcat_video_gestures_title">Swipe gestures</string>
+    <string name="setcat_video_gestures_desc">Swipe on the video to seek, change brightness (left half) and volume (right half). Tap, hold-for-speed and pinch zoom always work.</string>
+    <string name="setcat_video_subtitle_size_title">Subtitle text size</string>
+    <string name="setcat_video_subtitle_size_desc">Default size for subtitles in the video player.</string>
+    <string name="setcat_video_subtitle_color_title">Subtitle colour</string>
+    <string name="setcat_video_subtitle_color_desc">Default subtitle colour.</string>
+    <string name="setcat_video_subtitle_white">White</string>
+    <string name="setcat_video_subtitle_yellow">Yellow</string>
+    <string name="setcat_video_subtitle_cyan">Cyan</string>
+    <string name="setcat_video_subtitle_bg_title">Subtitle background</string>
+    <string name="setcat_video_subtitle_bg_desc">Background behind the subtitle text.</string>
+    <string name="setcat_developer_locked_title">Developer actions are locked</string>
+    <string name="setcat_developer_locked_desc">Tap the version in About 7 times to unlock them.</string>
+    <string name="setcat_developer_mode_enabled">Developer mode enabled</string>
+    <string name="setcat_developer_mode_already">Developer mode is already on</string>
 </resources>

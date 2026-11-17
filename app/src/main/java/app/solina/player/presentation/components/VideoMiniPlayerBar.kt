@@ -32,7 +32,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalLayoutDirection
@@ -273,25 +275,53 @@ fun VideoMiniPlayerBar(
                             fontWeight = FontWeight.SemiBold,
                             letterSpacing = (-0.2).sp,
                             fontFamily = RoundedSans,
-                            color = colors.onPrimaryContainer
+                            // R15 F7: in glass mode the pill is transparent
+                            // over the blurred list, so the dark-brown
+                            // onPrimaryContainer text is weak — white text
+                            // with a soft shadow instead.
+                            color = if (glassOn) Color.White else colors.onPrimaryContainer,
+                            shadow = if (glassOn) Shadow(
+                                color = Color.Black.copy(alpha = 0.45f),
+                                offset = Offset(0f, 1f),
+                                blurRadius = 4f
+                            ) else null
                         ),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
-                    RollingTimeText(
-                        text = "${formatDuration(livePosition)} / ${formatDuration(liveDuration)}",
-                        color = colors.onPrimaryContainer.copy(alpha = 0.7f),
-                        fontSize = 13.sp * fontScale
-                    )
+                    // R15 F1: plain Text, not RollingTimeText. The rolling
+                    // per-character AnimatedContent garbled the time
+                    // ("65:00:20 / 55:91") under the holder's 250 ms
+                    // position poll, and its per-character Row has no LTR
+                    // pinning, so RTL could reorder the digits too.
+                    // Pinned LTR so the digits keep their order in RTL.
+                    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+                        Text(
+                            text = "${formatDuration(livePosition)} / ${formatDuration(liveDuration)}",
+                            style = MaterialTheme.typography.bodySmall.copy(
+                                fontSize = 13.sp * fontScale,
+                                color = if (glassOn) Color.White.copy(alpha = 0.85f)
+                                else colors.onPrimaryContainer.copy(alpha = 0.7f),
+                                shadow = if (glassOn) Shadow(
+                                    color = Color.Black.copy(alpha = 0.45f),
+                                    offset = Offset(0f, 1f),
+                                    blurRadius = 4f
+                                ) else null
+                            ),
+                            maxLines = 1
+                        )
+                    }
                 }
-                Spacer(modifier = Modifier.width(8.dp))
+                // R15 F3: 12 dp gaps (was 8 dp) so the EQ bars no longer
+                // look glued to the text on long titles.
+                Spacer(modifier = Modifier.width(12.dp))
 
                 // Live EQ bars, exactly where the music bar has them.
                 MiniEqBars(
                     isPlaying = isPlaying,
                     color = colors.primary
                 )
-                Spacer(modifier = Modifier.width(8.dp))
+                Spacer(modifier = Modifier.width(12.dp))
 
                 // Media transport controls stay left-to-right in RTL locales.
                 CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {

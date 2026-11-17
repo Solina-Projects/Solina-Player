@@ -463,4 +463,44 @@
     <string name="appearance_glass_preset_frosted">مات</string>
     <string name="appearance_glass_preset_liquid">مایع</string>
     <string name="appearance_glass_video_note">نوارهای پخش‌کننده ویدیو ساده می‌مانند: ویدیو را نمی‌توان تار کرد، پس شیشه روی ویدیوی در حال پخش یک حفره سیاه نشان می‌دهد.</string>
+
+    <!-- Settings reorg + Video settings (round 15, wave 1, 2026-11-17) -->
+    <string name="settings_category_video_title">ویدیو</string>
+    <string name="settings_category_video_subtitle">نسبت تصویر، رمزگشا، زیرنویس، سرعت و ادامهٔ پخش</string>
+    <string name="setcat_appearance_customise_section">شخصی‌سازی</string>
+    <string name="setcat_lyrics_sources_section">منابع ترانه</string>
+    <string name="setcat_lyrics_display_section">نمایش ترانه</string>
+    <string name="setcat_video_playback_section">پخش</string>
+    <string name="setcat_video_subtitles_section">زیرنویس</string>
+    <string name="setcat_video_aspect_title">نسبت تصویر پیش‌فرض</string>
+    <string name="setcat_video_aspect_desc">ویدیوها در شروع پخش چطور در صفحه جا شوند.</string>
+    <string name="setcat_video_decoder_title">رمزگشا</string>
+    <string name="setcat_video_decoder_desc">خودکار یعنی پخش‌کننده انتخاب می‌کند. سخت‌افزاری از رمزگشای دستگاه استفاده می‌کند؛ نرم‌افزاری با پردازنده رمزگشایی می‌کند. از ویدیوی بعدی که پخش می‌کنید اعمال می‌شود.</string>
+    <string name="setcat_video_decoder_auto">خودکار</string>
+    <string name="setcat_video_decoder_hardware">سخت‌افزاری</string>
+    <string name="setcat_video_decoder_software">نرم‌افزاری</string>
+    <string name="setcat_video_default_speed_title">سرعت پیش‌فرض</string>
+    <string name="setcat_video_default_speed_desc">سرعتی که ویدیوهای جدید با آن شروع می‌شوند. تغییر سرعت هنگام پخش مثل قبل کار می‌کند.</string>
+    <string name="setcat_video_resume_title">رفتار ادامهٔ پخش</string>
+    <string name="setcat_video_resume_desc">وقتی ویدیویی را که نصفه رها کرده‌اید دوباره باز می‌کنید چه شود. گزینهٔ «بپرس» فعلاً مثل «ادامه» عمل می‌کند — هنوز پنجرهٔ پرسش وجود ندارد.</string>
+    <string name="setcat_video_resume_always">همیشه ادامه بده</string>
+    <string name="setcat_video_resume_ask">هر بار بپرس</string>
+    <string name="setcat_video_resume_start_over">از اول شروع کن</string>
+    <string name="setcat_video_background_title">پخش در پس‌زمینه</string>
+    <string name="setcat_video_background_desc">وقتی برنامه به پس‌زمینه می‌رود، صدای ویدیو مثل موزیک ادامه پیدا کند.</string>
+    <string name="setcat_video_gestures_title">ژست‌های کشویی</string>
+    <string name="setcat_video_gestures_desc">با کشیدن انگشت روی ویدیو جلو/عقب بروید، روشنایی (نیمهٔ چپ) و صدا (نیمهٔ راست) را تغییر دهید. ضربه، نگه‌داشتن برای سرعت و زوم با دو انگشت همیشه کار می‌کنند.</string>
+    <string name="setcat_video_subtitle_size_title">اندازهٔ متن زیرنویس</string>
+    <string name="setcat_video_subtitle_size_desc">اندازهٔ پیش‌فرض متن زیرنویس در پخش‌کنندهٔ ویدیو.</string>
+    <string name="setcat_video_subtitle_color_title">رنگ زیرنویس</string>
+    <string name="setcat_video_subtitle_color_desc">رنگ پیش‌فرض زیرنویس.</string>
+    <string name="setcat_video_subtitle_white">سفید</string>
+    <string name="setcat_video_subtitle_yellow">زرد</string>
+    <string name="setcat_video_subtitle_cyan">فیروزه‌ای</string>
+    <string name="setcat_video_subtitle_bg_title">پس‌زمینهٔ زیرنویس</string>
+    <string name="setcat_video_subtitle_bg_desc">پس‌زمینهٔ پشت متن زیرنویس.</string>
+    <string name="setcat_developer_locked_title">اقدام‌های توسعه‌دهنده قفل است</string>
+    <string name="setcat_developer_locked_desc">برای باز کردن قفل، ۷ بار روی نسخه در صفحهٔ «درباره» بزنید.</string>
+    <string name="setcat_developer_mode_enabled">حالت توسعه‌دهنده فعال شد</string>
+    <string name="setcat_developer_mode_already">حالت توسعه‌دهنده از قبل فعال است</string>
 </resources>

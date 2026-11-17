@@ -27,6 +27,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ClearAll
+import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.LinearScale
 import androidx.compose.material.icons.outlined.Warning
 import androidx.compose.material.icons.rounded.BlurOn
@@ -34,6 +35,7 @@ import androidx.compose.material.icons.rounded.FormatSize
 import androidx.compose.material.icons.rounded.Gradient
 import androidx.compose.material.icons.rounded.Groups
 import androidx.compose.material.icons.rounded.Mic
+import androidx.compose.material.icons.rounded.Timer
 import androidx.compose.material3.Slider
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
@@ -158,7 +160,10 @@ fun LyricsSettingsScreen(
         if (highlightPending && !highlightKey.isNullOrBlank()) {
             delay(200)
             val targetIndex = when (highlightKey) {
-                "item_lyrics_source_priority", "item_lyrics_reset_imported" -> 1
+                "item_library_auto_scan_lrc", "item_library_external_lyrics" -> 1
+                "item_appearance_immersive_lyrics",
+                "item_appearance_lyrics_auto_hide_delay" -> 2
+                "item_lyrics_source_priority", "item_lyrics_reset_imported" -> 3
                 else -> 0
             }
             lazyListState.animateScrollToItem(targetIndex)
@@ -281,6 +286,76 @@ fun LyricsSettingsScreen(
                             onValueChangeFinished = {
                                 settingsViewModel.setAnimatedLyricsBlurStrength(blurStrengthDraft)
                             }
+                        )
+                    }
+                }
+            }
+
+            // Lyrics sources (round 15, wave 1, A2): moved here from the
+            // Library category — same preference keys, same behaviour.
+            item(key = "lyrics_sources") {
+                LyricsSettingsSubsection(title = stringResource(R.string.setcat_lyrics_sources_section)) {
+                    SwitchSettingItem(
+                        title = stringResource(R.string.setcat_auto_scan_lrc_title),
+                        subtitle = stringResource(R.string.setcat_auto_scan_lrc_subtitle),
+                        checked = uiState.autoScanLrcFiles,
+                        onCheckedChange = settingsViewModel::setAutoScanLrcFiles,
+                        leadingIcon = {
+                            Icon(Icons.Outlined.Folder, null, tint = MaterialTheme.colorScheme.secondary)
+                        },
+                        modifier = Modifier.settingHighlight("item_library_auto_scan_lrc", highlightKey)
+                    )
+                    SwitchSettingItem(
+                        title = stringResource(R.string.setcat_external_lyrics_title),
+                        subtitle = stringResource(R.string.setcat_external_lyrics_subtitle),
+                        checked = uiState.externalLyricsEnabled,
+                        onCheckedChange = settingsViewModel::setExternalLyricsEnabled,
+                        leadingIcon = {
+                            Icon(
+                                painterResource(R.drawable.rounded_lyrics_24),
+                                null,
+                                tint = MaterialTheme.colorScheme.secondary
+                            )
+                        },
+                        modifier = Modifier.settingHighlight("item_library_external_lyrics", highlightKey)
+                    )
+                }
+            }
+
+            // Lyrics display (round 15, wave 1, A2): moved here from the
+            // Appearance category — same preference keys, same behaviour.
+            item(key = "lyrics_display") {
+                LyricsSettingsSubsection(title = stringResource(R.string.setcat_lyrics_display_section)) {
+                    SwitchSettingItem(
+                        title = stringResource(R.string.setcat_immersive_lyrics_title),
+                        subtitle = stringResource(R.string.setcat_immersive_lyrics_subtitle),
+                        checked = uiState.immersiveLyricsEnabled,
+                        onCheckedChange = settingsViewModel::setImmersiveLyricsEnabled,
+                        leadingIcon = {
+                            Icon(
+                                painterResource(R.drawable.rounded_lyrics_24),
+                                null,
+                                tint = MaterialTheme.colorScheme.secondary
+                            )
+                        },
+                        modifier = Modifier.settingHighlight("item_appearance_immersive_lyrics", highlightKey)
+                    )
+                    if (uiState.immersiveLyricsEnabled) {
+                        ThemeSelectorItem(
+                            label = stringResource(R.string.setcat_auto_hide_delay_label),
+                            description = stringResource(R.string.setcat_auto_hide_delay_desc),
+                            options = mapOf(
+                                "3000" to stringResource(R.string.setcat_lyrics_delay_3s),
+                                "4000" to stringResource(R.string.setcat_lyrics_delay_4s),
+                                "5000" to stringResource(R.string.setcat_lyrics_delay_5s),
+                                "6000" to stringResource(R.string.setcat_lyrics_delay_6s)
+                            ),
+                            selectedKey = uiState.immersiveLyricsTimeout.toString(),
+                            onSelectionChanged = { settingsViewModel.setImmersiveLyricsTimeout(it.toLong()) },
+                            leadingIcon = {
+                                Icon(Icons.Rounded.Timer, null, tint = MaterialTheme.colorScheme.secondary)
+                            },
+                            modifier = Modifier.settingHighlight("item_appearance_lyrics_auto_hide_delay", highlightKey)
                         )
                     }
                 }

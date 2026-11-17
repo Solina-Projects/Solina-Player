@@ -77,9 +77,16 @@ import androidx.compose.material.icons.outlined.PlayCircle
 import androidx.compose.material.icons.outlined.Style
 import androidx.compose.material.icons.outlined.Warning
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.rounded.AspectRatio
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.automirrored.rounded.ArrowForwardIos
+import androidx.compose.material.icons.rounded.FormatSize
+import androidx.compose.material.icons.rounded.Memory
+import androidx.compose.material.icons.rounded.Palette
+import androidx.compose.material.icons.rounded.Speed
+import androidx.compose.material.icons.rounded.Swipe
 import androidx.compose.material.icons.rounded.SystemUpdate
+import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.ExpandMore
@@ -88,7 +95,6 @@ import androidx.compose.material.icons.rounded.MusicNote
 import androidx.compose.material.icons.rounded.Restore
 import androidx.compose.material.icons.rounded.Science
 import androidx.compose.material.icons.rounded.Search
-import androidx.compose.material.icons.rounded.Timer
 import androidx.compose.material.icons.rounded.UnfoldMore
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.BottomAppBar
@@ -546,14 +552,6 @@ fun SettingsCategoryScreen(
                                 )
                                 }
                                 SwitchSettingItem(
-                                    title = stringResource(R.string.setcat_auto_scan_lrc_title),
-                                    subtitle = stringResource(R.string.setcat_auto_scan_lrc_subtitle),
-                                    checked = uiState.autoScanLrcFiles,
-                                    onCheckedChange = { settingsViewModel.setAutoScanLrcFiles(it) },
-                                    leadingIcon = { Icon(Icons.Outlined.Folder, null, tint = MaterialTheme.colorScheme.secondary) },
-                                    modifier = Modifier.settingHighlight("item_library_auto_scan_lrc", highlightKey)
-                                )
-                                SwitchSettingItem(
                                     title = stringResource(R.string.setcat_folder_album_art_title),
                                     subtitle = stringResource(R.string.setcat_folder_album_art_subtitle),
                                     checked = useFolderAlbumArt && hasImagesPermission,
@@ -661,14 +659,10 @@ fun SettingsCategoryScreen(
                                 title = stringResource(R.string.setcat_online_services),
                                 addBottomSpace = false
                             ) {
-                                SwitchSettingItem(
-                                    title = stringResource(R.string.setcat_external_lyrics_title),
-                                    subtitle = stringResource(R.string.setcat_external_lyrics_subtitle),
-                                    checked = uiState.externalLyricsEnabled,
-                                    onCheckedChange = { settingsViewModel.setExternalLyricsEnabled(it) },
-                                    leadingIcon = { Icon(painterResource(R.drawable.rounded_lyrics_24), null, tint = MaterialTheme.colorScheme.secondary) },
-                                    modifier = Modifier.settingHighlight("item_library_external_lyrics", highlightKey)
-                                )
+                                // Lyrics options moved to the Lyrics screen
+                                // (round 15, wave 1, A2): auto-scan LRC and
+                                // external lyrics live there now, with the
+                                // same preference keys.
                                 SwitchSettingItem(
                                     title = stringResource(R.string.setcat_external_artist_images_title),
                                     subtitle = stringResource(R.string.setcat_external_artist_images_subtitle),
@@ -682,6 +676,28 @@ fun SettingsCategoryScreen(
                         }
                         SettingsCategory.APPEARANCE -> {
                             val useSmoothCorners by settingsViewModel.useSmoothCorners.collectAsStateWithLifecycle()
+
+                            // Single appearance hub (round 15, wave 1, A1):
+                            // the two customisation screens are reached from
+                            // here now, not from the main Settings list.
+                            SettingsSubsection(title = stringResource(R.string.setcat_appearance_customise_section)) {
+                                SettingsItem(
+                                    title = stringResource(R.string.home_customize_title),
+                                    subtitle = stringResource(R.string.home_customize_subtitle),
+                                    leadingIcon = { Icon(Icons.Rounded.Tune, null, tint = MaterialTheme.colorScheme.secondary) },
+                                    trailingIcon = { Icon(Icons.AutoMirrored.Rounded.ArrowForwardIos, stringResource(R.string.cd_open), tint = MaterialTheme.colorScheme.onSurfaceVariant) },
+                                    modifier = Modifier.settingHighlight("item_home_customization", highlightKey),
+                                    onClick = { navController.navigateSafely(Screen.HomeCustomization.route) }
+                                )
+                                SettingsItem(
+                                    title = stringResource(R.string.appearance_customize_title),
+                                    subtitle = stringResource(R.string.appearance_customize_subtitle),
+                                    leadingIcon = { Icon(Icons.Rounded.Palette, null, tint = MaterialTheme.colorScheme.secondary) },
+                                    trailingIcon = { Icon(Icons.AutoMirrored.Rounded.ArrowForwardIos, stringResource(R.string.cd_open), tint = MaterialTheme.colorScheme.onSurfaceVariant) },
+                                    modifier = Modifier.settingHighlight("item_appearance_customization", highlightKey),
+                                    onClick = { navController.navigateSafely(Screen.AppearanceCustomization.route) }
+                                )
+                            }
 
                             SettingsSubsection(title = stringResource(R.string.setcat_global_theme)) {
                                 ThemeSelectorItem(
@@ -845,34 +861,6 @@ fun SettingsCategoryScreen(
                                     trailingIcon = { Icon(Icons.AutoMirrored.Rounded.ArrowForwardIos, null, tint = MaterialTheme.colorScheme.onSurfaceVariant) },
                                     onClick = { navController.navigateSafely(Screen.NavBarCrRad.createRoute()) }
                                 )
-                            }
-
-                            SettingsSubsection(title = stringResource(R.string.setcat_lyrics_screen)) {
-                                SwitchSettingItem(
-                                    title = stringResource(R.string.setcat_immersive_lyrics_title),
-                                    subtitle = stringResource(R.string.setcat_immersive_lyrics_subtitle),
-                                    checked = uiState.immersiveLyricsEnabled,
-                                    onCheckedChange = { settingsViewModel.setImmersiveLyricsEnabled(it) },
-                                    leadingIcon = { Icon(painterResource(R.drawable.rounded_lyrics_24), null, tint = MaterialTheme.colorScheme.secondary) },
-                                    modifier = Modifier.settingHighlight("item_appearance_immersive_lyrics", highlightKey)
-                                )
-
-                                if (uiState.immersiveLyricsEnabled) {
-                                    ThemeSelectorItem(
-                                        label = stringResource(R.string.setcat_auto_hide_delay_label),
-                                        description = stringResource(R.string.setcat_auto_hide_delay_desc),
-                                        options = mapOf(
-                                            "3000" to stringResource(R.string.setcat_lyrics_delay_3s),
-                                            "4000" to stringResource(R.string.setcat_lyrics_delay_4s),
-                                            "5000" to stringResource(R.string.setcat_lyrics_delay_5s),
-                                            "6000" to stringResource(R.string.setcat_lyrics_delay_6s)
-                                        ),
-                                        selectedKey = uiState.immersiveLyricsTimeout.toString(),
-                                        onSelectionChanged = { settingsViewModel.setImmersiveLyricsTimeout(it.toLong()) },
-                                        leadingIcon = { Icon(Icons.Rounded.Timer, null, tint = MaterialTheme.colorScheme.secondary) },
-                                        modifier = Modifier.settingHighlight("item_appearance_lyrics_auto_hide_delay", highlightKey)
-                                    )
-                                }
                             }
 
                             SettingsSubsection(
@@ -1092,6 +1080,141 @@ fun SettingsCategoryScreen(
                             }
 
                         }
+                        // Video settings (round 15, wave 1, 2026-11-17): the
+                        // video prefs used to live only inside the video
+                        // player UI. Same preference keys — the player reads
+                        // them too, so both places stay in sync.
+                        SettingsCategory.VIDEO -> {
+                            SettingsSubsection(title = stringResource(R.string.setcat_video_playback_section)) {
+                                ThemeSelectorItem(
+                                    label = stringResource(R.string.setcat_video_aspect_title),
+                                    description = stringResource(R.string.setcat_video_aspect_desc),
+                                    options = mapOf(
+                                        "FIT" to stringResource(R.string.video_aspect_fit),
+                                        "FILL" to stringResource(R.string.video_aspect_fill),
+                                        "ZOOM" to stringResource(R.string.video_aspect_zoom),
+                                        "STRETCH" to stringResource(R.string.video_aspect_stretch)
+                                    ),
+                                    selectedKey = uiState.videoAspectMode,
+                                    onSelectionChanged = { settingsViewModel.setVideoAspectMode(it) },
+                                    leadingIcon = { Icon(Icons.Rounded.AspectRatio, null, tint = MaterialTheme.colorScheme.secondary) },
+                                    modifier = Modifier.settingHighlight("item_video_aspect", highlightKey)
+                                )
+                                ThemeSelectorItem(
+                                    label = stringResource(R.string.setcat_video_decoder_title),
+                                    description = stringResource(R.string.setcat_video_decoder_desc),
+                                    options = mapOf(
+                                        "auto" to stringResource(R.string.setcat_video_decoder_auto),
+                                        "hardware" to stringResource(R.string.setcat_video_decoder_hardware),
+                                        "software" to stringResource(R.string.setcat_video_decoder_software)
+                                    ),
+                                    selectedKey = uiState.videoDecoderMode,
+                                    onSelectionChanged = { settingsViewModel.setVideoDecoderMode(it) },
+                                    leadingIcon = { Icon(Icons.Rounded.Memory, null, tint = MaterialTheme.colorScheme.secondary) },
+                                    modifier = Modifier.settingHighlight("item_video_decoder", highlightKey)
+                                )
+                                ThemeSelectorItem(
+                                    label = stringResource(R.string.setcat_video_default_speed_title),
+                                    description = stringResource(R.string.setcat_video_default_speed_desc),
+                                    options = mapOf(
+                                        "0.5" to "0.5×",
+                                        "0.75" to "0.75×",
+                                        "1.0" to "1×",
+                                        "1.25" to "1.25×",
+                                        "1.5" to "1.5×",
+                                        "2.0" to "2×"
+                                    ),
+                                    // The in-player speed bar also allows
+                                    // 0.1x–4x, so a stored speed outside
+                                    // these six shows its nearest choice.
+                                    selectedKey = when {
+                                        uiState.videoPlaybackSpeed <= 0.625f -> "0.5"
+                                        uiState.videoPlaybackSpeed <= 0.875f -> "0.75"
+                                        uiState.videoPlaybackSpeed <= 1.125f -> "1.0"
+                                        uiState.videoPlaybackSpeed <= 1.375f -> "1.25"
+                                        uiState.videoPlaybackSpeed <= 1.75f -> "1.5"
+                                        else -> "2.0"
+                                    },
+                                    onSelectionChanged = { settingsViewModel.setVideoPlaybackSpeed(it.toFloat()) },
+                                    leadingIcon = { Icon(Icons.Rounded.Speed, null, tint = MaterialTheme.colorScheme.secondary) },
+                                    modifier = Modifier.settingHighlight("item_video_default_speed", highlightKey)
+                                )
+                                ThemeSelectorItem(
+                                    label = stringResource(R.string.setcat_video_resume_title),
+                                    description = stringResource(R.string.setcat_video_resume_desc),
+                                    options = mapOf(
+                                        "always" to stringResource(R.string.setcat_video_resume_always),
+                                        "ask" to stringResource(R.string.setcat_video_resume_ask),
+                                        "start_over" to stringResource(R.string.setcat_video_resume_start_over)
+                                    ),
+                                    selectedKey = uiState.videoResumeBehaviour,
+                                    onSelectionChanged = { settingsViewModel.setVideoResumeBehaviour(it) },
+                                    leadingIcon = { Icon(Icons.Rounded.History, null, tint = MaterialTheme.colorScheme.secondary) },
+                                    modifier = Modifier.settingHighlight("item_video_resume_behaviour", highlightKey)
+                                )
+                                SwitchSettingItem(
+                                    title = stringResource(R.string.setcat_video_background_title),
+                                    subtitle = stringResource(R.string.setcat_video_background_desc),
+                                    checked = uiState.videoBackgroundPlayback,
+                                    onCheckedChange = { settingsViewModel.setVideoBackgroundPlayback(it) },
+                                    leadingIcon = { Icon(Icons.Rounded.MusicNote, null, tint = MaterialTheme.colorScheme.secondary) },
+                                    modifier = Modifier.settingHighlight("item_video_background_playback", highlightKey)
+                                )
+                                SwitchSettingItem(
+                                    title = stringResource(R.string.setcat_video_gestures_title),
+                                    subtitle = stringResource(R.string.setcat_video_gestures_desc),
+                                    checked = uiState.videoSwipeGesturesEnabled,
+                                    onCheckedChange = { settingsViewModel.setVideoSwipeGesturesEnabled(it) },
+                                    leadingIcon = { Icon(Icons.Rounded.Swipe, null, tint = MaterialTheme.colorScheme.secondary) },
+                                    modifier = Modifier.settingHighlight("item_video_swipe_gestures", highlightKey)
+                                )
+                            }
+
+                            SettingsSubsection(
+                                title = stringResource(R.string.setcat_video_subtitles_section),
+                                addBottomSpace = false
+                            ) {
+                                ThemeSelectorItem(
+                                    label = stringResource(R.string.setcat_video_subtitle_size_title),
+                                    description = stringResource(R.string.setcat_video_subtitle_size_desc),
+                                    options = mapOf(
+                                        "16" to stringResource(R.string.video_subtitle_small),
+                                        "20" to stringResource(R.string.video_subtitle_medium),
+                                        "26" to stringResource(R.string.video_subtitle_large)
+                                    ),
+                                    selectedKey = uiState.videoSubtitleTextSizeSp.toInt().toString(),
+                                    onSelectionChanged = { settingsViewModel.setVideoSubtitleTextSize(it.toFloat()) },
+                                    leadingIcon = { Icon(Icons.Rounded.FormatSize, null, tint = MaterialTheme.colorScheme.secondary) },
+                                    modifier = Modifier.settingHighlight("item_video_subtitle_size", highlightKey)
+                                )
+                                ThemeSelectorItem(
+                                    label = stringResource(R.string.setcat_video_subtitle_color_title),
+                                    description = stringResource(R.string.setcat_video_subtitle_color_desc),
+                                    options = mapOf(
+                                        Color.White.toArgb().toString() to stringResource(R.string.setcat_video_subtitle_white),
+                                        Color.Yellow.toArgb().toString() to stringResource(R.string.setcat_video_subtitle_yellow),
+                                        Color(0xFF00E5FF).toArgb().toString() to stringResource(R.string.setcat_video_subtitle_cyan)
+                                    ),
+                                    selectedKey = uiState.videoSubtitleTextColorArgb.toString(),
+                                    onSelectionChanged = { settingsViewModel.setVideoSubtitleTextColor(it.toInt()) },
+                                    leadingIcon = { Icon(Icons.Rounded.Palette, null, tint = MaterialTheme.colorScheme.secondary) },
+                                    modifier = Modifier.settingHighlight("item_video_subtitle_color", highlightKey)
+                                )
+                                ThemeSelectorItem(
+                                    label = stringResource(R.string.setcat_video_subtitle_bg_title),
+                                    description = stringResource(R.string.setcat_video_subtitle_bg_desc),
+                                    options = mapOf(
+                                        "0" to stringResource(R.string.video_subtitle_none),
+                                        "1" to stringResource(R.string.video_subtitle_dark),
+                                        "2" to stringResource(R.string.video_subtitle_solid)
+                                    ),
+                                    selectedKey = uiState.videoSubtitleBackgroundMode.toString(),
+                                    onSelectionChanged = { settingsViewModel.setVideoSubtitleBackground(it.toInt()) },
+                                    leadingIcon = { Icon(Icons.Outlined.Contrast, null, tint = MaterialTheme.colorScheme.secondary) },
+                                    modifier = Modifier.settingHighlight("item_video_subtitle_background", highlightKey)
+                                )
+                            }
+                        }
                         SettingsCategory.BEHAVIOR -> {
                             SettingsSubsection(
                                 title = stringResource(R.string.setcat_folders)
@@ -1264,6 +1387,11 @@ fun SettingsCategoryScreen(
                             }
                         }
                         SettingsCategory.DEVELOPER -> {
+                            // Dangerous actions (round 15, wave 1, A3) hide
+                            // behind developer mode, unlocked by 7 taps on
+                            // the version in About. Experimental stays
+                            // visible: it is a labs screen, not a device
+                            // action.
                             SettingsSubsection(title = stringResource(R.string.setcat_experiments)) {
                                 SettingsItem(
                                     title = stringResource(R.string.setcat_experimental_title),
@@ -1272,17 +1400,33 @@ fun SettingsCategoryScreen(
                                     trailingIcon = { Icon(Icons.AutoMirrored.Rounded.ArrowForwardIos, stringResource(R.string.cd_open), tint = MaterialTheme.colorScheme.onSurfaceVariant) },
                                     onClick = { navController.navigateSafely(Screen.Experimental.createRoute()) }
                                 )
-                                SettingsItem(
-                                    title = stringResource(R.string.setcat_test_setup_title),
-                                    subtitle = stringResource(R.string.setcat_test_setup_subtitle),
-                                    leadingIcon = { Icon(Icons.Rounded.Science, null, tint = MaterialTheme.colorScheme.tertiary) },
-                                    modifier = Modifier.settingHighlight("item_developer_test_setup", highlightKey),
-                                    onClick = {
-                                        settingsViewModel.resetSetupFlow()
-                                    }
-                                )
+                                if (uiState.developerModeEnabled) {
+                                    SettingsItem(
+                                        title = stringResource(R.string.setcat_test_setup_title),
+                                        subtitle = stringResource(R.string.setcat_test_setup_subtitle),
+                                        leadingIcon = { Icon(Icons.Rounded.Science, null, tint = MaterialTheme.colorScheme.tertiary) },
+                                        modifier = Modifier.settingHighlight("item_developer_test_setup", highlightKey),
+                                        onClick = {
+                                            settingsViewModel.resetSetupFlow()
+                                        }
+                                    )
+                                } else {
+                                    SettingsItem(
+                                        title = stringResource(R.string.setcat_developer_locked_title),
+                                        subtitle = stringResource(R.string.setcat_developer_locked_desc),
+                                        leadingIcon = { Icon(Icons.Outlined.Warning, null, tint = MaterialTheme.colorScheme.secondary) },
+                                        onClick = {
+                                            Toast.makeText(
+                                                context,
+                                                context.getString(R.string.setcat_developer_locked_desc),
+                                                Toast.LENGTH_SHORT
+                                            ).show()
+                                        }
+                                    )
+                                }
                             }
 
+                            if (uiState.developerModeEnabled) {
                             SettingsSubsection(title = stringResource(R.string.setcat_maintenance)) {
                                 ActionSettingsItem(
                                     title = stringResource(R.string.setcat_force_daily_mix_title),
@@ -1329,6 +1473,7 @@ fun SettingsCategoryScreen(
                                     onClick = { settingsViewModel.triggerTestCrash() }
                                 )
                             }
+                            }
                         }
                         SettingsCategory.ABOUT -> {
                             SettingsSubsection(
@@ -1352,8 +1497,6 @@ fun SettingsCategoryScreen(
                                     onClick = { navController.navigateSafely(Screen.Updates.route) }
                                 )
                             }
-                        }
-                        SettingsCategory.EQUALIZER -> {
                         }
                         SettingsCategory.DEVICE_CAPABILITIES -> {
                         }

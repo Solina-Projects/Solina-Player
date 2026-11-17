@@ -90,7 +90,6 @@ import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material.icons.rounded.VolumeOff
 import androidx.compose.material.icons.rounded.VolumeUp
 import androidx.compose.material.icons.rounded.WbSunny
-import app.solina.player.presentation.components.RollingTimeText
 import app.solina.player.presentation.components.WavySliderExpressive
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Checkbox
@@ -108,6 +107,7 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -134,6 +134,7 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLifecycleOwner
@@ -142,6 +143,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -284,6 +286,7 @@ fun VideoPlayerScreen(
     val isLoading by videoPlayerViewModel.isLoading.collectAsStateWithLifecycle()
     val aspectMode by videoPlayerViewModel.aspectMode.collectAsStateWithLifecycle()
     val backgroundPlayback by videoPlayerViewModel.backgroundPlayback.collectAsStateWithLifecycle()
+    val swipeGesturesEnabled by videoPlayerViewModel.swipeGesturesEnabled.collectAsStateWithLifecycle()
     val nightLight by videoPlayerViewModel.nightLight.collectAsStateWithLifecycle()
     val brightness by videoPlayerViewModel.brightness.collectAsStateWithLifecycle()
     val volume by videoPlayerViewModel.volume.collectAsStateWithLifecycle()
@@ -953,7 +956,7 @@ fun VideoPlayerScreen(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .pointerInput(player) {
+                    .pointerInput(player, swipeGesturesEnabled) {
                         awaitEachGesture {
                             val down = awaitFirstDown()
                             down.consume()
@@ -972,6 +975,10 @@ fun VideoPlayerScreen(
                                 .coerceAtLeast(0)
                             var pinchLastSpan = 0f
                             var longPressFired = false
+                            // A drag that moved past slop while swipe
+                            // gestures are off: not a tap, so the gesture
+                            // end must not toggle the bars.
+                            var draggedWithGesturesOff = false
 
                             // Long-press is detected with
                             // withTimeoutOrNull (a member of the
@@ -1052,6 +1059,17 @@ fun VideoPlayerScreen(
                                             val dx = pos.x - down.position.x
                                             val dy = pos.y - down.position.y
                                             if (abs(dx) > slopPx || abs(dy) > slopPx) {
+                                                // Swipe gestures off (Video
+                                                // settings): drags do
+                                                // nothing — no seek, no
+                                                // brightness/volume. Tap,
+                                                // hold-for-speed and pinch
+                                                // are unaffected.
+                                                if (!swipeGesturesEnabled) {
+                                                    draggedWithGesturesOff = true
+                                                    change.consume()
+                                                    continue
+                                                }
                                                 mode = if (abs(dx) > abs(dy)) {
                                                     GestureMode.Seek
                                                 } else if (down.position.x < size.width / 2f) {
@@ -1133,7 +1151,7 @@ fun VideoPlayerScreen(
                             // ---- Gesture end ----
                             when (mode) {
                                 GestureMode.Undecided -> {
-                                    if (!longPressFired) {
+                                    if (!longPressFired && !draggedWithGesturesOff) {
                                         // Tap: two quick taps reset the
                                         // pinch zoom, otherwise toggle bars.
                                         val now = System.currentTimeMillis()
@@ -1598,14 +1616,21 @@ fun VideoPlayerScreen(
                             verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            // Rolling digits (d3motion otp / countdown):
-                            // each changed digit rolls vertically.
-                            RollingTimeText(
-                                text = formatVideoTime(displayPositionMs),
-                                color = Color.White,
-                                fontSize = 13.sp,
-                                modifier = Modifier.padding(start = 8.dp)
-                            )
+                            // R15 F1: plain Text, not RollingTimeText.
+                            // Verified: this bar IS fed by the same 250 ms
+                            // poll as the mini bar (LaunchedEffect(player)
+                            // above), and it has no LTR wrapper, so the
+                            // rolling per-character Row could garble here
+                            // too — including digit reordering in RTL.
+                            CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+                                Text(
+                                    text = formatVideoTime(displayPositionMs),
+                                    color = Color.White,
+                                    fontSize = 13.sp,
+                                    maxLines = 1,
+                                    modifier = Modifier.padding(start = 8.dp)
+                                )
+                            }
                             // Bug-fix (2026-11-17, item 4): the old M3 Slider was the
                             // classic almost-blue bar with a big vertical scrubber
                             // handle. The seek bar is now the same wavy slider the
@@ -1675,12 +1700,17 @@ fun VideoPlayerScreen(
                                     .weight(1f)
                                     .padding(horizontal = 8.dp)
                             )
-                            RollingTimeText(
-                                text = formatVideoTime(durationMs),
-                                color = Color.White,
-                                fontSize = 13.sp,
-                                modifier = Modifier.padding(end = 8.dp)
-                            )
+                            // R15 F1: plain Text — same reason as the
+                            // current-time text above (250 ms poll, RTL).
+                            CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+                                Text(
+                                    text = formatVideoTime(durationMs),
+                                    color = Color.White,
+                                    fontSize = 13.sp,
+                                    maxLines = 1,
+                                    modifier = Modifier.padding(end = 8.dp)
+                                )
+                            }
                         }
                         Row(
                             verticalAlignment = Alignment.CenterVertically,

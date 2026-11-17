@@ -34,6 +34,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -292,10 +293,15 @@ private fun MiniListeningTimeline(summary: PlaybackStatsRepository.PlaybackStats
         return
     }
     val maxDuration = timeline.maxOfOrNull { it.totalDurationMs }?.takeIf { it > 0 } ?: 1L
+    // 112dp fits the tallest column: 70dp bar + 8dp gap + two lines of
+    // label (Persian day names such as «چهارشنبه» are far wider than one
+    // ~30dp column, so they wrap). The height used to be a fixed 96dp while
+    // the label had no maxLines, so a wrapped second line overflowed the
+    // row and rendered as stray text floating under the day label.
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .height(96.dp),
+            .height(112.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.Bottom
     ) {
@@ -324,7 +330,12 @@ private fun MiniListeningTimeline(summary: PlaybackStatsRepository.PlaybackStats
                 Text(
                     text = entry?.label ?: "",
                     style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    // Contained in the column: at most two lines, centred
+                    // under its bar, never spilling outside the chart.
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    textAlign = TextAlign.Center
                 )
             }
         }

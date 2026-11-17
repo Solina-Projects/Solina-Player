@@ -113,6 +113,16 @@ class VideoPlayerViewModel @Inject constructor(
         userPreferencesRepository.videoBackgroundPlaybackFlow
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
 
+    /**
+     * Swipe gestures on the video surface (Video settings, round 15, B1):
+     * seek, brightness (left half) and volume (right half). Tap,
+     * hold-for-speed and pinch zoom are not gestures in this sense and
+     * stay on.
+     */
+    val swipeGesturesEnabled: StateFlow<Boolean> =
+        userPreferencesRepository.videoSwipeGesturesEnabledFlow
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), true)
+
     fun setBackgroundPlayback(enabled: Boolean) {
         viewModelScope.launch {
             userPreferencesRepository.setVideoBackgroundPlayback(enabled)

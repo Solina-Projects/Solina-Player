@@ -128,7 +128,13 @@ fun EqBars(
  * Rolling digits (d3motion otp-verification / countdown-timer / gemini %):
  * every character rolls vertically when it changes, with a small
  * stagger between neighbours. Only the changed characters recompose.
- * Used for the player times (current / total) and the mini-bar time.
+ *
+ * R15 F1: NO LONGER used for player times. Fed by a 250 ms position
+ * poll, the per-character AnimatedContent drew the old and new digit
+ * simultaneously in the same slot and garbled the time ("65:00:20 /
+ * 55:91"); its per-character Row also has no LTR pinning, so RTL
+ * could reorder the digits. Player times are plain Text now. Kept
+ * for non-polled rolling counters only.
  */
 @Composable
 fun RollingTimeText(
@@ -252,7 +258,9 @@ fun D3Reveal(
 @Composable
 fun rememberRevealedKeys(): MutableSet<Any> = remember { mutableStateSetOf() }
 
-/** Small EQ bars sized for the mini-player bars (music + video). */
+/** Small EQ bars sized for the mini-player bars (music + video).
+ * R15 F3: 16×18 dp (was 18×20 dp) — the bigger bars crowded the
+ * title/artist text on long titles. */
 @Composable
 fun MiniEqBars(
     isPlaying: Boolean,
@@ -261,6 +269,6 @@ fun MiniEqBars(
     EqBars(
         isPlaying = isPlaying,
         color = color,
-        modifier = Modifier.size(width = 18.dp, height = 20.dp)
+        modifier = Modifier.size(width = 16.dp, height = 18.dp)
     )
 }

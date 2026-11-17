@@ -299,6 +299,21 @@ constructor(
         val VIDEO_SUBTITLE_TEXT_COLOR = intPreferencesKey("video_subtitle_text_color_argb")
         val VIDEO_SUBTITLE_BACKGROUND = intPreferencesKey("video_subtitle_background_mode")
 
+        // Settings reorg + Video settings (round 15, wave 1, 2026-11-17):
+        // decoder choice, resume behaviour and swipe gestures, surfaced in
+        // the new Video settings category. The other video prefs above
+        // (aspect, subtitles, speed, background playback) already existed
+        // and are only surfaced now — their keys are unchanged.
+        /** "auto" / "hardware" / "software" — which decoders ExoPlayer may use. */
+        val VIDEO_DECODER_MODE = stringPreferencesKey("video_decoder_mode")
+        /** "always" / "ask" / "start_over" — what reopening a half-watched video does. */
+        val VIDEO_RESUME_BEHAVIOUR = stringPreferencesKey("video_resume_behaviour")
+        /** Swipe on the video surface to seek / brightness / volume. */
+        val VIDEO_SWIPE_GESTURES_ENABLED = booleanPreferencesKey("video_swipe_gestures_enabled")
+
+        /** Developer mode: unlocks the dangerous Developer-category actions. */
+        val DEVELOPER_MODE_ENABLED = booleanPreferencesKey("developer_mode_enabled")
+
         val IS_ALBUMS_LIST_VIEW = booleanPreferencesKey("is_albums_list_view")
         val IS_PLAYLISTS_GRID_VIEW = booleanPreferencesKey("is_playlists_grid_view")
         val SHOW_SCROLLBAR = booleanPreferencesKey("show_scrollbar")
@@ -1197,6 +1212,58 @@ constructor(
         dataStore.edit { preferences ->
             preferences[PreferencesKeys.VIDEO_SUBTITLE_BACKGROUND] =
                 mode.coerceIn(0, 2)
+        }
+    }
+
+    // ---- Video settings category (round 15, wave 1, 2026-11-17) ----
+
+    /** Decoder choice: "auto" (today's behaviour), "hardware" or "software". */
+    val videoDecoderModeFlow: Flow<String> =
+        dataStore.data.map { preferences ->
+            preferences[PreferencesKeys.VIDEO_DECODER_MODE] ?: "auto"
+        }
+
+    suspend fun setVideoDecoderMode(mode: String) {
+        dataStore.edit { preferences ->
+            preferences[PreferencesKeys.VIDEO_DECODER_MODE] =
+                mode.takeIf { it in setOf("auto", "hardware", "software") } ?: "auto"
+        }
+    }
+
+    /** Resume behaviour: "always" (today's behaviour), "ask" or "start_over". */
+    val videoResumeBehaviourFlow: Flow<String> =
+        dataStore.data.map { preferences ->
+            preferences[PreferencesKeys.VIDEO_RESUME_BEHAVIOUR] ?: "always"
+        }
+
+    suspend fun setVideoResumeBehaviour(behaviour: String) {
+        dataStore.edit { preferences ->
+            preferences[PreferencesKeys.VIDEO_RESUME_BEHAVIOUR] =
+                behaviour.takeIf { it in setOf("always", "ask", "start_over") } ?: "always"
+        }
+    }
+
+    /** Swipe gestures on the video surface (seek / brightness / volume). */
+    val videoSwipeGesturesEnabledFlow: Flow<Boolean> =
+        dataStore.data.map { preferences ->
+            preferences[PreferencesKeys.VIDEO_SWIPE_GESTURES_ENABLED] ?: true
+        }
+
+    suspend fun setVideoSwipeGesturesEnabled(enabled: Boolean) {
+        dataStore.edit { preferences ->
+            preferences[PreferencesKeys.VIDEO_SWIPE_GESTURES_ENABLED] = enabled
+        }
+    }
+
+    /** Developer mode, unlocked by 7 taps on the version in About. */
+    val developerModeEnabledFlow: Flow<Boolean> =
+        dataStore.data.map { preferences ->
+            preferences[PreferencesKeys.DEVELOPER_MODE_ENABLED] ?: false
+        }
+
+    suspend fun setDeveloperModeEnabled(enabled: Boolean) {
+        dataStore.edit { preferences ->
+            preferences[PreferencesKeys.DEVELOPER_MODE_ENABLED] = enabled
         }
     }
 

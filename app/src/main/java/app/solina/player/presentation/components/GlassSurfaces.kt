@@ -97,19 +97,24 @@ fun Modifier.glassSurface(
     enabled: Boolean,
     shape: Shape,
     rimCornerDp: Dp,
-    source: View? = null
+    source: View? = null,
+    // R15 F7: minimum tint for this surface (0 = the user's slider
+    // value as-is). Bars use 0.25 so text over a busy blurred list
+    // never sits on a near-invisible pill.
+    minTintAlpha: Float = 0f
 ): Modifier {
     if (!enabled || !glass.enabled) return this
     // Read inside the block: slider drags then update the blur
     // without recomposing every animation frame.
     return this.blurSurface {
+        val effectiveTintAlpha = maxOf(glass.tintAlpha, minTintAlpha)
         radius = glass.radius.dp
-        tint(tintColor.copy(alpha = glass.tintAlpha))
+        tint(tintColor.copy(alpha = effectiveTintAlpha))
         saturation = glass.saturation
         when (glass.style) {
             GlassStyleNames.CLEAR -> {
                 radius = 3.dp
-                tint(tintColor.copy(alpha = minOf(glass.tintAlpha, 0.08f)))
+                tint(tintColor.copy(alpha = minOf(effectiveTintAlpha, 0.08f)))
                 glass(
                     refraction = 26.dp,
                     edgeWidth = 40.dp,
@@ -141,7 +146,10 @@ fun Modifier.glassSurface(
     }
 }
 
-/** Glass for a playback bar: stadium pill, rim follows the bar's own corners. */
+/** Glass for a playback bar: stadium pill, rim follows the bar's own corners.
+ * R15 F7: bars floor the tint at 25% so the pill never goes
+ * near-invisible over a busy blurred list (the user's slider can
+ * still raise it; Clear style keeps its own 8% cap). */
 @Composable
 fun Modifier.glassBar(
     glass: GlassAppearance,
@@ -153,7 +161,8 @@ fun Modifier.glassBar(
     tintColor = tintColor,
     enabled = enabled,
     shape = RoundedCornerShape(cornerDp.dp),
-    rimCornerDp = cornerDp.dp
+    rimCornerDp = cornerDp.dp,
+    minTintAlpha = 0.25f
 )
 
 /** Glass for a bottom sheet: rounded on top only, capturing the activity behind it. */

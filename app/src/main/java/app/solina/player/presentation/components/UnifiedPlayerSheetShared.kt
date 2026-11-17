@@ -40,6 +40,9 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalLayoutDirection
@@ -80,7 +83,11 @@ internal fun MiniPlayerContentInternal(
     // Appearance customisation (bug-fix round 2026-11-17, item 6):
     // the Home music bar can be resized independently; the floating
     // mini player always uses the fixed MiniPlayerHeight.
-    contentHeight: Dp = MiniPlayerHeight
+    contentHeight: Dp = MiniPlayerHeight,
+    // R15 F7: true while the bar is a transparent glass pill over the
+    // blurred list — title/artist then go white with a soft shadow
+    // instead of the dark onPrimaryContainer colours.
+    glassOn: Boolean = false
 ) {
     val hapticFeedback = LocalHapticFeedback.current
     val controlsEnabled = !isOutputConnecting && !isPreparingPlayback
@@ -127,13 +134,25 @@ internal fun MiniPlayerContentInternal(
                 fontWeight = FontWeight.SemiBold,
                 letterSpacing = (-0.2).sp,
                 fontFamily = RoundedSans,
-                color = LocalMaterialTheme.current.onPrimaryContainer
+                color = if (glassOn) Color.White
+                else LocalMaterialTheme.current.onPrimaryContainer,
+                shadow = if (glassOn) Shadow(
+                    color = Color.Black.copy(alpha = 0.45f),
+                    offset = Offset(0f, 1f),
+                    blurRadius = 4f
+                ) else null
             )
             val artistStyle = MaterialTheme.typography.bodySmall.copy(
                 fontSize = 13.sp,
                 letterSpacing = 0.sp,
                 fontFamily = RoundedSans,
-                color = LocalMaterialTheme.current.onPrimaryContainer.copy(alpha = 0.7f)
+                color = if (glassOn) Color.White.copy(alpha = 0.85f)
+                else LocalMaterialTheme.current.onPrimaryContainer.copy(alpha = 0.7f),
+                shadow = if (glassOn) Shadow(
+                    color = Color.Black.copy(alpha = 0.45f),
+                    offset = Offset(0f, 1f),
+                    blurRadius = 4f
+                ) else null
             )
 
             AutoScrollingText(
@@ -143,6 +162,10 @@ internal fun MiniPlayerContentInternal(
                     else -> song.title
                 },
                 style = titleStyle,
+                // R15 F3: the marquee fade is drawn with BlendMode.DstIn,
+                // which uses only the colour's alpha — so the solid
+                // primaryContainer edge already fades correctly over a
+                // transparent glass pill (no hue can leak through).
                 gradientEdgeColor = LocalMaterialTheme.current.primaryContainer,
                 canScroll = canScroll
             )
@@ -157,7 +180,9 @@ internal fun MiniPlayerContentInternal(
                 canScroll = canScroll
             )
         }
-        Spacer(modifier = Modifier.width(8.dp))
+        // R15 F3: 12 dp gaps (was 8 dp) so the EQ bars no longer look
+        // glued to the text on long titles.
+        Spacer(modifier = Modifier.width(12.dp))
 
         // Live EQ bars (d3motion music-player / suno): four bars driven
         // by one infiniteTransition, only while actually playing.
@@ -165,7 +190,7 @@ internal fun MiniPlayerContentInternal(
             isPlaying = isPlaying && controlsEnabled,
             color = LocalMaterialTheme.current.primary
         )
-        Spacer(modifier = Modifier.width(8.dp))
+        Spacer(modifier = Modifier.width(12.dp))
 
         // Media transport controls stay left-to-right in RTL locales.
         CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {

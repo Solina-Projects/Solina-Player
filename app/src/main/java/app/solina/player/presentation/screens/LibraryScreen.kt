@@ -932,7 +932,10 @@ fun LibraryScreen(
                                         .padding(5.dp)
                                         .clip(CircleShape)
                                         .background(
-                                            MaterialTheme.colorScheme.primary
+                                            // Container pair (see TabAnimation): a pale
+                                            // dynamic primary would make white tab text
+                                            // unreadable on this pill.
+                                            MaterialTheme.colorScheme.primaryContainer
                                         )
                                 )
                             }

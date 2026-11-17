@@ -487,7 +487,7 @@ private fun PresetTabsRow(
                             imageVector = Icons.Filled.Star,
                             contentDescription = stringResource(R.string.presentation_batch_d_eq_custom_preset_cd),
                             modifier = Modifier.size(10.dp),
-                            tint = if (selectedIndex == index) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.primary 
+                            tint = if (selectedIndex == index) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.primary
                         )
                     }
                 }

@@ -4,10 +4,10 @@ import androidx.annotation.StringRes
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.DeveloperBoard
 import androidx.compose.material.icons.rounded.DeveloperMode
-import androidx.compose.material.icons.rounded.GraphicEq
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.LibraryMusic
 import androidx.compose.material.icons.rounded.MusicNote
+import androidx.compose.material.icons.rounded.OndemandVideo
 import androidx.compose.material.icons.rounded.Palette
 import androidx.compose.ui.graphics.vector.ImageVector
 import app.solina.player.R
@@ -37,6 +37,14 @@ enum class SettingsCategory(
         subtitleRes = R.string.settings_category_playback_subtitle,
         icon = Icons.Rounded.MusicNote
     ),
+    // Video settings category (round 15, wave 1, 2026-11-17): the video
+    // prefs used to live only inside the video player UI.
+    VIDEO(
+        id = "video",
+        titleRes = R.string.settings_category_video_title,
+        subtitleRes = R.string.settings_category_video_subtitle,
+        icon = Icons.Rounded.OndemandVideo
+    ),
     BEHAVIOR(
         id = "behavior",
         titleRes = R.string.settings_category_behavior_title,
@@ -54,12 +62,6 @@ enum class SettingsCategory(
         titleRes = R.string.settings_category_developer_title,
         subtitleRes = R.string.settings_category_developer_subtitle,
         icon = Icons.Rounded.DeveloperMode
-    ),
-    EQUALIZER(
-        id = "equalizer",
-        titleRes = R.string.settings_category_equalizer_title,
-        subtitleRes = R.string.settings_category_equalizer_subtitle,
-        icon = Icons.Rounded.GraphicEq
     ),
     DEVICE_CAPABILITIES(
         id = "device_capabilities",

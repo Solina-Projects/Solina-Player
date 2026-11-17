@@ -39,6 +39,16 @@ private tailrec fun Context.findActivity(): Activity? = when (this) {
     else -> null
 }
 
+/**
+ * Content colour guaranteed readable on [background]: black on light
+ * backgrounds, white on dark ones, decided by the background's actual
+ * luminance. Use where a surface must stay a vivid/dynamic colour (so the
+ * contrast-guaranteed container pair cannot be used) but its icon or text
+ * still has to stay legible — e.g. a primary disc on a primaryContainer row.
+ */
+fun contentColorFor(background: Color): Color =
+    if (ColorUtils.calculateLuminance(background.toArgb()) > 0.5f) Color.Black else Color.White
+
 @Suppress("DEPRECATION")
 @Composable
 fun SolinaPlayerStatusBarStyle(

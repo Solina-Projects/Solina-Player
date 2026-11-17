@@ -29,6 +29,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.ui.draw.blur
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.layout.ContentScale
 import app.solina.player.data.preferences.GlassAppearance
@@ -329,7 +330,15 @@ fun FullPlayerContent(
 
     val totalDurationValue = totalDurationProvider()
 
-    val playerOnBaseColor = LocalMaterialTheme.current.onPrimaryContainer
+    // R15 F2: when the glass Now Playing backdrop is on, the backdrop
+    // is blurred album art under a dark scrim, so the light-sheet
+    // dark-brown onPrimaryContainer text is unreadable (dark on dark).
+    // Force white for the base colour — it flows to the title/artist,
+    // the seek times and the seek bar itself. Non-glass appearance
+    // is unchanged.
+    val glassBackdropOn = glass.enabled && glass.nowPlayingBackground
+    val playerOnBaseColor = if (glassBackdropOn) Color.White
+    else LocalMaterialTheme.current.onPrimaryContainer
     val playerAccentColor = LocalMaterialTheme.current.primary
     val playerOnAccentColor = LocalMaterialTheme.current.onPrimary
     val transportPlayPauseColors = expressivePlayPauseButtonColors(LocalMaterialTheme.current)
@@ -643,7 +652,10 @@ fun FullPlayerContent(
             playerOnBaseColor = playerOnBaseColor,
             playerViewModel = playerViewModel,
             gradientEdgeColor = LocalMaterialTheme.current.primaryContainer,
-            chipColor = playerOnAccentColor.copy(alpha = 0.8f),
+            // R15 F2: solid chip in glass mode (was white at 0.8 alpha
+            // over the blurred backdrop).
+            chipColor = if (glassBackdropOn) playerOnAccentColor
+            else playerOnAccentColor.copy(alpha = 0.8f),
             chipContentColor = playerAccentColor,
             onQueueClick = onSongMetadataQueueClick,
             onArtistClick = onSongMetadataArtistClick,
@@ -667,7 +679,10 @@ fun FullPlayerContent(
             playerOnBaseColor = playerOnBaseColor,
             playerViewModel = playerViewModel,
             gradientEdgeColor = LocalMaterialTheme.current.primaryContainer,
-            chipColor = playerOnAccentColor.copy(alpha = 0.8f),
+            // R15 F2: solid chip in glass mode (was white at 0.8 alpha
+            // over the blurred backdrop).
+            chipColor = if (glassBackdropOn) playerOnAccentColor
+            else playerOnAccentColor.copy(alpha = 0.8f),
             chipContentColor = playerAccentColor,
             onQueueClick = onSongMetadataQueueClick,
             onArtistClick = onSongMetadataArtistClick,
@@ -751,7 +766,9 @@ fun FullPlayerContent(
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
                         containerColor = Color.Transparent,
-                        titleContentColor = LocalMaterialTheme.current.onPrimaryContainer,
+                        // R15 F2: white title in glass mode (was the dark
+                        // onPrimaryContainer, unreadable over the scrim).
+                        titleContentColor = playerOnBaseColor,
                     ),
                     title = {
                         if (!isOutputConnecting) {
@@ -770,7 +787,7 @@ fun FullPlayerContent(
                                         Icon(
                                             imageVector = androidx.compose.material.icons.Icons.Rounded.Cloud,
                                             contentDescription = stringResource(R.string.presentation_batch_g_player_cd_cloud_stream),
-                                            tint = LocalMaterialTheme.current.onPrimaryContainer.copy(alpha = 0.6f),
+                                            tint = playerOnBaseColor.copy(alpha = 0.6f),
                                             modifier = Modifier.padding(start = 8.dp).size(16.dp)
                                         )
                                     }
@@ -899,27 +916,47 @@ fun FullPlayerContent(
             // Now Playing background — a static, one-shot blur of the
             // album art as the backdrop. Native Modifier.blur (one GPU
             // blur per artwork change, no per-frame capture), darkened
-            // so the text stays readable. Off by default; no art means
-            // no backdrop, the normal background shows instead.
+            // so the text stays readable.
+            // R15 F2: scrim raised to 0.6 (was 0.45) — the old scrim
+            // left dark-brown text unreadable over bright blurred art.
+            // R15 F4: the backdrop now draws even with no art. Before,
+            // no art meant no backdrop at all, so the strip above the
+            // top bar showed the bare player-area background as a grey
+            // rounded bar; now a dark gradient covers the whole card.
             val artUri = song.albumArtUriString?.takeIf { it.isNotBlank() }
-            if (glass.enabled && glass.nowPlayingBackground && artUri != null) {
+            if (glassBackdropOn) {
                 Box(modifier = Modifier.fillMaxSize()) {
-                    SmartImage(
-                        model = artUri,
-                        contentDescription = null,
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .blur(glass.radius.dp),
-                        shape = RectangleShape,
-                        contentScale = ContentScale.Crop,
-                        targetSize = coil.size.Size(400, 400),
-                        placeHolderBackgroundColor = Color.Transparent
-                    )
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .background(Color.Black.copy(alpha = 0.45f))
-                    )
+                    if (artUri != null) {
+                        SmartImage(
+                            model = artUri,
+                            contentDescription = null,
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .blur(glass.radius.dp),
+                            shape = RectangleShape,
+                            contentScale = ContentScale.Crop,
+                            targetSize = coil.size.Size(400, 400),
+                            placeHolderBackgroundColor = Color.Transparent
+                        )
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(Color.Black.copy(alpha = 0.6f))
+                        )
+                    } else {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(
+                                    Brush.verticalGradient(
+                                        listOf(
+                                            Color(0xFF2A2A2E),
+                                            Color(0xFF101012)
+                                        )
+                                    )
+                                )
+                        )
+                    }
                 }
             }
             if (isFoldableTwoPane) {

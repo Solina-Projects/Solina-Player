@@ -5,10 +5,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AccountCircle
 import androidx.compose.material.icons.rounded.CloudDownload
+import androidx.compose.material.icons.rounded.GraphicEq
 import androidx.compose.material.icons.rounded.Lyrics
-import androidx.compose.material.icons.rounded.Palette
 import androidx.compose.material.icons.rounded.SystemUpdate
-import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material3.ColorScheme
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
@@ -48,10 +47,10 @@ internal val SettingsCategory.iconTone: SettingsIconTone
         SettingsCategory.LIBRARY -> SettingsIconTone.PRIMARY
         SettingsCategory.APPEARANCE -> SettingsIconTone.TERTIARY
         SettingsCategory.PLAYBACK -> SettingsIconTone.SECONDARY
+        SettingsCategory.VIDEO -> SettingsIconTone.SECONDARY
         SettingsCategory.BEHAVIOR -> SettingsIconTone.PRIMARY
         SettingsCategory.BACKUP_RESTORE -> SettingsIconTone.TERTIARY
         SettingsCategory.DEVELOPER -> SettingsIconTone.SECONDARY
-        SettingsCategory.EQUALIZER -> SettingsIconTone.TERTIARY
         SettingsCategory.DEVICE_CAPABILITIES -> SettingsIconTone.SECONDARY
         SettingsCategory.ABOUT -> SettingsIconTone.SECONDARY
     }
@@ -68,7 +67,6 @@ internal sealed interface MainSettingsEntry {
 
         override val route: String
             get() = when (category) {
-                SettingsCategory.EQUALIZER -> Screen.Equalizer.createRoute()
                 SettingsCategory.DEVICE_CAPABILITIES -> Screen.DeviceCapabilities.createRoute()
                 SettingsCategory.ABOUT -> Screen.About.route
                 else -> Screen.SettingsCategory.createRoute(category.id)
@@ -91,6 +89,16 @@ internal sealed interface MainSettingsEntry {
             iconTone = SettingsIconTone.SECONDARY,
             route = Screen.LyricsSettings.createRoute()
         ),
+        // Equalizer (round 15, wave 1, 2026-11-17): demoted from a whole
+        // category — one screen does not need a category of its own — to a
+        // main-list destination row, like Lyrics.
+        EQUALIZER(
+            titleRes = R.string.settings_category_equalizer_title,
+            subtitleRes = R.string.settings_category_equalizer_subtitle,
+            icon = Icons.Rounded.GraphicEq,
+            iconTone = SettingsIconTone.TERTIARY,
+            route = Screen.Equalizer.createRoute()
+        ),
         DOWNLOADS(
             titleRes = R.string.cloud_downloads_title,
             subtitleRes = R.string.cloud_downloads_settings_subtitle,
@@ -111,22 +119,6 @@ internal sealed interface MainSettingsEntry {
             icon = Icons.Rounded.SystemUpdate,
             iconTone = SettingsIconTone.PRIMARY,
             route = Screen.Updates.route
-        ),
-        HOME_CUSTOMIZATION(
-            titleRes = R.string.home_customize_title,
-            subtitleRes = R.string.home_customize_subtitle,
-            icon = Icons.Rounded.Tune,
-            iconTone = SettingsIconTone.TERTIARY,
-            route = Screen.HomeCustomization.route
-        ),
-        // Appearance customisation (bug-fix round 2026-11-17, item 6):
-        // per-section bars, cards, colours and fonts.
-        APPEARANCE_CUSTOMIZATION(
-            titleRes = R.string.appearance_customize_title,
-            subtitleRes = R.string.appearance_customize_subtitle,
-            icon = Icons.Rounded.Palette,
-            iconTone = SettingsIconTone.TERTIARY,
-            route = Screen.AppearanceCustomization.route
         )
     }
 }
@@ -140,15 +132,20 @@ internal val mainSettingsEntries: List<MainSettingsEntry> = buildList {
         .filter { it != SettingsCategory.DEVICE_CAPABILITIES && it != SettingsCategory.ABOUT }
         .forEach { category ->
             add(MainSettingsEntry.Category(category))
-            if (category == SettingsCategory.PLAYBACK) add(MainSettingsEntry.Destination.LYRICS)
+            if (category == SettingsCategory.PLAYBACK) {
+                add(MainSettingsEntry.Destination.LYRICS)
+                add(MainSettingsEntry.Destination.EQUALIZER)
+            }
         }
     // Cloud disabled (2026-11-16, user: fully offline for now):
     // the Cloud Downloads and Accounts (Navidrome / Jellyfin) rows
     // are not shown. The destinations themselves stay defined above,
     // so re-enabling is a one-line change here.
     if (CloudFeatures.ENABLED) add(MainSettingsEntry.Destination.DOWNLOADS)
-    add(MainSettingsEntry.Destination.HOME_CUSTOMIZATION)
-    add(MainSettingsEntry.Destination.APPEARANCE_CUSTOMIZATION)
+    // Customise Home / Customise appearance (round 15, wave 1): no longer
+    // main-list rows — they live inside the Appearance category now, as
+    // the single appearance hub (A1). The screens themselves are
+    // untouched; only the entry point moved.
     add(MainSettingsEntry.Category(SettingsCategory.DEVICE_CAPABILITIES))
     if (CloudFeatures.ENABLED) add(MainSettingsEntry.Destination.ACCOUNTS)
     add(MainSettingsEntry.Destination.UPDATES)
