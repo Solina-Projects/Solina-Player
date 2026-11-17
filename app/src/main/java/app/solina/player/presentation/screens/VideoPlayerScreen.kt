@@ -700,22 +700,9 @@ fun VideoPlayerScreen(
         rowDragDx += deltaPx
         onRowRevealDrag(deltaPx)
     }
-    val onRowDragStarted: () -> Unit = {
-        rowDragDx = 0f
-        rowDragStartedOpen = controlsExpanded
-        rowDragStartedGathered = rowGatheredToEnd
-        rowDragActive = true
-        touchActive = true
-        // The handle is reachable while the bars are auto-hidden; a
-        // drag on it must show the bars or the reveal would be
-        // invisible until the drag settles.
-        barsVisible = true
-    }
-    val onRowDragStopped: (Float) -> Unit = { velocity ->
-        rowDragActive = false
-        touchActive = false
-        settleRowDrag(velocity)
-    }
+    // Declared before the drag callbacks below: local functions must
+    // be declared before use in the same scope (CI caught the forward
+    // reference when this sat below onRowDragStopped).
     fun settleRowDrag(velocity: Float) {
         // Open-ward amounts: positive = dragging / flinging away from
         // the handle side (opening), negative = toward it (gathering
@@ -793,6 +780,22 @@ fun VideoPlayerScreen(
             }
         }
         rowDragDx = 0f
+    }
+    val onRowDragStarted: () -> Unit = {
+        rowDragDx = 0f
+        rowDragStartedOpen = controlsExpanded
+        rowDragStartedGathered = rowGatheredToEnd
+        rowDragActive = true
+        touchActive = true
+        // The handle is reachable while the bars are auto-hidden; a
+        // drag on it must show the bars or the reveal would be
+        // invisible until the drag settles.
+        barsVisible = true
+    }
+    val onRowDragStopped: (Float) -> Unit = { velocity ->
+        rowDragActive = false
+        touchActive = false
+        settleRowDrag(velocity)
     }
     val handleDragState = rememberDraggableState { delta -> rowDragDelta(delta) }
     val rowDragState = rememberDraggableState { delta -> rowDragDelta(delta) }
@@ -1975,8 +1978,8 @@ fun VideoPlayerScreen(
                                     // Round 18: a row drag is a touch in
                                     // progress — gate the auto-hide timer
                                     // until the drag settles.
-                                    onDragStarted = onRowDragStarted,
-                                    onDragStopped = onRowDragStopped
+                                    onDragStarted = { onRowDragStarted() },
+                                    onDragStopped = { velocity -> onRowDragStopped(velocity) }
                                 ),
                             color = Color.Black.copy(alpha = 0.55f),
                             shape = RoundedCornerShape(
@@ -2130,8 +2133,8 @@ fun VideoPlayerScreen(
                                         modifier = Modifier.draggable(
                                             state = arrowDragState,
                                             orientation = Orientation.Horizontal,
-                                            onDragStarted = onRowDragStarted,
-                                            onDragStopped = onRowDragStopped
+                                            onDragStarted = { onRowDragStarted() },
+                                            onDragStopped = { velocity -> onRowDragStopped(velocity) }
                                         )
                                     )
                                 }
@@ -2285,8 +2288,8 @@ fun VideoPlayerScreen(
                                 // until the drag settles. Round 19: the
                                 // drag also drives the reveal (shared
                                 // start / stop with the row and arrow).
-                                onDragStarted = onRowDragStarted,
-                                onDragStopped = onRowDragStopped
+                                onDragStarted = { onRowDragStarted() },
+                                onDragStopped = { velocity -> onRowDragStopped(velocity) }
                             )
                     ) {
                         Box(contentAlignment = Alignment.Center) {
