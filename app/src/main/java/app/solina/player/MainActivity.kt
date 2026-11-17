@@ -724,6 +724,11 @@ class MainActivity : ComponentActivity() {
     ) = traceSection("MainActivity.MainUI") {
         val navBackStackEntry by navController.currentBackStackEntryAsState()
         val currentRoute = navBackStackEntry?.destination?.route
+        // Appearance customisation (bug-fix round 2026-11-17, item 6):
+        // the floating music bar's colour is read here (MainUI is a
+        // separate composable, so it cannot see setContent's locals).
+        val appearanceSettings by appearancePreferences.appearanceFlow
+            .collectAsStateWithLifecycle(initialValue = AppearanceSettings())
         var isSearchBarActive by remember { mutableStateOf(false) }
         val windowSizeClass = currentWindowAdaptiveInfo().windowSizeClass
         val useNavigationRail =
@@ -745,6 +750,7 @@ class MainActivity : ComponentActivity() {
                 Screen.VideoPlayer.route,
                 Screen.Home.route,
                 Screen.HomeCustomization.route,
+                Screen.AppearanceCustomization.route,
                 Screen.Settings.route,
                 Screen.Accounts.route,
                 Screen.PlaylistDetail.route,
