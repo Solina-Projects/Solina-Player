@@ -373,6 +373,9 @@ fun VideoPlayerScreen(
     // until the gesture ends, and during a row/handle drag; the timer
     // only counts down once every finger is off the screen, so a long
     // drag or hold can never hide the bars mid-gesture.
+    // (Fix: the declaration was missing from the round-18 patch —
+    // the comment and all 8 uses landed, the var itself did not.)
+    var touchActive by remember { mutableStateOf(false) }
     // Relative scrubbing (Search + Player polish, 2026-11-16): dragging
     // the bottom time bar moves the position at 0.5x — half the finger
     // travel — so scrubbing feels slower and finer. A tap (one big jump)
