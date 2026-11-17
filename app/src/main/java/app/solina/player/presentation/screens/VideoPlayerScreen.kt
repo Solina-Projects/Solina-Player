@@ -1262,7 +1262,7 @@ fun VideoPlayerScreen(
                                             GestureMode.TwoFingerSpeed -> {
                                                 twoFingerSpeed = twoFingerSpeedFor(
                                                     midY,
-                                                    size.height
+                                                    size.height.toFloat()
                                                 )
                                                 // Live only: no DataStore
                                                 // write per move; persisted
@@ -1299,7 +1299,7 @@ fun VideoPlayerScreen(
                                                         mode = GestureMode.TwoFingerSpeed
                                                         twoFingerSpeed = twoFingerSpeedFor(
                                                             midY,
-                                                            size.height
+                                                            size.height.toFloat()
                                                         )
                                                         videoPlayerViewModel.setSpeedLive(
                                                             twoFingerSpeed
