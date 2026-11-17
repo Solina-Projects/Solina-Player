@@ -159,6 +159,10 @@ fun HomeCustomizationScreen(
 private val HomeSectionId.titleRes: Int
     get() = when (this) {
         HomeSectionId.ENTRY_CARDS -> R.string.home_section_entry_cards
+        // COUNTS was removed 2026-11-17 (bug-fix item 3) and no longer
+        // appears in the list, but the when must stay exhaustive for
+        // the enum value that a stored config could still carry.
+        HomeSectionId.COUNTS -> R.string.home_section_counts
         HomeSectionId.RECENT_MUSIC -> R.string.home_section_recent_music
         HomeSectionId.RECENT_VIDEOS -> R.string.home_section_recent_videos
         HomeSectionId.YOUR_MIX -> R.string.home_section_your_mix
