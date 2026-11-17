@@ -101,7 +101,6 @@ import app.solina.player.presentation.components.HomeGradientTopBar
 import app.solina.player.presentation.components.HomeMusicPlaybackBar
 import app.solina.player.presentation.components.VideoMiniPlayerBar
 import app.solina.player.presentation.components.HomeOptionsBottomSheet
-import app.solina.player.presentation.components.MediaCountsRow
 import app.solina.player.presentation.components.MediaEntryCards
 import app.solina.player.presentation.components.RecentlyPlayedSection
 import app.solina.player.presentation.components.RecentlyPlayedSectionMinSongsToShow
@@ -509,25 +508,6 @@ fun HomeScreen(
                                 }
                             }
                         }
-                        HomeSectionId.COUNTS.name -> {
-                            if (isSectionVisible(HomeSectionId.COUNTS)) {
-                                item(
-                                    key = "home_counts",
-                                    contentType = "home_counts"
-                                ) {
-                                    MediaCountsRow(
-                                        musicCount = audioCount,
-                                        videoCount = videoCount,
-                                        onMusicClick = {
-                                            navController.navigateSafely(Screen.Library.route)
-                                        },
-                                        onVideoClick = {
-                                            navController.navigateSafely(Screen.VideoFolders.route)
-                                        }
-                                    )
-                                }
-                            }
-                        }
                         HomeSectionId.RECENT_MUSIC.name -> {
                             if (isSectionVisible(HomeSectionId.RECENT_MUSIC)) {
                                 if (recentMusic.isNotEmpty()) {
@@ -564,6 +544,19 @@ fun HomeScreen(
                                     ) {
                                         HomeMusicPlaybackBar(
                                             playerViewModel = playerViewModel,
+                                            // Bug-fix (2026-11-17, item 5): the
+                                            // sheet is not composed on Home, so
+                                            // expanding it alone opens nothing.
+                                            // Go to the Music section (where
+                                            // the sheet lives) and expand it
+                                            // there — the full player opens
+                                            // over the Library, exactly as it
+                                            // does from the mini bar inside
+                                            // the Music section.
+                                            onOpenFullPlayer = {
+                                                playerViewModel.expandPlayerSheet()
+                                                navController.navigateSafely(Screen.Library.route)
+                                            },
                                             modifier = Modifier.padding(horizontal = 16.dp)
                                         )
                                     }

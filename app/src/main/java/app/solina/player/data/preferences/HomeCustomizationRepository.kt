@@ -25,6 +25,9 @@ import javax.inject.Singleton
  */
 enum class HomeSectionId {
     ENTRY_CARDS,
+    // COUNTS was removed 2026-11-17 (bug-fix item 3: the count cards duplicated
+    // the counts already shown on the entry cards). The value stays so a stored
+    // section id can never fail to parse; it is no longer in the defaults.
     COUNTS,
     RECENT_MUSIC,
     RECENT_VIDEOS,
@@ -60,14 +63,13 @@ class HomeCustomizationRepository @Inject constructor(
         /** Default order, top to bottom, everything visible. */
         val DEFAULT_SECTIONS: List<HomeSectionConfig> = listOf(
             HomeSectionConfig(HomeSectionId.ENTRY_CARDS.name, true, 0),
-            HomeSectionConfig(HomeSectionId.COUNTS.name, true, 1),
-            HomeSectionConfig(HomeSectionId.RECENT_MUSIC.name, true, 2),
-            HomeSectionConfig(HomeSectionId.RECENT_VIDEOS.name, true, 3),
-            HomeSectionConfig(HomeSectionId.YOUR_MIX.name, true, 4),
-            HomeSectionConfig(HomeSectionId.DAILY_MIX.name, true, 5),
-            HomeSectionConfig(HomeSectionId.RECENTLY_PLAYED.name, true, 6),
-            HomeSectionConfig(HomeSectionId.STATS.name, true, 7),
-            HomeSectionConfig(HomeSectionId.RECAP.name, true, 8)
+            HomeSectionConfig(HomeSectionId.RECENT_MUSIC.name, true, 1),
+            HomeSectionConfig(HomeSectionId.RECENT_VIDEOS.name, true, 2),
+            HomeSectionConfig(HomeSectionId.YOUR_MIX.name, true, 3),
+            HomeSectionConfig(HomeSectionId.DAILY_MIX.name, true, 4),
+            HomeSectionConfig(HomeSectionId.RECENTLY_PLAYED.name, true, 5),
+            HomeSectionConfig(HomeSectionId.STATS.name, true, 6),
+            HomeSectionConfig(HomeSectionId.RECAP.name, true, 7)
         )
 
         fun defaultState(): HomeSectionsState = HomeSectionsState(DEFAULT_SECTIONS)

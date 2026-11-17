@@ -159,7 +159,6 @@ fun HomeCustomizationScreen(
 private val HomeSectionId.titleRes: Int
     get() = when (this) {
         HomeSectionId.ENTRY_CARDS -> R.string.home_section_entry_cards
-        HomeSectionId.COUNTS -> R.string.home_section_counts
         HomeSectionId.RECENT_MUSIC -> R.string.home_section_recent_music
         HomeSectionId.RECENT_VIDEOS -> R.string.home_section_recent_videos
         HomeSectionId.YOUR_MIX -> R.string.home_section_your_mix

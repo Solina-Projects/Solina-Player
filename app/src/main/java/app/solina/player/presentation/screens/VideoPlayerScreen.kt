@@ -91,6 +91,7 @@ import androidx.compose.material.icons.rounded.VolumeOff
 import androidx.compose.material.icons.rounded.VolumeUp
 import androidx.compose.material.icons.rounded.WbSunny
 import app.solina.player.presentation.components.RollingTimeText
+import app.solina.player.presentation.components.WavySliderExpressive
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
@@ -1605,11 +1606,21 @@ fun VideoPlayerScreen(
                                 fontSize = 13.sp,
                                 modifier = Modifier.padding(start = 8.dp)
                             )
-                            Slider(
-                                value = if (durationMs > 0) {
-                                    displayPositionMs.toFloat() / durationMs
-                                } else {
-                                    0f
+                            // Bug-fix (2026-11-17, item 4): the old M3 Slider was the
+                            // classic almost-blue bar with a big vertical scrubber
+                            // handle. The seek bar is now the same wavy slider the
+                            // music Now Playing screen uses — an animated wave while
+                            // playing, with a small white dot at the playhead (a
+                            // short line only while dragging). Tap jumps straight
+                            // to the tapped point, drag scrubs at 0.5x — the same
+                            // scrub behaviour as before, only the look changed.
+                            WavySliderExpressive(
+                                value = {
+                                    if (durationMs > 0) {
+                                        displayPositionMs.toFloat() / durationMs
+                                    } else {
+                                        0f
+                                    }
                                 },
                                 onValueChange = { fraction ->
                                     scrubbing = true
@@ -1654,11 +1665,12 @@ fun VideoPlayerScreen(
                                     poke()
                                 },
                                 enabled = durationMs > 0,
-                                colors = SliderDefaults.colors(
-                                    thumbColor = Color(0xFF8FB8FF),
-                                    activeTrackColor = Color(0xFF8FB8FF),
-                                    inactiveTrackColor = Color.White.copy(alpha = 0.4f)
-                                ),
+                                activeTrackColor = Color(0xFF8FB8FF),
+                                inactiveTrackColor = Color.White.copy(alpha = 0.4f),
+                                thumbColor = Color.White,
+                                isPlaying = isPlaying,
+                                thumbRadius = 7.dp,
+                                thumbLineHeightWhenInteracting = 16.dp,
                                 modifier = Modifier
                                     .weight(1f)
                                     .padding(horizontal = 8.dp)

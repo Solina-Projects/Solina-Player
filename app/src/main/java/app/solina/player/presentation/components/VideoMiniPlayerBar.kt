@@ -258,7 +258,7 @@ fun VideoMiniPlayerBar(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Box(
                             modifier = Modifier
-                                .size(36.dp)
+                                .size(32.dp)
                                 .clip(CircleShape)
                                 .background(colors.onPrimary)
                                 .clickable(
@@ -274,15 +274,15 @@ fun VideoMiniPlayerBar(
                                 imageVector = Icons.Rounded.SkipPrevious,
                                 contentDescription = stringResource(R.string.video_previous_video),
                                 tint = colors.primary,
-                                modifier = Modifier.size(22.dp)
+                                modifier = Modifier.size(20.dp)
                             )
                         }
 
-                        Spacer(modifier = Modifier.width(8.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
 
                         Box(
                             modifier = Modifier
-                                .size(36.dp)
+                                .size(32.dp)
                                 .clip(RoundedCornerShape(playPauseCorner))
                                 .background(colors.primary)
                                 .clickable(
@@ -301,15 +301,15 @@ fun VideoMiniPlayerBar(
                             MorphingPlayPauseIcon(
                                 isPlaying = isPlaying,
                                 tint = colors.onPrimary,
-                                size = 22.dp
+                                size = 20.dp
                             )
                         }
 
-                        Spacer(modifier = Modifier.width(8.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
 
                         Box(
                             modifier = Modifier
-                                .size(36.dp)
+                                .size(32.dp)
                                 .clip(CircleShape)
                                 .background(colors.onPrimary)
                                 .clickable(
@@ -324,7 +324,7 @@ fun VideoMiniPlayerBar(
                                 imageVector = Icons.Rounded.SkipNext,
                                 contentDescription = stringResource(R.string.video_next_video),
                                 tint = colors.primary,
-                                modifier = Modifier.size(22.dp)
+                                modifier = Modifier.size(20.dp)
                             )
                         }
                     }

@@ -33,11 +33,20 @@ import app.solina.player.presentation.viewmodel.PlayerViewModel
  *
  * Hidden when nothing has ever been played (no current song). Tapping
  * the bar opens the full player; the transport buttons work directly.
+ *
+ * Bug-fix (2026-11-17, item 5): tapping the bar did NOT open the full
+ * player. The bar only called [PlayerViewModel.expandPlayerSheet], but
+ * the player sheet is not composed on Home (the floating mini player is
+ * hidden there), so expanding did nothing visible. The caller therefore
+ * passes [onOpenFullPlayer], which navigates to the Music section first
+ * (where the sheet lives) and then expands it — the same full player
+ * that opens from the mini bar inside the Music section.
  */
 @Composable
 fun HomeMusicPlaybackBar(
     playerViewModel: PlayerViewModel,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onOpenFullPlayer: () -> Unit = { playerViewModel.expandPlayerSheet() }
 ) {
     val stablePlayerState by playerViewModel.stablePlayerState.collectAsStateWithLifecycle()
     val currentSong = stablePlayerState.currentSong ?: return
@@ -47,7 +56,7 @@ fun HomeMusicPlaybackBar(
             modifier = modifier
                 .fillMaxWidth()
                 .height(MiniPlayerHeight)
-                .clickable { playerViewModel.expandPlayerSheet() },
+                .clickable { onOpenFullPlayer() },
             shape = RoundedCornerShape(32.dp),
             color = MaterialTheme.colorScheme.primaryContainer,
             shadowElevation = 4.dp

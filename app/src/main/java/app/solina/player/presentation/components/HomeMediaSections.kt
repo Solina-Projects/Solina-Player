@@ -150,7 +150,7 @@ fun MediaEntryCards(
                     Icon(
                         imageVector = Icons.Rounded.MusicNote,
                         contentDescription = null,
-                        modifier = Modifier.size(32.dp)
+                        modifier = Modifier.size(26.dp)
                     )
                 },
                 containerColor = MaterialTheme.colorScheme.primaryContainer,
@@ -166,7 +166,7 @@ fun MediaEntryCards(
                     Icon(
                         imageVector = Icons.Rounded.VideoLibrary,
                         contentDescription = null,
-                        modifier = Modifier.size(32.dp)
+                        modifier = Modifier.size(26.dp)
                     )
                 },
                 containerColor = MaterialTheme.colorScheme.secondaryContainer,
@@ -191,23 +191,32 @@ private fun MediaEntryCard(
 ) {
     Card(
         modifier = modifier.clickable(onClick = onClick),
-        shape = RoundedCornerShape(24.dp),
+        shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(
             containerColor = containerColor,
             contentColor = contentColor
         ),
         elevation = CardDefaults.cardElevation(0.dp)
     ) {
+        // Bug-fix (2026-11-17, item 3): the name sits UP next to its icon
+        // in one row at the top of the card (it used to sit below the icon),
+        // and the card is proportionally smaller — less padding, a smaller
+        // icon and title — while both cards stay equal size (weight 1f).
         Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            modifier = Modifier.padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
-            icon()
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleLarge,
-                maxLines = 1
-            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                icon()
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium,
+                    maxLines = 1
+                )
+            }
             Text(
                 text = subtitle,
                 style = MaterialTheme.typography.bodyMedium,
@@ -220,83 +229,6 @@ private fun MediaEntryCard(
                 style = MaterialTheme.typography.labelLarge,
                 color = contentColor.copy(alpha = 0.8f)
             )
-        }
-    }
-}
-
-/** Two count cards in their own sections: audio files and video files, separate. */
-@Composable
-fun MediaCountsRow(
-    musicCount: Int,
-    videoCount: Int,
-    onMusicClick: () -> Unit,
-    onVideoClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp),
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        MediaCountCard(
-            label = stringResource(R.string.home_music_card_title),
-            countText = stringResource(R.string.home_music_count_label, musicCount),
-            icon = Icons.Rounded.MusicNote,
-            onClick = onMusicClick,
-            modifier = Modifier.weight(1f)
-        )
-        MediaCountCard(
-            label = stringResource(R.string.home_video_card_title),
-            countText = stringResource(R.string.home_video_count_label, videoCount),
-            icon = Icons.Rounded.VideoLibrary,
-            onClick = onVideoClick,
-            modifier = Modifier.weight(1f)
-        )
-    }
-}
-
-@Composable
-private fun MediaCountCard(
-    label: String,
-    countText: String,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Card(
-        modifier = modifier.clickable(onClick = onClick),
-        shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainer
-        ),
-        elevation = CardDefaults.cardElevation(0.dp)
-    ) {
-        Row(
-            modifier = Modifier.padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(24.dp)
-            )
-            Column {
-                Text(
-                    text = countText,
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    maxLines = 1
-                )
-                Text(
-                    text = label,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1
-                )
-            }
         }
     }
 }

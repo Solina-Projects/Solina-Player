@@ -168,7 +168,7 @@ internal fun MiniPlayerContentInternal(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(
                     modifier = Modifier
-                        .size(36.dp)
+                        .size(32.dp)
                         .clip(CircleShape)
                         .background(LocalMaterialTheme.current.onPrimary)
                         .clickable(
@@ -185,11 +185,11 @@ internal fun MiniPlayerContentInternal(
                         imageVector = Icons.Rounded.SkipPrevious,
                         contentDescription = stringResource(R.string.previous_track),
                         tint = LocalMaterialTheme.current.primary,
-                        modifier = Modifier.size(22.dp)
+                        modifier = Modifier.size(20.dp)
                     )
                 }
 
-                Spacer(modifier = Modifier.width(8.dp))
+                Spacer(modifier = Modifier.width(6.dp))
 
                 val playPauseCorner by animateDpAsState(
                     targetValue = if (isPlaying) 10.dp else 18.dp,
@@ -198,7 +198,7 @@ internal fun MiniPlayerContentInternal(
                 )
                 Box(
                     modifier = Modifier
-                        .size(36.dp)
+                        .size(32.dp)
                         .clip(RoundedCornerShape(playPauseCorner))
                         .background(LocalMaterialTheme.current.primary)
                         .clickable(
@@ -214,15 +214,15 @@ internal fun MiniPlayerContentInternal(
                     MorphingPlayPauseIcon(
                         isPlaying = isPlaying,
                         tint = LocalMaterialTheme.current.onPrimary,
-                        size = 22.dp
+                        size = 20.dp
                     )
                 }
 
-                Spacer(modifier = Modifier.width(8.dp))
+                Spacer(modifier = Modifier.width(6.dp))
 
                 Box(
                     modifier = Modifier
-                        .size(36.dp)
+                        .size(32.dp)
                         .clip(CircleShape)
                         .background(LocalMaterialTheme.current.onPrimary)
                         .clickable(
@@ -236,7 +236,7 @@ internal fun MiniPlayerContentInternal(
                         imageVector = Icons.Rounded.SkipNext,
                         contentDescription = stringResource(R.string.next_track),
                         tint = LocalMaterialTheme.current.primary,
-                        modifier = Modifier.size(22.dp)
+                        modifier = Modifier.size(20.dp)
                     )
                 }
             }

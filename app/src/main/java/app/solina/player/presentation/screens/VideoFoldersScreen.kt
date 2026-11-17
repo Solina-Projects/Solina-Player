@@ -34,7 +34,6 @@ import androidx.compose.material.icons.rounded.Folder
 import androidx.compose.material.icons.rounded.FolderCopy
 import androidx.compose.material.icons.rounded.GridView
 import androidx.compose.material.icons.rounded.PlayArrow
-import androidx.compose.material.icons.rounded.Replay
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material.icons.rounded.ViewList
@@ -43,7 +42,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
@@ -93,9 +91,11 @@ private enum class FolderViewMode { ALL_FOLDERS, FILES, FOLDERS }
  * total duration, a Play-all button, and opens its videos on tap.
  *
  * Folders + Player feedback (2026-11-16): a settings dialog (View Mode /
- * Layout / Sort, mirroring the reference app's dialog), a search field, and
- * a floating Resume button that continues the last partially-watched video
- * where it left off. View mode, layout and sort are persisted in DataStore.
+ * Layout / Sort, mirroring the reference app's dialog) and a search field.
+ * View mode, layout and sort are persisted in DataStore. The video
+ * mini-player bar above the bottom bar is the resume affordance now
+ * (bug-fix 2026-11-17: the old floating Resume button sat in exactly the
+ * same spot as the video bar and showed through behind it).
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -112,9 +112,6 @@ fun VideoFoldersScreen(
     val viewModeName by videoViewModel.videoFoldersViewMode.collectAsStateWithLifecycle()
     val sortName by videoViewModel.videoFoldersSort.collectAsStateWithLifecycle()
     val sortAscending by videoViewModel.videoFoldersSortAscending.collectAsStateWithLifecycle()
-    val resumeUri by videoViewModel.videoResumeUri.collectAsStateWithLifecycle()
-    val resumePositionMs by videoViewModel.videoResumePositionMs.collectAsStateWithLifecycle()
-    val resumeTitle by videoViewModel.videoResumeTitle.collectAsStateWithLifecycle()
 
     val viewMode = runCatching { FolderViewMode.valueOf(viewModeName) }
         .getOrElse { FolderViewMode.FOLDERS }
@@ -193,12 +190,6 @@ fun VideoFoldersScreen(
         else shownFolders.flatMap { it.videos }
     }
 
-    // The resume point only counts while the video still exists on device.
-    val resumeVideo = remember(videos, resumeUri, resumePositionMs) {
-        if (resumeUri.isNullOrBlank() || resumePositionMs <= 10_000L) null
-        else videos.firstOrNull { it.contentUriString == resumeUri }
-    }
-
     if (showSettings) {
         VideoFoldersSettingsDialog(
             viewMode = viewMode,
@@ -243,39 +234,6 @@ fun VideoFoldersScreen(
                     }
                 }
             )
-        },
-        floatingActionButton = {
-            if (resumeVideo != null) {
-                ExtendedFloatingActionButton(
-                    onClick = {
-                        navController.navigateSafely(
-                            Screen.VideoPlayer.createRoute(
-                                startUri = resumeVideo.contentUriString,
-                                queueUris = emptyList(),
-                                startPositionMs = resumePositionMs
-                            )
-                        )
-                    },
-                    icon = {
-                        Icon(
-                            imageVector = Icons.Rounded.Replay,
-                            contentDescription = null
-                        )
-                    },
-                    text = {
-                        Text(
-                            text = stringResource(
-                                R.string.video_resume_label,
-                                resumeTitle ?: resumeVideo.displayTitle,
-                                formatDuration(resumePositionMs)
-                            ),
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    },
-                    modifier = Modifier.padding(bottom = 92.dp)
-                )
-            }
         }
     ) { padding ->
         Column(
