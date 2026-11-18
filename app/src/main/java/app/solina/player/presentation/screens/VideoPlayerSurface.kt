@@ -87,6 +87,7 @@ fun VideoPlayerSurface(
     onCommitSpeed: (Float) -> Unit,
     onSingleTapCandidate: () -> Unit,
     onShowBarsAndPoke: () -> Unit,
+    onSpeedBarShown: () -> Unit,
     onCancelPendingSingleTap: () -> Unit,
     onLockedTap: () -> Unit,
     modifier: Modifier = Modifier
@@ -231,7 +232,9 @@ fun VideoPlayerSurface(
                                         val entrySpeed = availableSpeeds[speedIndex]
                                         onApplySpeedLive(entrySpeed)
                                         onSpeedBarState(true, true)
-                                        onShowBarsAndPoke()
+                                        // Round 20: the hold speed bar is solo — hide the
+                                        // other bars instead of showing them.
+                                        onSpeedBarShown()
                                     }
                                 }
 
@@ -320,7 +323,10 @@ fun VideoPlayerSurface(
                                                     down.position.x < size.width / 2f -> VideoGestureMode.Brightness
                                                     else -> VideoGestureMode.Volume
                                                 }
-                                                onShowBarsAndPoke()
+                                                // Round 20: only a horizontal seek shows the bars.
+                                                // Brightness/volume swipes stay clean — just the
+                                                // edge slider + % hint, no bars, no timer poke.
+                                                if (mode == VideoGestureMode.Seek) onShowBarsAndPoke()
                                                 if (mode == VideoGestureMode.Seek) {
                                                     val dur = durationMsProvider()
                                                     if (dur > 0L) {

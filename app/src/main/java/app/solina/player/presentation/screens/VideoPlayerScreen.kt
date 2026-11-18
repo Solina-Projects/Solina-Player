@@ -38,6 +38,8 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
@@ -140,6 +142,9 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.input.pointer.awaitPointerEvent
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.util.VelocityTracker
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -352,7 +357,7 @@ fun VideoPlayerScreen(
         if (barsVisible && isPlaying && !anyMenuOpen &&
             !speedMode && !speedBarVisible && !touchActive && !scrubbing
         ) {
-            delay(3_000)
+            delay(4_000)
             barsVisible = false
             controlsExpanded = false
         }
@@ -369,6 +374,12 @@ fun VideoPlayerScreen(
     }
 
     LaunchedEffect(speedBarVisible, speedMode) {
+        if (speedBarVisible || speedMode) {
+            // Round 20: the hold speed bar is solo — hide the top/bottom bars,
+            // the quick row and the handle stack while it is showing.
+            barsVisible = false
+            controlsExpanded = false
+        }
         if (speedBarVisible && !speedMode) {
             delay(2_000)
             speedBarVisible = false
@@ -583,7 +594,17 @@ fun VideoPlayerScreen(
         configuration.screenWidthDp < 470 -> 0.85f
         else -> 1f
     }
-    val bottomBarCentreGap = if (isLandscape) 12.dp else 10.dp
+    // Round 20: centre transport buttons (prev/next + +/-15s) are 20% larger and
+    // twice as far apart ONLY in landscape; play/pause is intentionally untouched.
+    val bottomBarCentreScale = if (isLandscape) 1.2f else 1f
+    val bottomBarCentreGap = if (isLandscape) 24.dp else 10.dp
+    // Physical right edge, whatever the layout direction is. Alignment.End on its
+    // own is the LEFT wall in RTL, which is why the quick row used to open from
+    // the left even though its handle sits on the right.
+    val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
+    val physicalRightH = if (isRtl) Alignment.Start else Alignment.End
+    val physicalRightCenter = if (isRtl) Alignment.CenterStart else Alignment.CenterEnd
+    val physicalRightTop = if (isRtl) Alignment.TopStart else Alignment.TopEnd
     val bottomBarGap = if (isLandscape) 10.dp else 6.dp
     val speedStepPx = with(LocalDensity.current) { 56.dp.toPx() }
 
@@ -708,6 +729,11 @@ fun VideoPlayerScreen(
             onShowBarsAndPoke = {
                 barsVisible = true
                 poke()
+            },
+            onSpeedBarShown = {
+                // Round 20: the long-press speed bar is solo — do NOT show the bars.
+                barsVisible = false
+                controlsExpanded = false
             },
             onCancelPendingSingleTap = { pendingSingleTap = false },
             onLockedTap = { lockHintVisible = !lockHintVisible }
@@ -879,23 +905,25 @@ fun VideoPlayerScreen(
                 // Expandable quick-action row (natural wrap sizing, RTL/LTR safe)
                 AnimatedVisibility(
                     visible = controlsExpanded,
-                    enter = expandHorizontally(expandFrom = Alignment.End) + fadeIn(),
-                    exit = shrinkHorizontally(shrinkTowards = Alignment.End) + fadeOut()
+                    enter = expandHorizontally(expandFrom = physicalRightH) + fadeIn(),
+                    exit = shrinkHorizontally(shrinkTowards = physicalRightH) + fadeOut()
                 ) {
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(top = 4.dp, end = 8.dp),
-                        contentAlignment = Alignment.CenterEnd
+                            .padding(top = 4.dp, start = if (isRtl) 8.dp else 0.dp, end = if (isRtl) 0.dp else 8.dp),
+                        contentAlignment = physicalRightCenter
                     ) {
                         Surface(
                             color = Color.Black.copy(alpha = 0.62f),
                             shape = RoundedCornerShape(24.dp),
-                            modifier = Modifier.border(
-                                1.dp,
-                                Color.White.copy(alpha = 0.12f),
-                                RoundedCornerShape(24.dp)
-                            )
+                            modifier = Modifier
+                                .border(
+                                    1.dp,
+                                    Color.White.copy(alpha = 0.12f),
+                                    RoundedCornerShape(24.dp)
+                                )
+                                .quickRowSwipeToClose(controlsExpanded) { controlsExpanded = false; poke() }
                         ) {
                             LazyRow(
                                 contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp),
@@ -969,45 +997,6 @@ fun VideoPlayerScreen(
                     }
                 }
 
-                // Floating momentary Speed Bar (long press hold-to-boost)
-                AnimatedVisibility(
-                    visible = speedBarVisible,
-                    enter = fadeIn(tween(150)) + slideInVertically { -it / 4 },
-                    exit = fadeOut(tween(150)),
-                    modifier = Modifier.align(Alignment.CenterHorizontally)
-                ) {
-                    Surface(
-                        color = Color.Black.copy(alpha = 0.72f),
-                        shape = RoundedCornerShape(20.dp),
-                        modifier = Modifier.padding(top = 8.dp)
-                    ) {
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(6.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
-                        ) {
-                            speedOptions.forEach { speed ->
-                                val selected = abs(playbackSpeed - speed) < 0.01f
-                                Surface(
-                                    onClick = {
-                                        holdSpeedPinned = true
-                                        applySpeed(speed)
-                                    },
-                                    shape = RoundedCornerShape(13.dp),
-                                    color = if (selected) videoAccentColor else Color.White.copy(alpha = 0.15f)
-                                ) {
-                                    Text(
-                                        text = formatSpeedLabel(speed),
-                                        color = if (selected) Color.Black else Color.White,
-                                        fontSize = 11.sp,
-                                        fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
-                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
             }
         }
 
@@ -1017,12 +1006,12 @@ fun VideoPlayerScreen(
             enter = fadeIn(tween(180)),
             exit = fadeOut(tween(180)),
             modifier = Modifier
-                .align(Alignment.TopEnd)
+                .align(physicalRightTop)
                 .statusBarsPadding()
-                .padding(top = 72.dp, end = 14.dp)
+                .padding(top = 72.dp, start = if (isRtl) 14.dp else 0.dp, end = if (isRtl) 0.dp else 14.dp)
         ) {
             Column(
-                horizontalAlignment = Alignment.End,
+                horizontalAlignment = physicalRightH,
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Surface(
@@ -1059,6 +1048,50 @@ fun VideoPlayerScreen(
                             lockHintVisible = true
                         }
                     )
+                }
+            }
+        }
+
+        // Round 20: solo hold speed bar — a direct child of the root Box (NOT
+        // inside the top bar, which hides with the other bars), compact, top
+        // physical-right wall. All sizes halved vs before: chips 11sp -> 6sp.
+        AnimatedVisibility(
+            visible = speedBarVisible,
+            enter = fadeIn(tween(150)) + slideInVertically { -it / 4 },
+            exit = fadeOut(tween(150)),
+            modifier = Modifier
+                .align(physicalRightTop)
+                .statusBarsPadding()
+                .padding(top = 8.dp, start = if (isRtl) 14.dp else 0.dp, end = if (isRtl) 0.dp else 14.dp)
+        ) {
+            Surface(
+                color = Color.Black.copy(alpha = 0.72f),
+                shape = RoundedCornerShape(10.dp)
+            ) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(3.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(horizontal = 5.dp, vertical = 3.dp)
+                ) {
+                    speedOptions.forEach { speed ->
+                        val selected = abs(playbackSpeed - speed) < 0.01f
+                        Surface(
+                            onClick = {
+                                holdSpeedPinned = true
+                                applySpeed(speed)
+                            },
+                            shape = RoundedCornerShape(7.dp),
+                            color = if (selected) videoAccentColor else Color.White.copy(alpha = 0.15f)
+                        ) {
+                            Text(
+                                text = formatSpeedLabel(speed),
+                                color = if (selected) Color.Black else Color.White,
+                                fontSize = 6.sp,
+                                fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
+                                modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -1146,21 +1179,21 @@ fun VideoPlayerScreen(
                     ) {
                         IconButton(
                             onClick = { videoPlayerViewModel.seekToPrevious(); poke() },
-                            modifier = Modifier.size((44f * bottomBarScale).dp)
+                            modifier = Modifier.size((44f * bottomBarScale * bottomBarCentreScale).dp)
                         ) {
                             Icon(
                                 imageVector = Icons.Rounded.SkipPrevious,
                                 contentDescription = stringResource(R.string.video_previous_video),
                                 tint = Color.White,
-                                modifier = Modifier.size((28f * bottomBarScale).dp)
+                                modifier = Modifier.size((28f * bottomBarScale * bottomBarCentreScale).dp)
                             )
                         }
                         VideoSkip15Button(
                             label = "-15",
                             contentDescription = stringResource(R.string.video_seek_back_15),
                             onClick = { videoPlayerViewModel.seekBy(-15_000L); poke() },
-                            size = (38f * bottomBarScale).dp,
-                            fontSize = (11f * bottomBarScale).sp
+                            size = (38f * bottomBarScale * bottomBarCentreScale).dp,
+                            fontSize = (11f * bottomBarScale * bottomBarCentreScale).sp
                         )
                         val playCorner by animateDpAsState(
                             targetValue = if (isPlaying) 14.dp else 28.dp,
@@ -1186,18 +1219,18 @@ fun VideoPlayerScreen(
                             label = "+15",
                             contentDescription = stringResource(R.string.video_seek_forward_15),
                             onClick = { videoPlayerViewModel.seekBy(15_000L); poke() },
-                            size = (38f * bottomBarScale).dp,
-                            fontSize = (11f * bottomBarScale).sp
+                            size = (38f * bottomBarScale * bottomBarCentreScale).dp,
+                            fontSize = (11f * bottomBarScale * bottomBarCentreScale).sp
                         )
                         IconButton(
                             onClick = { videoPlayerViewModel.seekToNext(); poke() },
-                            modifier = Modifier.size((44f * bottomBarScale).dp)
+                            modifier = Modifier.size((44f * bottomBarScale * bottomBarCentreScale).dp)
                         ) {
                             Icon(
                                 imageVector = Icons.Rounded.SkipNext,
                                 contentDescription = stringResource(R.string.video_next_video),
                                 tint = Color.White,
-                                modifier = Modifier.size((28f * bottomBarScale).dp)
+                                modifier = Modifier.size((28f * bottomBarScale * bottomBarCentreScale).dp)
                             )
                         }
                     }
@@ -1854,6 +1887,38 @@ private fun VideoRoundControlButton(
             overflow = TextOverflow.Ellipsis,
             textAlign = TextAlign.Center
         )
+    }
+}
+
+/**
+ * Round 20: swipe-to-close for the quick-action row. This observes only — it
+ * never consumes the drag, so the LazyRow underneath keeps scrolling normally
+ * on slow drags (back/forward through its buttons). A fast fling toward the
+ * physical right wall (screen +x) closes the row instead.
+ */
+private fun Modifier.quickRowSwipeToClose(
+    enabled: Boolean,
+    onClose: () -> Unit
+): Modifier = if (!enabled) this else this.pointerInput(onClose) {
+    awaitEachGesture {
+        val down = awaitFirstDown(requireUnconsumed = false)
+        val tracker = VelocityTracker()
+        tracker.addPosition(down.uptimeMillis, down.position)
+        var totalDx = 0f
+        var lastPosition = down.position
+        while (true) {
+            val event = awaitPointerEvent()
+            val pressed = event.changes.filter { it.pressed }
+            if (pressed.isEmpty()) break
+            val change = pressed.firstOrNull { it.id == down.id } ?: pressed.first()
+            totalDx += change.position.x - lastPosition.x
+            lastPosition = change.position
+            tracker.addPosition(change.uptimeMillis, change.position)
+        }
+        val velocityX = runCatching { tracker.calculateVelocity().x }.getOrDefault(0f)
+        if (velocityX > 900f && totalDx > 24f) {
+            onClose()
+        }
     }
 }
 
