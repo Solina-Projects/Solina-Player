@@ -6,6 +6,7 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import app.solina.player.data.cloud.CloudFeatures
 import app.solina.player.presentation.model.SettingsCategory
 import app.solina.player.presentation.navigation.Screen
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -53,9 +54,14 @@ class SettingsMainListTest {
     }
 
     @Test
-    fun `main list shows every category and destination exactly once`() {
+    fun `main list shows every enabled category and destination exactly once`() {
+        val enabledDestinations = MainSettingsEntry.Destination.entries.filter {
+            CloudFeatures.ENABLED ||
+                (it != MainSettingsEntry.Destination.DOWNLOADS &&
+                    it != MainSettingsEntry.Destination.ACCOUNTS)
+        }
         val expected = SettingsCategory.entries.map { MainSettingsEntry.Category(it) } +
-            MainSettingsEntry.Destination.entries
+            enabledDestinations
 
         assertEquals(expected.size, mainSettingsEntries.size)
         assertEquals(expected.toSet(), mainSettingsEntries.toSet())
@@ -145,7 +151,7 @@ class SettingsMainListTest {
             Screen.SettingsCategory.createRoute("library"),
             MainSettingsEntry.Category(SettingsCategory.LIBRARY).route
         )
-        assertEquals(Screen.Equalizer.createRoute(), MainSettingsEntry.Category(SettingsCategory.EQUALIZER).route)
+        assertEquals(Screen.Equalizer.createRoute(), MainSettingsEntry.Destination.EQUALIZER.route)
         assertEquals(
             Screen.DeviceCapabilities.createRoute(),
             MainSettingsEntry.Category(SettingsCategory.DEVICE_CAPABILITIES).route
