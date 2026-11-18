@@ -545,18 +545,22 @@ fun HomeScreen(
                                     ) {
                                         HomeMusicPlaybackBar(
                                             playerViewModel = playerViewModel,
-                                            // Bug-fix (2026-11-17, item 5): the
-                                            // sheet is not composed on Home, so
-                                            // expanding it alone opens nothing.
-                                            // Go to the Music section (where
-                                            // the sheet lives) and expand it
-                                            // there — the full player opens
-                                            // over the Library, exactly as it
-                                            // does from the mini bar inside
-                                            // the Music section.
+                                            // Round 21 (rework of the 2026-11-17
+                                            // item-5 fix): expanding BEFORE
+                                            // navigating was lost — the sheet's
+                                            // route-change sync cancels the
+                                            // in-flight expand, so the sheet
+                                            // stayed collapsed on Library.
+                                            // Navigate FIRST, then ask the
+                                            // ViewModel to expand once the
+                                            // Library route is active
+                                            // (consumed in MainActivity).
+                                            // A paused song just opens the
+                                            // full player at that song.
                                             onOpenFullPlayer = {
-                                                playerViewModel.expandPlayerSheet()
-                                                navController.navigateSafely(Screen.Library.route)
+                                                if (navController.navigateSafely(Screen.Library.route)) {
+                                                    playerViewModel.requestExpandPlayerSheetAfterNavigation()
+                                                }
                                             },
                                             modifier = Modifier.padding(horizontal = 16.dp)
                                         )

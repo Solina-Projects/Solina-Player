@@ -1,8 +1,6 @@
 package app.solina.player.presentation.screens
 
-import android.content.Context
 import android.content.res.Configuration
-import android.media.AudioManager
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
@@ -92,7 +90,6 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -106,7 +103,6 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -733,31 +729,21 @@ private fun VideoPlayerDialog(
     )
 }
 
-/** Unified Audio & Display dialog: real system volume, player gain, audio tracks, and night light / brightness. */
+/** Unified Audio & Display dialog: audio tracks, and night light / brightness.
+ * Round 21: the two volume rows (system volume and player gain) were removed
+ * at the user's request — volume is still adjustable via the right-edge
+ * swipe gesture and the phone's hardware buttons. */
 @Composable
 fun VideoAudioDisplayDialog(
     audioTrackLabels: List<String>,
     selectedAudioTrack: Int,
     onSelectTrack: (Int) -> Unit,
-    playerGain: Float,
-    onPlayerGain: (Float) -> Unit,
     nightLight: Boolean,
     brightness: Int,
     onNightLight: (Boolean) -> Unit,
     onBrightness: (Int) -> Unit,
     onDismiss: () -> Unit
 ) {
-    val context = LocalContext.current
-    val audioManager = remember(context) {
-        context.getSystemService(Context.AUDIO_SERVICE) as? AudioManager
-    }
-    val maxVol = remember(audioManager) {
-        (audioManager?.getStreamMaxVolume(AudioManager.STREAM_MUSIC) ?: 15).coerceAtLeast(1)
-    }
-    var systemVolume by remember {
-        mutableIntStateOf(audioManager?.getStreamVolume(AudioManager.STREAM_MUSIC) ?: maxVol / 2)
-    }
-
     VideoPlayerDialog(
         onDismissRequest = onDismiss,
         title = stringResource(R.string.video_audio_display_title)
@@ -768,60 +754,6 @@ fun VideoAudioDisplayDialog(
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            Text(
-                text = stringResource(R.string.video_system_volume),
-                color = Color.White.copy(alpha = 0.8f),
-                style = MaterialTheme.typography.labelLarge
-            )
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    imageVector = Icons.Rounded.VolumeUp,
-                    contentDescription = null,
-                    tint = Color.White,
-                    modifier = Modifier.size(20.dp)
-                )
-                Spacer(Modifier.width(8.dp))
-                Slider(
-                    value = systemVolume.toFloat(),
-                    onValueChange = { raw ->
-                        val next = raw.toInt().coerceIn(0, maxVol)
-                        systemVolume = next
-                        runCatching {
-                            audioManager?.setStreamVolume(AudioManager.STREAM_MUSIC, next, 0)
-                        }
-                    },
-                    valueRange = 0f..maxVol.toFloat(),
-                    modifier = Modifier.weight(1f)
-                )
-                Text(
-                    text = "${(systemVolume * 100 / maxVol)}%",
-                    color = Color.White,
-                    style = MaterialTheme.typography.bodySmall,
-                    modifier = Modifier.padding(start = 6.dp)
-                )
-            }
-            Text(
-                text = stringResource(R.string.video_player_gain),
-                color = Color.White.copy(alpha = 0.8f),
-                style = MaterialTheme.typography.labelLarge
-            )
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Slider(
-                    value = playerGain,
-                    onValueChange = onPlayerGain,
-                    valueRange = 0f..1f,
-                    modifier = Modifier.weight(1f)
-                )
-                Text(
-                    text = "${(playerGain * 100).toInt()}%",
-                    color = Color.White,
-                    style = MaterialTheme.typography.bodySmall,
-                    modifier = Modifier.padding(start = 6.dp)
-                )
-            }
-
-            HorizontalDivider(color = Color.White.copy(alpha = 0.14f))
-
             Text(
                 text = stringResource(R.string.video_audio_track),
                 color = Color.White.copy(alpha = 0.8f),

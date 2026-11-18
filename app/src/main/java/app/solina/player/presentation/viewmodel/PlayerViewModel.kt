@@ -2216,6 +2216,23 @@ class PlayerViewModel @Inject constructor(
         }
     }
 
+    // Round 21: the Home music bar must open the full player, but expanding
+    // BEFORE navigating to the Music section is lost — the expand fires
+    // while the sheet is hidden on Home, and the sheet's syncToExpansion
+    // (MutatorMutex) then cancels it on the route change, leaving the
+    // sheet collapsed on Library. So Home requests the expand first and
+    // MainActivity consumes it once the Library route is active.
+    private val _pendingExpandPlayerSheet = MutableStateFlow(false)
+    val pendingExpandPlayerSheet: StateFlow<Boolean> = _pendingExpandPlayerSheet.asStateFlow()
+
+    fun requestExpandPlayerSheetAfterNavigation() {
+        _pendingExpandPlayerSheet.value = true
+    }
+
+    fun clearPendingExpandPlayerSheet() {
+        _pendingExpandPlayerSheet.value = false
+    }
+
     fun collapsePlayerSheet(resetPredictiveState: Boolean = true) {
         _sheetState.value = PlayerSheetState.COLLAPSED
         if (resetPredictiveState) {

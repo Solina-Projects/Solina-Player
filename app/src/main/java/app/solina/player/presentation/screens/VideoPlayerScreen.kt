@@ -22,12 +22,10 @@ import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.expandHorizontally
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
-import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutHorizontally
@@ -212,7 +210,6 @@ fun VideoPlayerScreen(
     val swipeGesturesEnabled by videoPlayerViewModel.swipeGesturesEnabled.collectAsStateWithLifecycle()
     val nightLight by videoPlayerViewModel.nightLight.collectAsStateWithLifecycle()
     val brightness by videoPlayerViewModel.brightness.collectAsStateWithLifecycle()
-    val volume by videoPlayerViewModel.volume.collectAsStateWithLifecycle()
     val sleepTimerMinutes by videoPlayerViewModel.sleepTimerMinutes.collectAsStateWithLifecycle()
     val sleepTimerRemainingSeconds by videoPlayerViewModel.sleepTimerRemainingSeconds.collectAsStateWithLifecycle()
     val audioTrackLabels by videoPlayerViewModel.audioTrackLabels.collectAsStateWithLifecycle()
@@ -597,12 +594,13 @@ fun VideoPlayerScreen(
     // twice as far apart ONLY in landscape; play/pause is intentionally untouched.
     val bottomBarCentreScale = if (isLandscape) 1.2f else 1f
     val bottomBarCentreGap = if (isLandscape) 24.dp else 10.dp
-    // Physical right edge, whatever the layout direction is. Alignment.End on its
-    // own is the LEFT wall in RTL, which is why the quick row used to open from
-    // the left even though its handle sits on the right.
+    // Physical right edge, whatever the layout direction is. Round 21:
+    // the Round 20 direction-aware Alignment anchor (expandFrom =
+    // Alignment.Start in RTL) still grew the quick row from the LEFT wall
+    // on the phone, so the row no longer relies on Alignment at all for
+    // its animation — see the slideIn/slideOutHorizontally transitions
+    // below (pixel offsets, +x = physical right, direction-independent).
     val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
-    val physicalRightH = if (isRtl) Alignment.Start else Alignment.End
-    val physicalRightCenter = if (isRtl) Alignment.CenterStart else Alignment.CenterEnd
     val physicalRightTop = if (isRtl) Alignment.TopStart else Alignment.TopEnd
     val bottomBarGap = if (isLandscape) 10.dp else 6.dp
     val speedStepPx = with(LocalDensity.current) { 56.dp.toPx() }
@@ -901,17 +899,26 @@ fun VideoPlayerScreen(
                     }
                 }
 
-                // Expandable quick-action row (natural wrap sizing, RTL/LTR safe)
+                // Expandable quick-action row. Round 21: enters/exits with an
+                // absolute pixel slide from the physical right wall
+                // (slideInHorizontally { it } starts a full width to the
+                // right of its final spot and slides left into place, and
+                // back out to the right on exit) — no Alignment, no layout
+                // direction involved, so it cannot come from the left.
+                // The row container is forced LTR so Alignment.CenterEnd
+                // is the physical right wall in any locale; the LazyRow
+                // itself stays RTL so the button order is unchanged.
                 AnimatedVisibility(
                     visible = controlsExpanded,
-                    enter = expandHorizontally(expandFrom = physicalRightH) + fadeIn(),
-                    exit = shrinkHorizontally(shrinkTowards = physicalRightH) + fadeOut()
+                    enter = slideInHorizontally(animationSpec = tween(250)) { it } + fadeIn(),
+                    exit = slideOutHorizontally(animationSpec = tween(200)) { it } + fadeOut()
                 ) {
+                    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(top = 4.dp, start = if (isRtl) 8.dp else 0.dp, end = if (isRtl) 0.dp else 8.dp),
-                        contentAlignment = physicalRightCenter
+                            .padding(top = 4.dp, end = 8.dp),
+                        contentAlignment = Alignment.CenterEnd
                     ) {
                         Surface(
                             color = Color.Black.copy(alpha = 0.62f),
@@ -924,6 +931,9 @@ fun VideoPlayerScreen(
                                 )
                                 .quickRowSwipeToClose(controlsExpanded) { controlsExpanded = false; poke() }
                         ) {
+                            // Keep the button order RTL as before — only the
+                            // container positioning is forced LTR above.
+                            CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
                             LazyRow(
                                 contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp),
                                 horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -992,14 +1002,18 @@ fun VideoPlayerScreen(
                                     )
                                 }
                             }
+                            }
                         }
+                    }
                     }
                 }
 
             }
         }
 
-        // Top-End compact handle stack (expand arrow, plus rotation + lock in portrait)
+        // Top-End compact handle stack (expand arrow, plus rotation + lock in portrait).
+        // Round 21: the inner Column is forced LTR so Alignment.End is the
+        // physical right wall in any locale, matching the quick row.
         AnimatedVisibility(
             visible = barsVisible && !controlsExpanded,
             enter = fadeIn(tween(180)),
@@ -1009,8 +1023,9 @@ fun VideoPlayerScreen(
                 .statusBarsPadding()
                 .padding(top = 72.dp, start = if (isRtl) 14.dp else 0.dp, end = if (isRtl) 0.dp else 14.dp)
         ) {
+            CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
             Column(
-                horizontalAlignment = physicalRightH,
+                horizontalAlignment = Alignment.End,
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Surface(
@@ -1049,28 +1064,32 @@ fun VideoPlayerScreen(
                     )
                 }
             }
+            }
         }
 
-        // Round 20: solo hold speed bar — a direct child of the root Box (NOT
-        // inside the top bar, which hides with the other bars), compact, top
-        // physical-right wall. All sizes halved vs before: chips 11sp -> 6sp.
+        // Round 21: solo hold speed bar — a direct child of the root Box (NOT
+        // inside the top bar, which hides with the other bars), horizontally
+        // CENTRED at the top. Sizes vs Round 20: gap 3dp -> 1dp (60% less),
+        // chip text 6sp -> 7sp (+20%), chips only +5% (padding 5x2 ->
+        // 5.25x2dp, radius 7 -> 7.25dp, surface padding 5x3 -> 5.25x3.25dp,
+        // surface radius 10 -> 10.5dp).
         AnimatedVisibility(
             visible = speedBarVisible,
             enter = fadeIn(tween(150)) + slideInVertically { -it / 4 },
             exit = fadeOut(tween(150)),
             modifier = Modifier
-                .align(physicalRightTop)
+                .align(Alignment.TopCenter)
                 .statusBarsPadding()
-                .padding(top = 8.dp, start = if (isRtl) 14.dp else 0.dp, end = if (isRtl) 0.dp else 14.dp)
+                .padding(top = 8.dp)
         ) {
             Surface(
                 color = Color.Black.copy(alpha = 0.72f),
-                shape = RoundedCornerShape(10.dp)
+                shape = RoundedCornerShape(10.5.dp)
             ) {
                 Row(
-                    horizontalArrangement = Arrangement.spacedBy(3.dp),
+                    horizontalArrangement = Arrangement.spacedBy(1.dp),
                     verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.padding(horizontal = 5.dp, vertical = 3.dp)
+                    modifier = Modifier.padding(horizontal = 5.25.dp, vertical = 3.25.dp)
                 ) {
                     speedOptions.forEach { speed ->
                         val selected = abs(playbackSpeed - speed) < 0.01f
@@ -1079,15 +1098,15 @@ fun VideoPlayerScreen(
                                 holdSpeedPinned = true
                                 applySpeed(speed)
                             },
-                            shape = RoundedCornerShape(7.dp),
+                            shape = RoundedCornerShape(7.25.dp),
                             color = if (selected) videoAccentColor else Color.White.copy(alpha = 0.15f)
                         ) {
                             Text(
                                 text = formatSpeedLabel(speed),
                                 color = if (selected) Color.Black else Color.White,
-                                fontSize = 6.sp,
+                                fontSize = 7.sp,
                                 fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
-                                modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
+                                modifier = Modifier.padding(horizontal = 5.25.dp, vertical = 2.dp)
                             )
                         }
                     }
@@ -1465,8 +1484,6 @@ fun VideoPlayerScreen(
             audioTrackLabels = audioTrackLabels,
             selectedAudioTrack = selectedAudioTrack,
             onSelectTrack = { videoPlayerViewModel.selectAudioTrack(it) },
-            playerGain = volume,
-            onPlayerGain = { videoPlayerViewModel.setVolume(it) },
             nightLight = nightLight,
             brightness = brightness,
             onNightLight = { videoPlayerViewModel.setNightLight(it) },

@@ -252,6 +252,10 @@ class MainActivity : ComponentActivity() {
     private val _pendingVideoNavigation = kotlinx.coroutines.flow.MutableStateFlow<String?>(null)
     private val _isInPictureInPicture = kotlinx.coroutines.flow.MutableStateFlow(false)
 
+    // Round 21: mirrors the current nav route for onUserLeaveHint(), which
+    // runs outside composition and cannot read MainUI's currentRoute.
+    private var isVideoPlayerRouteActive: Boolean = false
+
     private val videoPipReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             if (intent?.action != VideoPipContract.ACTION_PIP_CONTROL) return
@@ -1009,17 +1013,36 @@ class MainActivity : ComponentActivity() {
         val currentVideoItem by videoPlaybackHolder.currentVideo.collectAsStateWithLifecycle()
         val inVideoPlayerRoute = currentRoute?.startsWith("video_player") == true
 
-        LaunchedEffect(inVideoPlayerRoute, isVideoPlaying, currentVideoItem) {
-            if (inVideoPlayerRoute) {
-                val params = VideoPipContract.buildParams(
-                    context = this@MainActivity,
-                    isPlaying = isVideoPlaying,
-                    videoWidth = currentVideoItem?.width ?: 16,
-                    videoHeight = currentVideoItem?.height ?: 9,
-                    autoEnter = isVideoPlaying
-                )
-                runCatching { setPictureInPictureParams(params) }
+        // Round 21: keep the activity field in sync for onUserLeaveHint().
+        LaunchedEffect(inVideoPlayerRoute) { isVideoPlayerRouteActive = inVideoPlayerRoute }
+
+        // Round 21: consume a pending full-player expand requested from Home
+        // (Home music bar): the Library route must be active first, and the
+        // sheet's route-change sync must have settled, so wait briefly
+        // before expanding — otherwise the expand is cancelled/snapped
+        // back by the sheet's syncToExpansion on the route change.
+        val pendingExpandPlayerSheet by playerViewModel.pendingExpandPlayerSheet.collectAsStateWithLifecycle()
+        LaunchedEffect(currentRoute, pendingExpandPlayerSheet) {
+            if (pendingExpandPlayerSheet && currentRoute == Screen.Library.route) {
+                playerViewModel.clearPendingExpandPlayerSheet()
+                delay(200)
+                playerViewModel.expandPlayerSheet()
             }
+        }
+
+        LaunchedEffect(inVideoPlayerRoute, isVideoPlaying, currentVideoItem) {
+            // Round 21: always (re)publish the PiP params — autoEnter must
+            // be cleared (false) when leaving the video player route or
+            // when playback stops, otherwise a stale autoEnter=true makes
+            // the system auto-enter PiP later from other sections.
+            val params = VideoPipContract.buildParams(
+                context = this@MainActivity,
+                isPlaying = isVideoPlaying,
+                videoWidth = currentVideoItem?.width ?: 16,
+                videoHeight = currentVideoItem?.height ?: 9,
+                autoEnter = inVideoPlayerRoute && isVideoPlaying
+            )
+            runCatching { setPictureInPictureParams(params) }
         }
 
         CompositionLocalProvider(
@@ -1528,7 +1551,12 @@ class MainActivity : ComponentActivity() {
 
     override fun onUserLeaveHint() {
         super.onUserLeaveHint()
+        // Round 21: PiP on Home-press ONLY while a video is playing inside
+        // the video player screen — never from other sections. The route
+        // check matters as well as videoPlayerActive, because a stale
+        // autoEnter PiP param could otherwise re-enter PiP later.
         if (PhoneOrientationPolicy.videoPlayerActive &&
+            isVideoPlayerRouteActive &&
             videoPlaybackHolder.isPlaying.value &&
             !isInPictureInPictureMode
         ) {
