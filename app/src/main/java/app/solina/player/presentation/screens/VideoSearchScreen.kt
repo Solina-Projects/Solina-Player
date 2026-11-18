@@ -76,6 +76,7 @@ import androidx.navigation.NavController
 import androidx.window.core.layout.WindowSizeClass
 import app.solina.player.R
 import app.solina.player.data.model.VideoItem
+import app.solina.player.data.model.VideoProgressEntry
 import app.solina.player.presentation.components.MiniPlayerHeight
 import app.solina.player.presentation.components.VideoThumbnail
 import app.solina.player.presentation.navigation.Screen
@@ -114,6 +115,7 @@ fun VideoSearchScreen(
     val searchInputFocusRequester = remember { FocusRequester() }
     val statusBarTopInset = WindowInsets.systemBars.asPaddingValues().calculateTopPadding()
     val isGridView by videoViewModel.isVideoSearchGridView.collectAsStateWithLifecycle()
+    val progressMap by videoViewModel.videoProgressMap.collectAsStateWithLifecycle()
 
     // All videos together in one list: empty query = every video, newest
     // first; typing filters by title/mime; a format chip filters by type.
@@ -281,6 +283,7 @@ fun VideoSearchScreen(
             }
             VideoSearchResults(
                 results = results,
+                progressMap = progressMap,
                 formats = formats,
                 formatFilter = formatFilter,
                 onFormatClick = { formatFilter = it },
@@ -335,6 +338,7 @@ private fun VideoBrowseCard(
     title: String,
     subtitle: String,
     thumbnailVideo: VideoItem?,
+    progressFraction: Float = 0f,
     isGridView: Boolean,
     colorSeed: String,
     onClick: () -> Unit
@@ -381,6 +385,7 @@ private fun VideoBrowseCard(
                 ) {
                     VideoThumbnail(
                         video = thumbnailVideo,
+                        progressFraction = progressFraction,
                         modifier = Modifier.fillMaxSize()
                     )
                 }
@@ -420,6 +425,7 @@ private fun VideoBrowseCard(
 @Composable
 private fun VideoSearchResults(
     results: List<VideoItem>,
+    progressMap: Map<String, VideoProgressEntry>,
     formats: List<VideoFormatGroup>,
     formatFilter: String?,
     onFormatClick: (String?) -> Unit,
@@ -430,7 +436,7 @@ private fun VideoSearchResults(
 ) {
     val localDensity = LocalDensity.current
     val systemNavBarInset = WindowInsets.systemBars.asPaddingValues().calculateBottomPadding()
-    val imePadding = WindowInsets.ime.getBottom(localDensity).dp
+    val imePadding = with(localDensity) { WindowInsets.ime.getBottom(this).toDp() }
     val windowSizeClass = currentWindowAdaptiveInfo().windowSizeClass
     val isMediumWidth = windowSizeClass.isWidthAtLeastBreakpoint(WindowSizeClass.WIDTH_DP_MEDIUM_LOWER_BOUND)
     val isExpandedWidth = windowSizeClass.isWidthAtLeastBreakpoint(WindowSizeClass.WIDTH_DP_EXPANDED_LOWER_BOUND)
@@ -528,6 +534,7 @@ private fun VideoSearchResults(
                         title = video.displayTitle,
                         subtitle = formatDuration(video.durationMs),
                         thumbnailVideo = video,
+                        progressFraction = progressMap[video.contentUriString]?.fraction ?: 0f,
                         isGridView = true,
                         colorSeed = video.contentUriString,
                         onClick = { onVideoClick(video) }
@@ -543,6 +550,7 @@ private fun VideoSearchResults(
                 items(results, key = { it.id }) { video ->
                     VideoSearchRow(
                         video = video,
+                        progressFraction = progressMap[video.contentUriString]?.fraction ?: 0f,
                         onClick = { onVideoClick(video) }
                     )
                 }
@@ -554,6 +562,7 @@ private fun VideoSearchResults(
 @Composable
 private fun VideoSearchRow(
     video: VideoItem,
+    progressFraction: Float = 0f,
     onClick: () -> Unit,
     // Round 15, wave 2, C2 + C4: row corners + list font size from the
     // appearance settings (same controls as the music library rows).
@@ -577,6 +586,7 @@ private fun VideoSearchRow(
         ) {
             VideoThumbnail(
                 video = video,
+                progressFraction = progressFraction,
                 modifier = Modifier.size(width = 112.dp, height = 64.dp)
             )
             Spacer(Modifier.width(12.dp))

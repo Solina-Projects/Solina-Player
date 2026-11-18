@@ -61,6 +61,7 @@ fun VideoLibraryScreen(
     // Mini-player bar (2026-11-16): it overlays the bottom of this list, so
     // leave room for it (64 dp bar + 8 dp gap) when it is showing.
     val showVideoMiniBar by videoViewModel.showVideoMiniBar.collectAsStateWithLifecycle()
+    val progressMap by videoViewModel.videoProgressMap.collectAsStateWithLifecycle()
     // Staggered tile reveal (d3motion gemini-image): each row fades/scales
     // in once, in order, when the list first loads.
     val revealedKeys = rememberRevealedKeys()
@@ -158,6 +159,7 @@ fun VideoLibraryScreen(
                         ) {
                             VideoThumbnail(
                                 video = video,
+                                progressFraction = progressMap[video.contentUriString]?.fraction ?: 0f,
                                 modifier = Modifier.size(width = 112.dp, height = 64.dp)
                             )
                             Spacer(Modifier.width(12.dp))

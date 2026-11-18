@@ -762,10 +762,10 @@ fun AppNavigation(
                 }
             }
             composable(
-                route = Screen.VideoPlayer.route + "?queue={queue}&startMs={startMs}",
+                route = Screen.VideoPlayer.route + "?queueKey={queueKey}&startMs={startMs}",
                 arguments = listOf(
                     navArgument("videoUri") { type = NavType.StringType },
-                    navArgument("queue") {
+                    navArgument("queueKey") {
                         type = NavType.StringType
                         nullable = true
                         defaultValue = null
@@ -781,14 +781,8 @@ fun AppNavigation(
                 popExitTransition = { popExitTransition() },
             ) { backStackEntry ->
                 val videoUri = backStackEntry.arguments?.getString("videoUri").orEmpty()
-                val videoQueue = backStackEntry.arguments?.getString("queue")
-                    ?.let { encoded ->
-                        runCatching { java.net.URLDecoder.decode(encoded, "UTF-8") }
-                            .getOrElse { encoded }
-                    }
-                    ?.split("\n")
-                    ?.filter { it.isNotBlank() }
-                    .orEmpty()
+                val queueKey = backStackEntry.arguments?.getString("queueKey")
+                val videoQueue = VideoQueueStore.get(queueKey)
                 val startMs = backStackEntry.arguments?.getLong("startMs") ?: 0L
                 ScreenWrapper(navController = navController, playerViewModel = playerViewModel) {
                     VideoPlayerScreen(

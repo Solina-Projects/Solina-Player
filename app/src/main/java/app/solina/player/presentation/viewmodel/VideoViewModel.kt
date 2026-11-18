@@ -3,6 +3,8 @@ package app.solina.player.presentation.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.solina.player.data.model.VideoItem
+import app.solina.player.data.model.VideoPlaylistEntry
+import app.solina.player.data.model.VideoProgressEntry
 import app.solina.player.data.preferences.UserPreferencesRepository
 import app.solina.player.data.repository.VideoRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -16,7 +18,7 @@ import javax.inject.Inject
 
 /**
  * Video library state. Separate from [PlayerViewModel] (music): the video
- * list, count and recent videos come only from [VideoRepository].
+ * list, count, progress map, favourites, playlist, and recent videos come only from video stores.
  */
 @HiltViewModel
 class VideoViewModel @Inject constructor(
@@ -36,25 +38,26 @@ class VideoViewModel @Inject constructor(
         .map { it.take(RECENT_VIDEOS_LIMIT) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
-    /**
-     * Swipe-to-skip on the mini-player bars (round 15, D1): the video bars
-     * (Video section + Home) and the Home music bar all follow the same
-     * "swipe to change track" switch as the floating music bar
-     * ([UserPreferencesRepository.miniPlayerSwipeToSkipFlow], Behaviour →
-     * Player gestures, off by default). Deliberately NOT the video
-     * surface-gestures switch (`videoSwipeGesturesEnabledFlow`): that one
-     * governs seek / brightness / volume on the full video player surface,
-     * a different gesture in a different place.
-     */
+    val videoProgressMap: StateFlow<Map<String, VideoProgressEntry>> =
+        userPreferencesRepository.videoProgressMapFlow
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
+
+    val favouriteVideoUris: StateFlow<Set<String>> =
+        userPreferencesRepository.videoFavouriteUrisFlow
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptySet())
+
+    val videoPlaylistEntries: StateFlow<List<VideoPlaylistEntry>> =
+        userPreferencesRepository.videoPlaylistFlow
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    fun removeFromVideoPlaylist(uri: String) {
+        viewModelScope.launch { userPreferencesRepository.removeFromVideoPlaylist(uri) }
+    }
+
     val miniPlayerSwipeToSkip: StateFlow<Boolean> =
         userPreferencesRepository.miniPlayerSwipeToSkipFlow
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
 
-    /**
-     * Search feedback (2026-11-16): the Video Search browse grid has its own
-     * persisted grid/list mode, mirroring the music search genre grid
-     * ([PlayerViewModel.isGenreGridView]).
-     */
     val isVideoSearchGridView: StateFlow<Boolean> =
         userPreferencesRepository.isVideoSearchGridViewFlow
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), true)
@@ -64,10 +67,6 @@ class VideoViewModel @Inject constructor(
             userPreferencesRepository.setVideoSearchGridView(!isVideoSearchGridView.value)
         }
     }
-
-    // ---- Video Folders + Player feedback (2026-11-16): the Folders
-    // settings dialog (view mode / layout / sort) and the floating
-    // Resume button. All persisted in the shared settings DataStore. ----
 
     val isVideoFoldersGridView: StateFlow<Boolean> =
         userPreferencesRepository.isVideoFoldersGridViewFlow
@@ -105,7 +104,6 @@ class VideoViewModel @Inject constructor(
         }
     }
 
-    /** Last partially-watched video (URI / position / title), or null. */
     val videoResumeUri: StateFlow<String?> =
         userPreferencesRepository.videoResumeUriFlow
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
@@ -122,12 +120,6 @@ class VideoViewModel @Inject constructor(
         viewModelScope.launch { userPreferencesRepository.clearVideoResume() }
     }
 
-    /**
-     * Video mini bar (2026-11-16): show it when a video is loaded in the
-     * shared holder (live session) or a resume point was saved (a video was
-     * played before, even if the app restarted). The bar itself decides
-     * what to display; this only drives list bottom padding.
-     */
     val showVideoMiniBar: StateFlow<Boolean> = combine(
         videoPlaybackHolder.currentVideo,
         videoResumeUri

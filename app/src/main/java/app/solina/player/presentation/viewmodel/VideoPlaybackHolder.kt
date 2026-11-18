@@ -1,23 +1,30 @@
 package app.solina.player.presentation.viewmodel
 
 import android.content.Context
+import android.content.Intent
 import android.media.MediaCodecList
 import android.media.MediaFormat
 import android.net.Uri
-import androidx.annotation.OptIn
+import androidx.core.content.ContextCompat
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
+import androidx.media3.common.MediaMetadata
+import androidx.media3.common.MimeTypes
+import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.common.Tracks
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.analytics.AnalyticsListener
 import androidx.media3.exoplayer.mediacodec.MediaCodecSelector
 import app.solina.player.data.model.ExternalVideoSubtitle
 import app.solina.player.data.model.VideoItem
+import app.solina.player.data.model.VideoProgressEntry
 import app.solina.player.data.preferences.UserPreferencesRepository
 import app.solina.player.data.repository.VideoRepository
+import app.solina.player.data.service.VideoPlaybackService
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -30,32 +37,22 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import timber.log.Timber
+import java.io.File
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.math.abs
 
+data class VideoPlaybackError(
+    val uri: String,
+    val message: String,
+    val canRetrySoftware: Boolean
+)
+
 /**
- * App-scoped owner of the video ExoPlayer (mini-player feedback,
- * 2026-11-16).
- *
- * The video player screen's [VideoPlayerViewModel] is navigation-scoped, so
- * it used to be cleared — and the player released — the moment the user
- * left the player. That made a "last played video" bar impossible: there
- * was no player left to show or control. The player now lives here, in a
- * @Singleton, and the ViewModel only drives it while the player screen is
- * open. Leaving the player pauses it when background playback is off (via
- * [VideoPlayerViewModel.onLeavePlayer]) but never releases it, so the
- * [app.solina.player.presentation.components.VideoMiniPlayerBar] can keep
- * showing the last video — a small live preview while it plays, the saved
- * thumbnail + position when it is paused — and play / pause / skip it.
- *
- * Limits, stated honestly: there is still no foreground service, so this
- * keeps playback alive while the user moves around *inside* the app. When
- * the app itself goes to the background it follows the background-playback
- * toggle (off = the player screen's ON_STOP observer pauses it; on = the
- * audio keeps playing), and if Android kills the process the player is
- * gone — the mini bar then falls back to the saved resume point in
- * DataStore.
+ * App-scoped owner of the video ExoPlayer, queue, sleep timer, A-B repeat,
+ * decoder telemetry, error recovery, and background MediaSessionService lifecycle.
  */
 @OptIn(UnstableApi::class)
 @Singleton
@@ -68,16 +65,8 @@ class VideoPlaybackHolder @Inject constructor(
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
     private var exoPlayer: ExoPlayer? = null
-
-    /**
-     * Decoder mode the live player was built with (round 16, item 1c).
-     * The renderers factory depends on the decoder preference, so the
-     * player is rebuilt only when this differs from [_decoderMode] —
-     * never on a plain video switch. Rebuilding on every switch tore
-     * the PlayerView surface down and re-attached a new player, which
-     * left the previous video's frame frozen on screen.
-     */
     private var playerDecoderMode: String? = null
+    private var activeVideoDecoderName: String? = null
 
     /** The live player, or null before the first video is played. */
     val playerOrNull: ExoPlayer?
@@ -89,7 +78,6 @@ class VideoPlaybackHolder @Inject constructor(
     private val _currentVideo = MutableStateFlow<VideoItem?>(null)
     val currentVideo: StateFlow<VideoItem?> = _currentVideo.asStateFlow()
 
-    /** The queue the player was given (Play all), or a single-item list. */
     private val _queueUris = MutableStateFlow<List<String>>(emptyList())
     val queueUris: StateFlow<List<String>> = _queueUris.asStateFlow()
 
@@ -105,46 +93,80 @@ class VideoPlaybackHolder @Inject constructor(
     private val _durationMs = MutableStateFlow(0L)
     val durationMs: StateFlow<Long> = _durationMs.asStateFlow()
 
-    /** Last track set, for the subtitle/audio menus (mirrored by the VM). */
     private val _tracks = MutableStateFlow<Tracks?>(null)
     val tracks: StateFlow<Tracks?> = _tracks.asStateFlow()
 
     private val _playbackSpeed = MutableStateFlow(1f)
     val playbackSpeed: StateFlow<Float> = _playbackSpeed.asStateFlow()
 
-    /**
-     * Decoder choice (round 15, wave 1, B2) and resume behaviour (B5),
-     * from the Video settings category. Cached here so [buildPlayer] and
-     * [play]/[playQueue] can read them synchronously; defaults match
-     * today's behaviour ("auto" / "always") until the DataStore value
-     * loads.
-     */
     private val _decoderMode = MutableStateFlow("auto")
     private val _resumeBehaviour = MutableStateFlow("always")
+    private val _backgroundPlaybackEnabled = MutableStateFlow(false)
+    val backgroundPlaybackEnabled: StateFlow<Boolean> = _backgroundPlaybackEnabled.asStateFlow()
 
     private val _volume = MutableStateFlow(1f)
     val volume: StateFlow<Float> = _volume.asStateFlow()
 
-    /**
-     * Reference-player redesign (2026-11-16): the "HW" / "SW" decoder
-     * badge. This is a REAL indicator, not a toggle: when the video
-     * tracks change, the platform [MediaCodecList] is asked which decoder
-     * would decode this video format. A Google software decoder
-     * (c2.android.* / OMX.google.*) — or no platform decoder at all, in
-     * which case the FFmpeg extension decodes in software — means "SW";
-     * any vendor/hardware decoder means "HW".
-     */
     private val _decoderBadge = MutableStateFlow("HW")
     val decoderBadge: StateFlow<String> = _decoderBadge.asStateFlow()
 
-    /**
-     * External subtitle files picked per video (persisted, so they reload
-     * with the video). Keyed by video content URI.
-     */
+    private val _playbackError = MutableStateFlow<VideoPlaybackError?>(null)
+    val playbackError: StateFlow<VideoPlaybackError?> = _playbackError.asStateFlow()
+
+    // Holder-owned playback modes (survive leaving/reopening VideoPlayerScreen via mini bar).
+    private val _shuffleEnabled = MutableStateFlow(false)
+    val shuffleEnabled: StateFlow<Boolean> = _shuffleEnabled.asStateFlow()
+
+    private val _repeatMode = MutableStateFlow(Player.REPEAT_MODE_OFF)
+    val repeatMode: StateFlow<Int> = _repeatMode.asStateFlow()
+
+    private val _isMuted = MutableStateFlow(false)
+    val isMuted: StateFlow<Boolean> = _isMuted.asStateFlow()
+    private var preMuteVolume = 1f
+
+    // A-B Repeat
+    private val _aPointMs = MutableStateFlow(-1L)
+    val aPointMs: StateFlow<Long> = _aPointMs.asStateFlow()
+    private val _bPointMs = MutableStateFlow(-1L)
+    val bPointMs: StateFlow<Long> = _bPointMs.asStateFlow()
+    private var abRepeatJob: Job? = null
+
+    // Sleep timer (lives in holder so background playback sleep timer continues ticking).
+    private val _sleepTimerMinutes = MutableStateFlow(0)
+    val sleepTimerMinutes: StateFlow<Int> = _sleepTimerMinutes.asStateFlow()
+    private val _sleepTimerRemainingSeconds = MutableStateFlow(0)
+    val sleepTimerRemainingSeconds: StateFlow<Int> = _sleepTimerRemainingSeconds.asStateFlow()
+    private var sleepJob: Job? = null
+    private var sleepTickJob: Job? = null
+
+    // Resume prompt for "ask" resume behaviour.
+    private val _pendingResumePromptMs = MutableStateFlow<Long?>(null)
+    val pendingResumePromptMs: StateFlow<Long?> = _pendingResumePromptMs.asStateFlow()
+
+    private val progressMap = MutableStateFlow<Map<String, VideoProgressEntry>>(emptyMap())
+
     private val externalSubtitles =
         MutableStateFlow<Map<String, ExternalVideoSubtitle>>(emptyMap())
 
+    private fun isSoftwareCodecName(name: String?): Boolean {
+        if (name.isNullOrBlank()) return false
+        val lower = name.lowercase()
+        return lower.startsWith("omx.google.") ||
+            lower.startsWith("c2.android.") ||
+            lower.contains("ffmpeg") ||
+            lower.contains("sw")
+    }
+
     private fun computeDecoderBadge() {
+        val activeName = activeVideoDecoderName
+        if (!activeName.isNullOrBlank()) {
+            _decoderBadge.value = if (isSoftwareCodecName(activeName)) "SW" else "HW"
+            return
+        }
+        if (playerDecoderMode == "software") {
+            _decoderBadge.value = "SW"
+            return
+        }
         val format = exoPlayer?.videoFormat
         if (format == null) {
             _decoderBadge.value = "HW"
@@ -160,9 +182,8 @@ class VideoPlaybackHolder @Inject constructor(
             val codecName = MediaCodecList(MediaCodecList.REGULAR_CODECS)
                 .findDecoderForFormat(mediaFormat)
             when {
-                codecName == null -> "SW" // no platform decoder: FFmpeg (software)
-                codecName.startsWith("OMX.google.") ||
-                    codecName.startsWith("c2.android.") -> "SW"
+                codecName == null -> "SW"
+                isSoftwareCodecName(codecName) -> "SW"
                 else -> "HW"
             }
         }.getOrElse { "HW" }
@@ -170,22 +191,53 @@ class VideoPlaybackHolder @Inject constructor(
 
     private var pollJob: Job? = null
 
+    private val analyticsListener = object : AnalyticsListener {
+        override fun onVideoDecoderInitialized(
+            eventTime: AnalyticsListener.EventTime,
+            decoderName: String,
+            initializedTimestampMs: Long,
+            initializationDurationMs: Long
+        ) {
+            activeVideoDecoderName = decoderName
+            computeDecoderBadge()
+        }
+    }
+
     private val playerListener = object : Player.Listener {
         override fun onPlaybackStateChanged(playbackState: Int) {
             _isLoading.value = playbackState == Player.STATE_BUFFERING
             _isPlaying.value = exoPlayer?.isPlaying == true
+            if (playbackState == Player.STATE_READY) {
+                _playbackError.value = null
+            }
+            if (playbackState == Player.STATE_ENDED) {
+                _currentVideo.value?.let { finished ->
+                    scope.launch {
+                        userPreferencesRepository.saveVideoProgress(
+                            uri = finished.contentUriString,
+                            positionMs = 0L,
+                            durationMs = finished.durationMs
+                        )
+                    }
+                }
+                stopBackgroundService()
+            }
         }
 
         override fun onIsPlayingChanged(isPlaying: Boolean) {
             _isPlaying.value = isPlaying
             if (isPlaying) {
                 startPolling()
+                if (_backgroundPlaybackEnabled.value) {
+                    startBackgroundServiceIfNeeded()
+                }
             } else {
                 stopPolling()
                 exoPlayer?.let { p ->
                     _positionMs.value = p.currentPosition
                     _durationMs.value = p.duration.coerceAtLeast(0L)
                 }
+                saveResumePosition()
             }
         }
 
@@ -194,33 +246,69 @@ class VideoPlaybackHolder @Inject constructor(
             computeDecoderBadge()
         }
 
-        // Queue playback (Play all): keep the title in sync when the
-        // player steps to the next video in the queue.
         override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
             val uri = mediaItem?.localConfiguration?.uri?.toString() ?: return
+            activeVideoDecoderName = null
+            _playbackError.value = null
+            _positionMs.value = 0L
+            _durationMs.value = 0L
+            clearABRepeat()
+            _pendingResumePromptMs.value = null
             scope.launch {
-                _currentVideo.value = videoRepository.getVideoByContentUri(uri)
+                val video = videoRepository.getVideoByContentUri(uri)
+                _currentVideo.value = video
+                if (video != null) {
+                    maybeAutoLoadSidecarSubtitle(video)
+                }
             }
+        }
+
+        override fun onPlayerError(error: PlaybackException) {
+            val uri = _currentVideo.value?.contentUriString
+                ?: exoPlayer?.currentMediaItem?.localConfiguration?.uri?.toString()
+                ?: ""
+            _isLoading.value = false
+            _isPlaying.value = false
+            stopPolling()
+            val message = error.cause?.localizedMessage?.takeIf { it.isNotBlank() }
+                ?: error.localizedMessage
+                ?: error.errorCodeName
+            val canRetrySw = playerDecoderMode != "software"
+            Timber.tag("VideoPlaybackHolder").e(error, "Video playback error for %s", uri)
+            _playbackError.value = VideoPlaybackError(
+                uri = uri,
+                message = message,
+                canRetrySoftware = canRetrySw
+            )
         }
     }
 
     init {
-        // Restore the saved speed and volume before the first play.
         scope.launch {
             _playbackSpeed.value = userPreferencesRepository.videoPlaybackSpeedFlow.first()
             _volume.value = userPreferencesRepository.videoVolumeFlow.first()
         }
-        // Decoder choice and resume behaviour (Video settings, round 15):
-        // collected continuously, not just once — the holder outlives the
-        // settings screen, and the choice must apply to the next video
-        // played after the user changes it.
         scope.launch {
             userPreferencesRepository.videoDecoderModeFlow.collect { _decoderMode.value = it }
         }
         scope.launch {
             userPreferencesRepository.videoResumeBehaviourFlow.collect { _resumeBehaviour.value = it }
         }
-        // External subtitle files picked earlier, keyed by video URI.
+        scope.launch {
+            userPreferencesRepository.videoBackgroundPlaybackFlow.collect { enabled ->
+                _backgroundPlaybackEnabled.value = enabled
+                if (enabled && exoPlayer?.isPlaying == true) {
+                    startBackgroundServiceIfNeeded()
+                } else if (!enabled) {
+                    stopBackgroundService()
+                }
+            }
+        }
+        scope.launch {
+            userPreferencesRepository.videoProgressMapFlow.collect { map ->
+                progressMap.value = map
+            }
+        }
         scope.launch {
             externalSubtitles.value = userPreferencesRepository
                 .videoExternalSubtitlesFlow.first()
@@ -228,13 +316,16 @@ class VideoPlaybackHolder @Inject constructor(
         }
     }
 
-    /**
-     * Build a MediaItem for a video URI, attaching a previously picked
-     * external subtitle file for this video (if any) as a
-     * [MediaItem.SubtitleConfiguration].
-     */
-    private fun buildMediaItem(contentUriString: String): MediaItem {
+    private fun buildMediaItem(contentUriString: String, titleHint: String? = null): MediaItem {
         val builder = MediaItem.Builder().setUri(Uri.parse(contentUriString))
+        val title = titleHint ?: _currentVideo.value?.takeIf { it.contentUriString == contentUriString }?.displayTitle
+        if (!title.isNullOrBlank()) {
+            builder.setMediaMetadata(
+                MediaMetadata.Builder()
+                    .setTitle(title)
+                    .build()
+            )
+        }
         externalSubtitles.value[contentUriString]?.let { external ->
             builder.setSubtitleConfigurations(
                 listOf(
@@ -253,11 +344,59 @@ class VideoPlaybackHolder @Inject constructor(
     }
 
     /**
-     * Attach an external subtitle file (.srt / .vtt / .ass / .ssa) to the
-     * video that is playing now: the current media item is rebuilt with
-     * the subtitle configuration and swapped in place (queue untouched),
-     * the position is kept, and the file is remembered so it reloads
-     * next time this video plays. Returns the label to auto-select.
+     * Best-effort auto-discovery of a sidecar subtitle (.srt / .vtt / .ass / .ssa)
+     * matching the video filename in the same local directory when no manual external
+     * subtitle has been set for this video.
+     */
+    private suspend fun maybeAutoLoadSidecarSubtitle(video: VideoItem) {
+        if (externalSubtitles.value.containsKey(video.contentUriString)) return
+        val videoPath = video.path ?: return
+        val sidecar = withContext(Dispatchers.IO) {
+            runCatching {
+                val file = File(videoPath)
+                val parent = file.parentFile ?: return@runCatching null
+                val stem = file.nameWithoutExtension
+                if (stem.isBlank()) return@runCatching null
+                val extensions = listOf(
+                    "srt" to MimeTypes.APPLICATION_SUBRIP,
+                    "vtt" to MimeTypes.TEXT_VTT,
+                    "ass" to MimeTypes.TEXT_SSA,
+                    "ssa" to MimeTypes.TEXT_SSA
+                )
+                for ((ext, mime) in extensions) {
+                    val candidate = File(parent, "$stem.$ext")
+                    if (candidate.exists() && candidate.isFile && candidate.canRead()) {
+                        return@runCatching Triple(Uri.fromFile(candidate), candidate.name, mime)
+                    }
+                }
+                null
+            }.getOrNull()
+        } ?: return
+
+        val player = exoPlayer ?: return
+        val currentUri = player.currentMediaItem?.localConfiguration?.uri?.toString()
+        if (currentUri != video.contentUriString) return
+        val (subUri, label, mime) = sidecar
+        val entry = ExternalVideoSubtitle(
+            videoUri = video.contentUriString,
+            subUri = subUri.toString(),
+            label = label,
+            mimeType = mime
+        )
+        externalSubtitles.value = externalSubtitles.value + (video.contentUriString to entry)
+        val pos = player.currentPosition
+        val wasPlaying = player.isPlaying
+        val idx = player.currentMediaItemIndex
+        if (idx >= 0 && idx < player.mediaItemCount) {
+            player.replaceMediaItem(idx, buildMediaItem(video.contentUriString, video.displayTitle))
+            player.seekTo(pos)
+            if (wasPlaying) player.play() else player.pause()
+        }
+    }
+
+    /**
+     * Attach an external subtitle file (.srt / .vtt / .ass / .ssa) to the playing video
+     * while preserving its play/pause state and current position.
      */
     fun attachExternalSubtitle(subUri: Uri, label: String, mimeType: String): String {
         val player = exoPlayer ?: return label
@@ -271,37 +410,55 @@ class VideoPlaybackHolder @Inject constructor(
         externalSubtitles.value = externalSubtitles.value + (videoUri to entry)
         scope.launch { userPreferencesRepository.setExternalVideoSubtitle(entry) }
         val position = player.currentPosition
+        val wasPlaying = player.isPlaying
         val index = player.currentMediaItemIndex
-        player.replaceMediaItem(index, buildMediaItem(videoUri))
-        player.seekTo(position)
-        player.play()
+        if (index in 0 until player.mediaItemCount) {
+            player.replaceMediaItem(index, buildMediaItem(videoUri))
+            player.seekTo(position)
+            if (wasPlaying) player.play() else player.pause()
+        }
         return label
     }
 
-    /**
-     * Resume entry points pass a saved position here. "start over" zeroes
-     * it; "ask" has no resume prompt anywhere in the app yet, so it falls
-     * back to today's always-resume behaviour (stated in the setting's
-     * description rather than faking a dialog).
-     */
-    private fun effectiveStartPositionMs(requestedStartPositionMs: Long): Long =
-        if (_resumeBehaviour.value == "start_over") 0L else requestedStartPositionMs
+    private fun computeStartPositionFor(
+        contentUriString: String,
+        explicitStartPositionMs: Long
+    ): Long {
+        if (_resumeBehaviour.value == "start_over") {
+            _pendingResumePromptMs.value = null
+            return 0L
+        }
+        val savedPos = if (explicitStartPositionMs > 0L) {
+            explicitStartPositionMs
+        } else {
+            progressMap.value[contentUriString]?.positionMs ?: 0L
+        }
+        if (_resumeBehaviour.value == "ask" && savedPos > 10_000L) {
+            _pendingResumePromptMs.value = savedPos
+            return 0L
+        }
+        _pendingResumePromptMs.value = null
+        return savedPos
+    }
 
-    private fun buildPlayer(): ExoPlayer {
-        // Decoder choice (round 15, wave 1, B2) — standard Media3:
-        // "auto" is today's setup (FFmpeg extension renderers on, default
-        // platform selector); "hardware" turns the FFmpeg software
-        // renderers off so only platform (hardware) decoders are used;
-        // "software" prefers software platform decoders and keeps the
-        // FFmpeg software renderers on.
-        //
-        // The renderers factory is fixed at build time, so a decoder
-        // change takes effect on the next video — but ONLY a decoder
-        // change rebuilds the player (see [ensurePlayer]). A plain video
-        // switch reuses the live player and swaps the media item, so the
-        // PlayerView surface stays attached (round 16, item 1c: rebuilding
-        // per switch left the previous video's frame frozen on screen).
-        val renderersFactory = when (_decoderMode.value) {
+    fun acceptResumePrompt() {
+        val target = _pendingResumePromptMs.value ?: return
+        _pendingResumePromptMs.value = null
+        seekTo(target)
+    }
+
+    fun dismissResumePrompt() {
+        _pendingResumePromptMs.value = null
+    }
+
+    fun restartFromBeginning() {
+        _pendingResumePromptMs.value = null
+        seekTo(0L)
+    }
+
+    private fun buildPlayer(forceSoftware: Boolean = false): ExoPlayer {
+        val effectiveMode = if (forceSoftware) "software" else _decoderMode.value
+        val renderersFactory = when (effectiveMode) {
             "hardware" -> DefaultRenderersFactory(context)
                 .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_OFF)
             "software" -> DefaultRenderersFactory(context)
@@ -318,38 +475,64 @@ class VideoPlaybackHolder @Inject constructor(
             .setRenderersFactory(renderersFactory)
             .setAudioAttributes(audioAttributes, true)
             .setHandleAudioBecomingNoisy(true)
+            .setWakeMode(C.WAKE_MODE_LOCAL)
             .build()
             .apply {
                 addListener(playerListener)
-                volume = _volume.value
+                addAnalyticsListener(analyticsListener)
+                volume = if (_isMuted.value) 0f else _volume.value
                 setPlaybackSpeed(_playbackSpeed.value)
+                shuffleModeEnabled = _shuffleEnabled.value
+                repeatMode = _repeatMode.value
             }
     }
 
-    /**
-     * One player for the lifetime of the holder (round 16, item 1c).
-     * Returns the live player when it was built with the current decoder
-     * mode; rebuilds it only when there is no player yet or the decoder
-     * preference changed since it was built. Reusing the instance keeps
-     * [_player] emitting the same object, so the PlayerView's
-     * `playerView.player = player` assignment is a no-op and the video
-     * surface is never torn down and re-attached on a video switch —
-     * the re-attach is what left the previous video's frame frozen on
-     * screen. Never rebuilds mid-playback: callers only reach here
-     * when starting a (different) video.
-     */
-    private fun ensurePlayer(): ExoPlayer {
+    private fun ensurePlayer(forceRebuildSoftware: Boolean = false): ExoPlayer {
         val current = exoPlayer
-        if (current != null && playerDecoderMode == _decoderMode.value) return current
+        val targetMode = if (forceRebuildSoftware) "software" else _decoderMode.value
+        if (!forceRebuildSoftware && current != null && playerDecoderMode == targetMode) {
+            return current
+        }
         releasePlayer()
-        val player = buildPlayer()
+        val player = buildPlayer(forceSoftware = forceRebuildSoftware)
         exoPlayer = player
         _player.value = player
-        playerDecoderMode = _decoderMode.value
+        playerDecoderMode = targetMode
         return player
     }
 
-    /** Poll position / duration / playing state while playback is active (250 ms). */
+    fun clearError() {
+        _playbackError.value = null
+    }
+
+    fun retryCurrent() {
+        val uri = _currentVideo.value?.contentUriString
+            ?: _playbackError.value?.uri?.takeIf { it.isNotBlank() }
+            ?: return
+        val pos = _positionMs.value
+        _playbackError.value = null
+        val p = ensurePlayer()
+        p.setMediaItem(buildMediaItem(uri))
+        p.prepare()
+        if (pos > 0L) p.seekTo(pos)
+        p.play()
+        _isLoading.value = true
+    }
+
+    fun retryWithSoftwareDecoder() {
+        val uri = _currentVideo.value?.contentUriString
+            ?: _playbackError.value?.uri?.takeIf { it.isNotBlank() }
+            ?: return
+        val pos = _positionMs.value
+        _playbackError.value = null
+        val p = ensurePlayer(forceRebuildSoftware = true)
+        p.setMediaItem(buildMediaItem(uri))
+        p.prepare()
+        if (pos > 0L) p.seekTo(pos)
+        p.play()
+        _isLoading.value = true
+    }
+
     private fun startPolling() {
         if (pollJob?.isActive == true) return
         pollJob = scope.launch {
@@ -372,56 +555,51 @@ class VideoPlaybackHolder @Inject constructor(
     }
 
     fun play(contentUriString: String, startPositionMs: Long = 0L) {
-        val effectiveStartPositionMs = effectiveStartPositionMs(startPositionMs)
         val current = exoPlayer
+        _playbackError.value = null
         if (_currentVideo.value?.contentUriString == contentUriString && current != null) {
-            // Same video, player already alive (e.g. reopened from the mini
-            // bar): don't rebuild, just resume — seeking only when the
-            // requested position is actually different (a resume point).
-            if (effectiveStartPositionMs > 0 &&
-                abs(current.currentPosition - effectiveStartPositionMs) > 1_000L
-            ) {
-                current.seekTo(effectiveStartPositionMs)
+            val effectiveStart = if (startPositionMs > 0L) {
+                computeStartPositionFor(contentUriString, startPositionMs)
+            } else 0L
+            if (effectiveStart > 0 && abs(current.currentPosition - effectiveStart) > 1_000L) {
+                current.seekTo(effectiveStart)
+            }
+            if (current.playbackState == Player.STATE_IDLE) {
+                current.prepare()
             }
             current.play()
             return
         }
-        // Different video: reuse the live player (round 16, item 1c) —
-        // swap the media item in place instead of releasing + rebuilding
-        // the player, so the PlayerView surface stays attached and the
-        // new video's frames actually render. Only a decoder-preference
-        // change rebuilds the player (inside ensurePlayer). The stale
-        // position / duration / tracks of the previous video are cleared
-        // here, exactly as releasePlayer() used to do on a switch.
+        val effectiveStartPositionMs = computeStartPositionFor(contentUriString, startPositionMs)
+        activeVideoDecoderName = null
         _queueUris.value = listOf(contentUriString)
         _positionMs.value = 0L
         _durationMs.value = 0L
         _tracks.value = null
+        clearABRepeat()
         ensurePlayer().apply {
             setMediaItem(buildMediaItem(contentUriString))
             prepare()
             if (effectiveStartPositionMs > 0) seekTo(effectiveStartPositionMs)
             setPlaybackSpeed(_playbackSpeed.value)
-            volume = _volume.value
+            volume = if (_isMuted.value) 0f else _volume.value
             play()
         }
         _isLoading.value = true
         startPolling()
         scope.launch {
-            _currentVideo.value = videoRepository.getVideoByContentUri(contentUriString)
+            val video = videoRepository.getVideoByContentUri(contentUriString)
+            _currentVideo.value = video
+            if (video != null) maybeAutoLoadSidecarSubtitle(video)
         }
     }
 
     suspend fun loadVideo(contentUriString: String) {
+        val existing = _currentVideo.value
+        if (existing?.contentUriString == contentUriString) return
         _currentVideo.value = videoRepository.getVideoByContentUri(contentUriString)
     }
 
-    /**
-     * Play-all: play a whole list of videos as one ExoPlayer queue,
-     * starting at [startIndex]. Falls back to single-video playback when
-     * the list has one item. Reopening the same queue at the same video
-     * (e.g. from the mini bar) does NOT rebuild the player.
-     */
     fun playQueue(
         contentUriStrings: List<String>,
         startIndex: Int = 0,
@@ -433,29 +611,31 @@ class VideoPlaybackHolder @Inject constructor(
             return
         }
         val wantedIndex = startIndex.coerceIn(0, contentUriStrings.lastIndex)
-        val effectiveStartPositionMs = effectiveStartPositionMs(startPositionMs)
+        val wantedUri = contentUriStrings[wantedIndex]
         val current = exoPlayer
+        _playbackError.value = null
         if (current != null && _queueUris.value == contentUriStrings &&
             current.currentMediaItemIndex == wantedIndex
         ) {
-            if (effectiveStartPositionMs > 0 &&
-                abs(current.currentPosition - effectiveStartPositionMs) > 1_000L
-            ) {
-                current.seekTo(effectiveStartPositionMs)
+            val effectiveStart = if (startPositionMs > 0L) {
+                computeStartPositionFor(wantedUri, startPositionMs)
+            } else 0L
+            if (effectiveStart > 0 && abs(current.currentPosition - effectiveStart) > 1_000L) {
+                current.seekTo(effectiveStart)
+            }
+            if (current.playbackState == Player.STATE_IDLE) {
+                current.prepare()
             }
             current.play()
             return
         }
-        // Different queue / video: reuse the live player (round 16,
-        // item 1c) — swap the media items in place instead of releasing
-        // + rebuilding, so the PlayerView surface stays attached.
-        // Only a decoder-preference change rebuilds (inside
-        // ensurePlayer). Stale position / duration / tracks are cleared,
-        // exactly as releasePlayer() used to do on a switch.
+        val effectiveStartPositionMs = computeStartPositionFor(wantedUri, startPositionMs)
+        activeVideoDecoderName = null
         _queueUris.value = contentUriStrings
         _positionMs.value = 0L
         _durationMs.value = 0L
         _tracks.value = null
+        clearABRepeat()
         ensurePlayer().apply {
             setMediaItems(
                 contentUriStrings.map { buildMediaItem(it) },
@@ -464,29 +644,54 @@ class VideoPlaybackHolder @Inject constructor(
             )
             prepare()
             setPlaybackSpeed(_playbackSpeed.value)
-            volume = _volume.value
+            volume = if (_isMuted.value) 0f else _volume.value
             play()
         }
         _isLoading.value = true
         startPolling()
         scope.launch {
-            _currentVideo.value = videoRepository.getVideoByContentUri(contentUriStrings[wantedIndex])
+            val video = videoRepository.getVideoByContentUri(wantedUri)
+            _currentVideo.value = video
+            if (video != null) maybeAutoLoadSidecarSubtitle(video)
         }
     }
 
-    /** Current position, for the resume point saved on leave. */
+    fun removeQueueItem(index: Int) {
+        val player = exoPlayer ?: return
+        val currentList = _queueUris.value.toMutableList()
+        if (index !in currentList.indices || currentList.size <= 1) return
+        if (index == player.currentMediaItemIndex) return
+        currentList.removeAt(index)
+        _queueUris.value = currentList
+        if (index < player.mediaItemCount) {
+            player.removeMediaItem(index)
+        }
+    }
+
+    fun moveQueueItem(fromIndex: Int, toIndex: Int) {
+        val player = exoPlayer ?: return
+        val currentList = _queueUris.value.toMutableList()
+        if (fromIndex !in currentList.indices || toIndex !in currentList.indices || fromIndex == toIndex) return
+        val item = currentList.removeAt(fromIndex)
+        currentList.add(toIndex, item)
+        _queueUris.value = currentList
+        if (fromIndex < player.mediaItemCount && toIndex < player.mediaItemCount) {
+            player.moveMediaItem(fromIndex, toIndex)
+        }
+    }
+
     fun currentPositionMs(): Long = exoPlayer?.currentPosition ?: 0L
 
-    /**
-     * Save the resume point (Folders screen's Resume button, and the mini
-     * bar's fallback). Only mid-video positions count — the very start and
-     * the very end are not worth resuming.
-     */
     fun saveResumePosition() {
         val video = _currentVideo.value ?: return
         val position = currentPositionMs()
-        val duration = exoPlayer?.duration ?: 0L
+        val duration = video.durationMs.takeIf { it > 0L } ?: (exoPlayer?.duration ?: 0L)
         scope.launch {
+            userPreferencesRepository.saveVideoProgress(
+                uri = video.contentUriString,
+                positionMs = position,
+                durationMs = duration
+            )
             if (position > 10_000L && (duration <= 0L || position < duration - 5_000L)) {
                 userPreferencesRepository.saveVideoResume(
                     uri = video.contentUriString,
@@ -502,49 +707,152 @@ class VideoPlaybackHolder @Inject constructor(
     }
 
     fun setSpeed(speed: Float) {
-        _playbackSpeed.value = speed
-        exoPlayer?.setPlaybackSpeed(speed)
+        val clamped = speed.coerceIn(0.1f, 4f)
+        _playbackSpeed.value = clamped
+        exoPlayer?.setPlaybackSpeed(clamped)
         scope.launch {
-            userPreferencesRepository.setVideoPlaybackSpeed(speed)
+            userPreferencesRepository.setVideoPlaybackSpeed(clamped)
         }
     }
 
-    /**
-     * Live speed change (two-finger speed gesture, 2026-11-17): applies
-     * at once without a DataStore write per move; the gesture end
-     * persists it through [setSpeed].
-     */
     fun setSpeedLive(speed: Float) {
-        _playbackSpeed.value = speed
-        exoPlayer?.setPlaybackSpeed(speed)
+        val clamped = speed.coerceIn(0.1f, 4f)
+        _playbackSpeed.value = clamped
+        exoPlayer?.setPlaybackSpeed(clamped)
     }
 
     fun setVolume(volume: Float) {
-        _volume.value = volume.coerceIn(0f, 1f)
-        exoPlayer?.volume = _volume.value
-        scope.launch { userPreferencesRepository.setVideoVolume(_volume.value) }
+        val clamped = volume.coerceIn(0f, 1f)
+        _volume.value = clamped
+        if (clamped > 0f && _isMuted.value) {
+            _isMuted.value = false
+        }
+        exoPlayer?.volume = clamped
+        scope.launch { userPreferencesRepository.setVideoVolume(clamped) }
     }
 
-    /**
-     * Live volume change (swipe gesture): applies at once without a
-     * DataStore write per move; the gesture end persists it through
-     * [setVolume].
-     */
     fun setVolumeLive(volume: Float) {
-        _volume.value = volume.coerceIn(0f, 1f)
-        exoPlayer?.volume = _volume.value
+        val clamped = volume.coerceIn(0f, 1f)
+        _volume.value = clamped
+        if (clamped > 0f && _isMuted.value) {
+            _isMuted.value = false
+        }
+        exoPlayer?.volume = clamped
     }
 
-    /** Seek to an absolute position, clamped to the video's duration. */
+    fun toggleMute() {
+        if (_isMuted.value) {
+            _isMuted.value = false
+            setVolume(preMuteVolume.coerceAtLeast(0.1f))
+        } else {
+            preMuteVolume = _volume.value.coerceAtLeast(0.1f)
+            _isMuted.value = true
+            exoPlayer?.volume = 0f
+        }
+    }
+
+    fun toggleShuffle() {
+        val next = !_shuffleEnabled.value
+        _shuffleEnabled.value = next
+        exoPlayer?.shuffleModeEnabled = next
+    }
+
+    fun cycleRepeatMode() {
+        val next = when (_repeatMode.value) {
+            Player.REPEAT_MODE_OFF -> Player.REPEAT_MODE_ONE
+            Player.REPEAT_MODE_ONE -> Player.REPEAT_MODE_ALL
+            else -> Player.REPEAT_MODE_OFF
+        }
+        _repeatMode.value = next
+        exoPlayer?.repeatMode = next
+    }
+
+    fun tapABRepeat() {
+        val player = exoPlayer
+        if (_aPointMs.value < 0) {
+            _aPointMs.value = player?.currentPosition ?: 0L
+            return
+        }
+        if (_bPointMs.value < 0) {
+            val b = player?.currentPosition ?: 0L
+            if (b <= _aPointMs.value) {
+                _aPointMs.value = b
+                return
+            }
+            _bPointMs.value = b
+            abRepeatJob?.cancel()
+            abRepeatJob = scope.launch {
+                while (isActive) {
+                    delay(200)
+                    val p = exoPlayer ?: break
+                    if (p.isPlaying && p.currentPosition >= _bPointMs.value && _bPointMs.value > 0) {
+                        p.seekTo(_aPointMs.value)
+                    }
+                }
+            }
+            return
+        }
+        clearABRepeat()
+    }
+
+    fun clearABRepeat() {
+        abRepeatJob?.cancel()
+        abRepeatJob = null
+        _aPointMs.value = -1L
+        _bPointMs.value = -1L
+    }
+
+    fun setSleepTimer(minutes: Int) {
+        sleepJob?.cancel()
+        sleepTickJob?.cancel()
+        _sleepTimerMinutes.value = minutes
+        if (minutes <= 0) {
+            _sleepTimerRemainingSeconds.value = 0
+            return
+        }
+        _sleepTimerRemainingSeconds.value = minutes * 60
+        sleepTickJob = scope.launch {
+            while (isActive && _sleepTimerRemainingSeconds.value > 0) {
+                delay(1_000L)
+                _sleepTimerRemainingSeconds.value =
+                    (_sleepTimerRemainingSeconds.value - 1).coerceAtLeast(0)
+            }
+        }
+        sleepJob = scope.launch {
+            delay(minutes * 60_000L)
+            pause()
+            _sleepTimerMinutes.value = 0
+            _sleepTimerRemainingSeconds.value = 0
+            sleepTickJob?.cancel()
+            stopBackgroundService()
+        }
+    }
+
+    fun startBackgroundServiceIfNeeded() {
+        if (!_backgroundPlaybackEnabled.value || exoPlayer == null) return
+        runCatching {
+            val intent = Intent(context, VideoPlaybackService::class.java)
+            ContextCompat.startForegroundService(context, intent)
+        }.onFailure { e ->
+            Timber.tag("VideoPlaybackHolder").w(e, "Unable to start VideoPlaybackService")
+        }
+    }
+
+    fun stopBackgroundService() {
+        runCatching {
+            context.stopService(Intent(context, VideoPlaybackService::class.java))
+        }
+    }
+
     fun seekTo(positionMs: Long) {
         val player = exoPlayer ?: return
-        val duration = player.duration.coerceAtLeast(0L)
-        val clamped = positionMs.coerceIn(0L, duration)
+        val mediaStoreDuration = _currentVideo.value?.durationMs ?: 0L
+        val duration = maxOf(player.duration.coerceAtLeast(0L), mediaStoreDuration)
+        val clamped = if (duration > 0L) positionMs.coerceIn(0L, duration) else positionMs.coerceAtLeast(0L)
         player.seekTo(clamped)
         _positionMs.value = clamped
     }
 
-    /** Relative seek (the ±15 s buttons, swipe seek). */
     fun seekBy(deltaMs: Long) {
         val player = exoPlayer ?: return
         seekTo(player.currentPosition + deltaMs)
@@ -563,7 +871,6 @@ class VideoPlaybackHolder @Inject constructor(
         exoPlayer?.seekToPrevious()
     }
 
-    /** Playing Queue (reference-player redesign): jump to a queue item. */
     fun playQueueIndex(index: Int) {
         val player = exoPlayer ?: return
         if (index in 0 until player.mediaItemCount) {
@@ -572,9 +879,11 @@ class VideoPlaybackHolder @Inject constructor(
         }
     }
 
-    /** Resolve a queue URI to its [VideoItem] (for the Playing Queue list). */
     suspend fun getVideoByUri(contentUriString: String): VideoItem? =
         videoRepository.getVideoByContentUri(contentUriString)
+
+    suspend fun getVideosByUris(contentUriStrings: List<String>): List<VideoItem> =
+        videoRepository.getVideosByContentUris(contentUriStrings)
 
     fun pause() {
         exoPlayer?.pause()
@@ -585,24 +894,30 @@ class VideoPlaybackHolder @Inject constructor(
     }
 
     fun setShuffleEnabled(enabled: Boolean) {
+        _shuffleEnabled.value = enabled
         exoPlayer?.shuffleModeEnabled = enabled
     }
 
     fun setRepeatMode(@Player.RepeatMode mode: Int) {
+        _repeatMode.value = mode
         exoPlayer?.repeatMode = mode
     }
 
     private fun releasePlayer() {
         pollJob?.cancel()
         pollJob = null
+        clearABRepeat()
+        activeVideoDecoderName = null
         _isPlaying.value = false
         _positionMs.value = 0L
         _durationMs.value = 0L
         exoPlayer?.removeListener(playerListener)
+        exoPlayer?.removeAnalyticsListener(analyticsListener)
         exoPlayer?.release()
         exoPlayer = null
         _player.value = null
         playerDecoderMode = null
         _tracks.value = null
+        stopBackgroundService()
     }
 }

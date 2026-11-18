@@ -18,6 +18,7 @@ import app.solina.player.data.model.Playlist
 import app.solina.player.data.model.ExternalVideoSubtitle
 import app.solina.player.data.model.VideoBookmark
 import app.solina.player.data.model.VideoPlaylistEntry
+import app.solina.player.data.model.VideoProgressEntry
 import app.solina.player.data.model.SortOption
 import app.solina.player.data.model.FolderSource
 import app.solina.player.data.model.LyricsSourcePreference
@@ -298,6 +299,8 @@ constructor(
             androidx.datastore.preferences.core.floatPreferencesKey("video_subtitle_text_size_sp")
         val VIDEO_SUBTITLE_TEXT_COLOR = intPreferencesKey("video_subtitle_text_color_argb")
         val VIDEO_SUBTITLE_BACKGROUND = intPreferencesKey("video_subtitle_background_mode")
+        val VIDEO_SUBTITLE_EDGE_TYPE = intPreferencesKey("video_subtitle_edge_type")
+        val VIDEO_PROGRESS_MAP_JSON = stringPreferencesKey("video_progress_map_json")
 
         // Settings reorg + Video settings (round 15, wave 1, 2026-11-17):
         // decoder choice, resume behaviour and swipe gestures, surfaced in
@@ -1043,7 +1046,7 @@ constructor(
 
     suspend fun setVideoPlaybackSpeed(speed: Float) {
         dataStore.edit { preferences ->
-            preferences[PreferencesKeys.VIDEO_PLAYBACK_SPEED] = speed.coerceIn(0.5f, 2f)
+            preferences[PreferencesKeys.VIDEO_PLAYBACK_SPEED] = speed.coerceIn(0.1f, 4f)
         }
     }
 
@@ -1202,6 +1205,53 @@ constructor(
         }
     }
 
+    suspend fun removeFromVideoPlaylist(uri: String) {
+        dataStore.edit { preferences ->
+            val current = runCatching {
+                json.decodeFromString<List<VideoPlaylistEntry>>(
+                    preferences[PreferencesKeys.VIDEO_PLAYLIST_JSON] ?: "[]"
+                )
+            }.getOrElse { emptyList() }
+            preferences[PreferencesKeys.VIDEO_PLAYLIST_JSON] =
+                json.encodeToString(current.filterNot { it.uri == uri })
+        }
+    }
+
+    /** Per-video watch progress map (last 200 videos) for card progress bars & resume prompts. */
+    val videoProgressMapFlow: Flow<Map<String, VideoProgressEntry>> =
+        dataStore.data.map { preferences ->
+            val raw = preferences[PreferencesKeys.VIDEO_PROGRESS_MAP_JSON] ?: return@map emptyMap()
+            runCatching {
+                json.decodeFromString<List<VideoProgressEntry>>(raw)
+                    .associateBy { it.uri }
+            }.getOrElse { emptyMap() }
+        }.distinctUntilChanged()
+
+    suspend fun saveVideoProgress(uri: String, positionMs: Long, durationMs: Long) {
+        dataStore.edit { preferences ->
+            val current = runCatching {
+                json.decodeFromString<List<VideoProgressEntry>>(
+                    preferences[PreferencesKeys.VIDEO_PROGRESS_MAP_JSON] ?: "[]"
+                )
+            }.getOrElse { emptyList() }
+            val withoutCurrent = current.filterNot { it.uri == uri }
+            val finishedOrStart = positionMs <= 5_000L || (durationMs > 0L && positionMs >= durationMs - 5_000L)
+            val updated = if (finishedOrStart) {
+                withoutCurrent
+            } else {
+                (listOf(
+                    VideoProgressEntry(
+                        uri = uri,
+                        positionMs = positionMs,
+                        durationMs = durationMs,
+                        updatedAtMs = System.currentTimeMillis()
+                    )
+                ) + withoutCurrent).take(200)
+            }
+            preferences[PreferencesKeys.VIDEO_PROGRESS_MAP_JSON] = json.encodeToString(updated)
+        }
+    }
+
     /** Subtitle background: 0 = none, 1 = dark translucent, 2 = solid black. */
     val videoSubtitleBackgroundFlow: Flow<Int> =
         dataStore.data.map { preferences ->
@@ -1212,6 +1262,19 @@ constructor(
         dataStore.edit { preferences ->
             preferences[PreferencesKeys.VIDEO_SUBTITLE_BACKGROUND] =
                 mode.coerceIn(0, 2)
+        }
+    }
+
+    /** Subtitle edge style: 0 = none, 1 = outline, 2 = drop shadow. */
+    val videoSubtitleEdgeTypeFlow: Flow<Int> =
+        dataStore.data.map { preferences ->
+            preferences[PreferencesKeys.VIDEO_SUBTITLE_EDGE_TYPE] ?: 1
+        }.distinctUntilChanged()
+
+    suspend fun setVideoSubtitleEdgeType(edgeType: Int) {
+        dataStore.edit { preferences ->
+            preferences[PreferencesKeys.VIDEO_SUBTITLE_EDGE_TYPE] =
+                edgeType.coerceIn(0, 2)
         }
     }
 

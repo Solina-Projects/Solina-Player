@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -29,7 +30,10 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.ArrowForwardIos
+import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Description
+import androidx.compose.material.icons.rounded.Favorite
+import androidx.compose.material.icons.rounded.PlaylistPlay
 import androidx.compose.material.icons.rounded.Folder
 import androidx.compose.material.icons.rounded.FolderCopy
 import androidx.compose.material.icons.rounded.GridView
@@ -71,6 +75,8 @@ import androidx.navigation.NavController
 import app.solina.player.R
 import app.solina.player.data.model.VideoFolder
 import app.solina.player.data.model.VideoItem
+import app.solina.player.data.model.VideoPlaylistEntry
+import app.solina.player.data.model.VideoProgressEntry
 import app.solina.player.data.model.groupVideosByFolder
 import app.solina.player.data.model.parentFolderPath
 import app.solina.player.presentation.components.D3Reveal
@@ -105,6 +111,11 @@ fun VideoFoldersScreen(
     videoViewModel: VideoViewModel = hiltViewModel()
 ) {
     val videos by videoViewModel.videos.collectAsStateWithLifecycle()
+    val progressMap by videoViewModel.videoProgressMap.collectAsStateWithLifecycle()
+    val favouriteUris by videoViewModel.favouriteVideoUris.collectAsStateWithLifecycle()
+    val playlistEntries by videoViewModel.videoPlaylistEntries.collectAsStateWithLifecycle()
+    var showFavouritesDialog by remember { mutableStateOf(false) }
+    var showPlaylistDialog by remember { mutableStateOf(false) }
     var sort by rememberSaveable { mutableStateOf(FolderSort.NAME) }
     var showPaths by rememberSaveable { mutableStateOf(false) }
 
@@ -191,6 +202,43 @@ fun VideoFoldersScreen(
         else shownFolders.flatMap { it.videos }
     }
 
+    if (showFavouritesDialog) {
+        val favVideos = remember(videos, favouriteUris) {
+            videos.filter { it.contentUriString in favouriteUris }
+        }
+        VideoFavouritesCollectionDialog(
+            videos = favVideos,
+            onPlayVideo = { video, queue ->
+                showFavouritesDialog = false
+                navController.navigateSafely(
+                    Screen.VideoPlayer.createRoute(
+                        startUri = video.contentUriString,
+                        queueUris = queue.map { it.contentUriString }
+                    )
+                )
+            },
+            onDismiss = { showFavouritesDialog = false }
+        )
+    }
+
+    if (showPlaylistDialog) {
+        VideoPlaylistCollectionDialog(
+            entries = playlistEntries,
+            allVideos = videos,
+            onPlayUri = { uri, uris ->
+                showPlaylistDialog = false
+                navController.navigateSafely(
+                    Screen.VideoPlayer.createRoute(
+                        startUri = uri,
+                        queueUris = uris
+                    )
+                )
+            },
+            onRemoveEntry = { uri -> videoViewModel.removeFromVideoPlaylist(uri) },
+            onDismiss = { showPlaylistDialog = false }
+        )
+    }
+
     if (showSettings) {
         VideoFoldersSettingsDialog(
             viewMode = viewMode,
@@ -225,6 +273,18 @@ fun VideoFoldersScreen(
                         Icon(
                             imageVector = Icons.Rounded.Search,
                             contentDescription = stringResource(R.string.video_folders_search_hint)
+                        )
+                    }
+                    IconButton(onClick = { showFavouritesDialog = true }) {
+                        Icon(
+                            imageVector = Icons.Rounded.Favorite,
+                            contentDescription = stringResource(R.string.video_favourites_title)
+                        )
+                    }
+                    IconButton(onClick = { showPlaylistDialog = true }) {
+                        Icon(
+                            imageVector = Icons.Rounded.PlaylistPlay,
+                            contentDescription = stringResource(R.string.video_playlist_title)
                         )
                     }
                     IconButton(onClick = { showSettings = true }) {
@@ -301,7 +361,7 @@ fun VideoFoldersScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = stringResource(R.string.video_count_label, videos.size),
+                    text = stringResource(R.string.video_count_label, playAllVideos.size),
                     style = MaterialTheme.typography.titleMedium,
                     modifier = Modifier.weight(1f)
                 )
@@ -347,6 +407,7 @@ fun VideoFoldersScreen(
             } else if (viewMode == FolderViewMode.FILES) {
                 VideoFilesList(
                     videos = shownVideos,
+                    progressMap = progressMap,
                     isGrid = isGrid,
                     navController = navController
                 )
@@ -486,6 +547,7 @@ private fun VideoFolderList(
 @Composable
 private fun VideoFilesList(
     videos: List<VideoItem>,
+    progressMap: Map<String, VideoProgressEntry>,
     isGrid: Boolean,
     navController: NavController
 ) {
@@ -509,6 +571,7 @@ private fun VideoFilesList(
                 ) {
                 VideoFileGridCard(
                     video = video,
+                    progressFraction = progressMap[video.contentUriString]?.fraction ?: 0f,
                     onClick = {
                         navController.navigateSafely(
                             // Round 16, item 1a: the tapped video starts
@@ -538,6 +601,7 @@ private fun VideoFilesList(
                 ) {
                 VideoFileRow(
                     video = video,
+                    progressFraction = progressMap[video.contentUriString]?.fraction ?: 0f,
                     onClick = {
                         navController.navigateSafely(
                             // Round 16, item 1a: the tapped video starts
@@ -754,6 +818,7 @@ private fun VideoFolderGridCard(
 @Composable
 private fun VideoFileRow(
     video: VideoItem,
+    progressFraction: Float = 0f,
     onClick: () -> Unit,
     // Round 15, wave 2, C2 + C4: row corners + list font size from the
     // appearance settings (same controls as the music library rows).
@@ -777,6 +842,7 @@ private fun VideoFileRow(
         ) {
             VideoThumbnail(
                 video = video,
+                progressFraction = progressFraction,
                 modifier = Modifier.size(width = 112.dp, height = 64.dp)
             )
             Spacer(Modifier.width(12.dp))
@@ -821,6 +887,7 @@ private fun VideoFileRow(
 @Composable
 private fun VideoFileGridCard(
     video: VideoItem,
+    progressFraction: Float = 0f,
     onClick: () -> Unit
 ) {
     Card(
@@ -836,6 +903,7 @@ private fun VideoFileGridCard(
         Column {
             VideoThumbnail(
                 video = video,
+                progressFraction = progressFraction,
                 modifier = Modifier
                     .fillMaxWidth()
                     .aspectRatio(16f / 9f)
@@ -1084,6 +1152,7 @@ fun VideoFolderDetailScreen(
             .getOrElse { folderPathArg }
     }
     val allVideos by videoViewModel.videos.collectAsStateWithLifecycle()
+    val progressMap by videoViewModel.videoProgressMap.collectAsStateWithLifecycle()
     val folderVideos = remember(allVideos, folderPath) {
         allVideos.filter { it.parentFolderPath() == folderPath }
     }
@@ -1160,6 +1229,7 @@ fun VideoFolderDetailScreen(
                 items(folderVideos, key = { it.id }) { video ->
                     VideoFileRow(
                         video = video,
+                        progressFraction = progressMap[video.contentUriString]?.fraction ?: 0f,
                         onClick = {
                             navController.navigateSafely(
                                 // Round 16, item 1a: the tapped video
@@ -1177,4 +1247,165 @@ fun VideoFolderDetailScreen(
             }
         }
     }
+}
+
+
+@Composable
+private fun VideoFavouritesCollectionDialog(
+    videos: List<VideoItem>,
+    onPlayVideo: (VideoItem, List<VideoItem>) -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(text = stringResource(R.string.video_favourites_title)) },
+        text = {
+            if (videos.isEmpty()) {
+                Text(
+                    text = stringResource(R.string.video_favourites_empty),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            } else {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = 320.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    items(videos, key = { it.contentUriString }) { video ->
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { onPlayVideo(video, videos) }
+                                .padding(vertical = 4.dp)
+                        ) {
+                            VideoThumbnail(
+                                video = video,
+                                modifier = Modifier.size(width = 76.dp, height = 44.dp)
+                            )
+                            Spacer(Modifier.width(10.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = video.displayTitle,
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                                Text(
+                                    text = formatDuration(video.durationMs),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            Icon(
+                                imageVector = Icons.Rounded.PlayArrow,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            if (videos.isNotEmpty()) {
+                TextButton(onClick = { onPlayVideo(videos.first(), videos) }) {
+                    Text(text = stringResource(R.string.video_play_all))
+                }
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(text = stringResource(R.string.video_player_done))
+            }
+        }
+    )
+}
+
+@Composable
+private fun VideoPlaylistCollectionDialog(
+    entries: List<VideoPlaylistEntry>,
+    allVideos: List<VideoItem>,
+    onPlayUri: (String, List<String>) -> Unit,
+    onRemoveEntry: (String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val videoLookup = remember(allVideos) { allVideos.associateBy { it.contentUriString } }
+    val uris = remember(entries) { entries.map { it.uri } }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(text = stringResource(R.string.video_playlist_title)) },
+        text = {
+            if (entries.isEmpty()) {
+                Text(
+                    text = stringResource(R.string.video_playlist_empty),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            } else {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = 320.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    items(entries, key = { it.uri }) { entry ->
+                        val matched = videoLookup[entry.uri]
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { onPlayUri(entry.uri, uris) }
+                                .padding(vertical = 4.dp)
+                        ) {
+                            if (matched != null) {
+                                VideoThumbnail(
+                                    video = matched,
+                                    modifier = Modifier.size(width = 76.dp, height = 44.dp)
+                                )
+                                Spacer(Modifier.width(10.dp))
+                            }
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = matched?.displayTitle ?: entry.title,
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                                val dur = matched?.durationMs ?: 0L
+                                if (dur > 0L) {
+                                    Text(
+                                        text = formatDuration(dur),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                            IconButton(onClick = { onRemoveEntry(entry.uri) }) {
+                                Icon(
+                                    imageVector = Icons.Rounded.Delete,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            if (entries.isNotEmpty()) {
+                TextButton(onClick = { onPlayUri(entries.first().uri, uris) }) {
+                    Text(text = stringResource(R.string.video_play_all))
+                }
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(text = stringResource(R.string.video_player_done))
+            }
+        }
+    )
 }

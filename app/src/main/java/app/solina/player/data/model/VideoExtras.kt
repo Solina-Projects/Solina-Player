@@ -3,10 +3,9 @@ package app.solina.player.data.model
 import kotlinx.serialization.Serializable
 
 /**
- * Reference-player redesign (2026-11-16): extras stored for the video
- * player — bookmarks, favourites, a simple video playlist and external
- * subtitle files. All persisted as JSON in the shared settings DataStore
- * (see UserPreferencesRepository); no new database tables.
+ * Extras stored for the video player — bookmarks, favourites, video playlist,
+ * external subtitle files, per-video watch progress, and subtitle style.
+ * Persisted as JSON in the shared settings DataStore.
  */
 @Serializable
 data class VideoBookmark(
@@ -29,10 +28,23 @@ data class ExternalVideoSubtitle(
     val mimeType: String
 )
 
-/** Subtitle style (text size / colour / background), persisted per key. */
+@Serializable
+data class VideoProgressEntry(
+    val uri: String,
+    val positionMs: Long,
+    val durationMs: Long,
+    val updatedAtMs: Long = 0L
+) {
+    val fraction: Float
+        get() = if (durationMs > 0L) (positionMs.toFloat() / durationMs).coerceIn(0f, 1f) else 0f
+}
+
+/** Subtitle style (text size / colour / background / edge), persisted per key. */
 data class VideoSubtitleStyle(
     val textSizeSp: Float = 20f,
     val textColorArgb: Int = -1, // white
     /** 0 = none, 1 = dark translucent, 2 = solid black. */
-    val backgroundMode: Int = 1
+    val backgroundMode: Int = 1,
+    /** 0 = none, 1 = crisp outline, 2 = drop shadow. */
+    val edgeType: Int = 1
 )

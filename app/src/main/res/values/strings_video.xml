@@ -219,4 +219,41 @@
     <string name="video_player_done">Done</string>
     <string name="video_decoder_hw">HW</string>
     <string name="video_decoder_sw">SW</string>
+
+    <!-- Video player upgrade: localized colours, edges, jump-to-time, mirror, PiP actions, error recovery, resume ask, playlists -->
+    <string name="video_color_white">White</string>
+    <string name="video_color_yellow">Yellow</string>
+    <string name="video_color_cyan">Cyan</string>
+    <string name="video_color_green">Green</string>
+    <string name="video_subtitle_edge">Text edge</string>
+    <string name="video_subtitle_edge_none">None</string>
+    <string name="video_subtitle_edge_outline">Outline</string>
+    <string name="video_subtitle_edge_shadow">Shadow</string>
+    <string name="video_grid_menu_jump_to">Jump to</string>
+    <string name="video_grid_menu_mirror">Mirror</string>
+    <string name="video_mirror_on">Mirror on</string>
+    <string name="video_mirror_off">Mirror off</string>
+    <string name="video_jump_to_title">Jump to timestamp</string>
+    <string name="video_jump_to_minutes">Minutes</string>
+    <string name="video_jump_to_seconds">Seconds</string>
+    <string name="video_jump_to_go">Go</string>
+    <string name="video_error_title">Unable to play video</string>
+    <string name="video_error_retry">Retry</string>
+    <string name="video_error_try_software">Try software decoder</string>
+    <string name="video_error_next">Next video</string>
+    <string name="video_resume_prompt_title">Resume from %1$s?</string>
+    <string name="video_resume_continue">Resume</string>
+    <string name="video_resume_start_over">Start over</string>
+    <string name="video_hold_to_unlock">Tap or press to unlock</string>
+    <string name="video_playlist_title">Videos playlist</string>
+    <string name="video_playlist_empty">No videos in your playlist yet</string>
+    <string name="video_favourites_title">Favourite videos</string>
+    <string name="video_favourites_empty">No favourite videos yet</string>
+    <string name="video_remove_from_queue">Remove from queue</string>
+    <string name="video_move_up">Move up</string>
+    <string name="video_move_down">Move down</string>
+    <string name="video_audio_display_title">Audio &amp; Display</string>
+    <string name="video_system_volume">Media volume</string>
+    <string name="video_player_gain">Boost / Gain</string>
+    <string name="video_pip_play_pause">Play / Pause</string>
 </resources>

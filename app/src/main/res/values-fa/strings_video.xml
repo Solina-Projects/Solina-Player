@@ -219,4 +219,41 @@
     <string name="video_player_done">تمام</string>
     <string name="video_decoder_hw">سخت‌افزاری</string>
     <string name="video_decoder_sw">نرم‌افزاری</string>
+
+    <!-- Video player upgrade: localized colours, edges, jump-to-time, mirror, PiP actions, error recovery, resume ask, playlists -->
+    <string name="video_color_white">سفید</string>
+    <string name="video_color_yellow">زرد</string>
+    <string name="video_color_cyan">فیروزه‌ای</string>
+    <string name="video_color_green">سبز</string>
+    <string name="video_subtitle_edge">حاشیهٔ متن</string>
+    <string name="video_subtitle_edge_none">بدون حاشیه</string>
+    <string name="video_subtitle_edge_outline">دورخط</string>
+    <string name="video_subtitle_edge_shadow">سایه</string>
+    <string name="video_grid_menu_jump_to">پرش به زمان</string>
+    <string name="video_grid_menu_mirror">آینه‌ای</string>
+    <string name="video_mirror_on">حالت آینه‌ای روشن</string>
+    <string name="video_mirror_off">حالت آینه‌ای خاموش</string>
+    <string name="video_jump_to_title">پرش به زمان دلخواه</string>
+    <string name="video_jump_to_minutes">دقیقه</string>
+    <string name="video_jump_to_seconds">ثانیه</string>
+    <string name="video_jump_to_go">برو</string>
+    <string name="video_error_title">خطا در پخش ویدیو</string>
+    <string name="video_error_retry">تلاش مجدد</string>
+    <string name="video_error_try_software">پخش با رمزگشای نرم‌افزاری</string>
+    <string name="video_error_next">ویدیوی بعدی</string>
+    <string name="video_resume_prompt_title">ادامه از %1$s؟</string>
+    <string name="video_resume_continue">ادامه</string>
+    <string name="video_resume_start_over">از ابتدا</string>
+    <string name="video_hold_to_unlock">برای باز کردن قفل ضربه بزنید</string>
+    <string name="video_playlist_title">پلی‌لیست ویدیوها</string>
+    <string name="video_playlist_empty">هنوز ویدیویی در پلی‌لیست نیست</string>
+    <string name="video_favourites_title">ویدیوهای موردعلاقه</string>
+    <string name="video_favourites_empty">هنوز ویدیوی موردعلاقه‌ای نیست</string>
+    <string name="video_remove_from_queue">حذف از صف</string>
+    <string name="video_move_up">انتقال به بالا</string>
+    <string name="video_move_down">انتقال به پایین</string>
+    <string name="video_audio_display_title">صدا و تصویر</string>
+    <string name="video_system_volume">صدای دستگاه</string>
+    <string name="video_player_gain">تقویت صدای پخش‌کننده</string>
+    <string name="video_pip_play_pause">پخش / مکث</string>
 </resources>

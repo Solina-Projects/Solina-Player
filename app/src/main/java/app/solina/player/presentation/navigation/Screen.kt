@@ -115,12 +115,11 @@ sealed class Screen(val route: String) {
             queueUris: List<String>,
             startPositionMs: Long
         ): String {
-            val base = if (queueUris.isEmpty()) {
+            val queueKey = VideoQueueStore.stage(queueUris)
+            val base = if (queueKey == null) {
                 createRoute(startUri)
             } else {
-                "video_player/${Uri.encode(startUri)}?queue=${
-                    Uri.encode(queueUris.joinToString("\n"))
-                }"
+                "video_player/${Uri.encode(startUri)}?queueKey=${Uri.encode(queueKey)}"
             }
             return if (startPositionMs > 0) {
                 "$base${if (base.contains("?")) "&" else "?"}startMs=$startPositionMs"

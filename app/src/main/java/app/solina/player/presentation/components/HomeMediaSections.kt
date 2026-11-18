@@ -1,9 +1,12 @@
 package app.solina.player.presentation.components
 
 import android.graphics.Bitmap
+import android.media.MediaMetadataRetriever
 import android.net.Uri
 import android.os.Build
+import android.util.LruCache
 import android.util.Size
+import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -61,26 +64,61 @@ import kotlinx.coroutines.withContext
  * primary/secondary containers, no mixed queue.
  */
 
-/** A video frame thumbnail loaded from MediaStore, with a film icon fallback. */
+/** Bounded in-memory LRU cache for video frame thumbnails so scrolling never flashes or re-decodes. */
+object VideoThumbnailCache {
+    private val cache = object : LruCache<String, Bitmap>(16 * 1024) {
+        override fun sizeOf(key: String, value: Bitmap): Int =
+            (value.allocationByteCount / 1024).coerceAtLeast(1)
+    }
+
+    fun get(key: String): Bitmap? = cache.get(key)
+
+    fun put(key: String, bitmap: Bitmap) {
+        cache.put(key, bitmap)
+    }
+}
+
+/** A video frame thumbnail loaded from MediaStore (cached via [VideoThumbnailCache]), with an optional watched-progress strip. */
 @Composable
 fun VideoThumbnail(
     video: VideoItem,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    progressFraction: Float = 0f
 ) {
     val context = LocalContext.current
-    val bitmap by produceState<Bitmap?>(initialValue = null, video.contentUriString) {
-        value = withContext(Dispatchers.IO) {
+    val key = video.contentUriString
+    val cached = VideoThumbnailCache.get(key)
+    val bitmap by produceState<Bitmap?>(initialValue = cached, key) {
+        if (value != null) return@produceState
+        val loaded = withContext(Dispatchers.IO) {
             runCatching {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                     context.contentResolver.loadThumbnail(
-                        Uri.parse(video.contentUriString),
+                        Uri.parse(key),
                         Size(320, 180),
                         null
                     )
                 } else {
                     null
                 }
+            }.getOrNull() ?: runCatching {
+                val retriever = MediaMetadataRetriever()
+                try {
+                    retriever.setDataSource(context, Uri.parse(key))
+                    retriever.getScaledFrameAtTime(
+                        1_000_000L,
+                        MediaMetadataRetriever.OPTION_CLOSEST_SYNC,
+                        320,
+                        180
+                    )
+                } finally {
+                    runCatching { retriever.release() }
+                }
             }.getOrNull()
+        }
+        if (loaded != null) {
+            VideoThumbnailCache.put(key, loaded)
+            value = loaded
         }
     }
     Box(
@@ -96,10 +134,7 @@ fun VideoThumbnail(
                 modifier = Modifier.matchParentSize()
             )
         } else {
-            // Skeleton shimmer (d3motion claude-chat thinking state):
-            // a travelling gradient while the frame loads, instead of a
-            // flat box. It leaves composition the moment the bitmap
-            // arrives, so it costs nothing afterwards.
+            // Skeleton shimmer while the frame loads on a background thread.
             ShimmerBox(modifier = Modifier.matchParentSize())
             Icon(
                 imageVector = Icons.Rounded.VideoLibrary,
@@ -107,6 +142,23 @@ fun VideoThumbnail(
                 tint = MaterialTheme.colorScheme.onSecondaryContainer,
                 modifier = Modifier.size(28.dp)
             )
+        }
+        val clampedProgress = progressFraction.coerceIn(0f, 1f)
+        if (clampedProgress > 0.01f) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .height(3.dp)
+                    .background(Color.Black.copy(alpha = 0.45f))
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth(clampedProgress)
+                        .height(3.dp)
+                        .background(MaterialTheme.colorScheme.primary)
+                )
+            }
         }
     }
 }

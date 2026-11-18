@@ -3,6 +3,7 @@ package app.solina.player.presentation.components
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
@@ -50,11 +51,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.viewinterop.AndroidView
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.media3.common.util.UnstableApi
-import androidx.media3.ui.PlayerView
 import androidx.navigation.NavController
 import app.solina.player.R
 import app.solina.player.presentation.components.player.MorphingPlayPauseIcon
@@ -294,33 +293,25 @@ fun VideoMiniPlayerBar(
                     .padding(start = 10.dp, end = 12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Circular slot: live preview while playing, frame
-                // thumbnail while paused — the video's answer to the
-                // music bar's circular album art.
+                // Circular thumbnail slot: uses cached thumbnail + subtle
+                // animated active ring while playing instead of attaching a
+                // SurfaceView-backed PlayerView inside a tiny CircleShape,
+                // avoiding decoder surface races and circular clip artifacts.
                 Box(
                     modifier = Modifier
                         .size(44.dp)
                         .clip(CircleShape)
-                        .background(Color.Black),
+                        .background(Color.Black)
+                        .then(
+                            if (isPlaying) {
+                                Modifier.border(2.dp, colors.primary, CircleShape)
+                            } else {
+                                Modifier
+                            }
+                        ),
                     contentAlignment = Alignment.Center
                 ) {
-                    if (isPlaying && holder.playerOrNull != null) {
-                        AndroidView(
-                            factory = { ctx ->
-                                PlayerView(ctx).apply {
-                                    useController = false
-                                    setShowBuffering(PlayerView.SHOW_BUFFERING_NEVER)
-                                }
-                            },
-                            update = { playerView ->
-                                playerView.player = holder.playerOrNull
-                            },
-                            onRelease = { playerView ->
-                                playerView.player = null
-                            },
-                            modifier = Modifier.fillMaxSize()
-                        )
-                    } else if (shownVideo != null) {
+                    if (shownVideo != null) {
                         VideoThumbnail(
                             video = shownVideo,
                             modifier = Modifier.fillMaxSize()

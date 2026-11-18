@@ -122,7 +122,14 @@ import app.solina.player.data.preferences.SidebarShortcutKeys
 import app.solina.player.data.preferences.ThemePreferencesRepository
 import app.solina.player.data.preferences.ThemePreset
 import app.solina.player.data.preferences.UserPreferencesRepository
+import android.content.BroadcastReceiver
+import android.content.IntentFilter
+import androidx.core.content.ContextCompat
 import app.solina.player.data.service.MusicService
+import app.solina.player.data.service.VideoPlaybackService
+import app.solina.player.presentation.utils.LocalIsInPictureInPicture
+import app.solina.player.presentation.utils.VideoPipContract
+import app.solina.player.presentation.viewmodel.VideoPlaybackHolder
 import app.solina.player.data.worker.SyncManager
 import app.solina.player.data.worker.SyncProgress
 import app.solina.player.presentation.components.AllFilesAccessDialog
@@ -237,9 +244,24 @@ class MainActivity : ComponentActivity() {
     lateinit var appearancePreferences: AppearancePreferences
     @Inject
     lateinit var syncManager: SyncManager
+    @Inject
+    lateinit var videoPlaybackHolder: VideoPlaybackHolder
     private val _pendingPlaylistNavigation = kotlinx.coroutines.flow.MutableStateFlow<String?>(null)
     private val _pendingShuffleAll = kotlinx.coroutines.flow.MutableStateFlow(false)
     private val _pendingUpdatesNavigation = kotlinx.coroutines.flow.MutableStateFlow(false)
+    private val _pendingVideoNavigation = kotlinx.coroutines.flow.MutableStateFlow<String?>(null)
+    private val _isInPictureInPicture = kotlinx.coroutines.flow.MutableStateFlow(false)
+
+    private val videoPipReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (intent?.action != VideoPipContract.ACTION_PIP_CONTROL) return
+            when (intent.getIntExtra(VideoPipContract.EXTRA_CONTROL_TYPE, 0)) {
+                VideoPipContract.CONTROL_PREV -> videoPlaybackHolder.seekToPrevious()
+                VideoPipContract.CONTROL_PLAY_PAUSE -> videoPlaybackHolder.togglePlayPause()
+                VideoPipContract.CONTROL_NEXT -> videoPlaybackHolder.seekToNext()
+            }
+        }
+    }
 
     /** Flips when the system splash view is removed; SolinaPlayerSplash starts animating then. */
     private val systemSplashGone = mutableStateOf(false)
@@ -255,6 +277,12 @@ class MainActivity : ComponentActivity() {
     @OptIn(ExperimentalPermissionsApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         LogUtils.d(this, "onCreate")
+        ContextCompat.registerReceiver(
+            this,
+            videoPipReceiver,
+            IntentFilter(VideoPipContract.ACTION_PIP_CONTROL),
+            ContextCompat.RECEIVER_NOT_EXPORTED
+        )
         val splashScreen = installSplashScreen()
         enableEdgeToEdge(
             statusBarStyle = SystemBarStyle.auto(
@@ -540,6 +568,14 @@ class MainActivity : ComponentActivity() {
                 intent.action = null
             }
 
+            intent.getBooleanExtra(VideoPlaybackService.EXTRA_OPEN_VIDEO_PLAYER, false) -> {
+                intent.removeExtra(VideoPlaybackService.EXTRA_OPEN_VIDEO_PLAYER)
+                val currentUri = videoPlaybackHolder.currentVideo.value?.contentUriString
+                if (!currentUri.isNullOrBlank()) {
+                    _pendingVideoNavigation.value = Screen.VideoPlayer.createRoute(currentUri)
+                }
+            }
+
             intent.getBooleanExtra("ACTION_SHOW_PLAYER", false) -> {
                 playerViewModel.showPlayer()
             }
@@ -547,7 +583,19 @@ class MainActivity : ComponentActivity() {
             intent.action == android.content.Intent.ACTION_VIEW && intent.data != null -> {
                 intent.data?.let { uri ->
                     persistUriPermissionIfNeeded(intent, uri)
-                    playerViewModel.playExternalUri(uri)
+                    if (isVideoIntent(intent, uri)) {
+                        _pendingVideoNavigation.value = Screen.VideoPlayer.createRoute(uri.toString())
+                    } else {
+                        playerViewModel.playExternalUri(uri)
+                    }
+                }
+                clearExternalIntentPayload(intent)
+            }
+
+            intent.action == android.content.Intent.ACTION_SEND && intent.type?.startsWith("video/") == true -> {
+                resolveStreamUri(intent)?.let { uri ->
+                    persistUriPermissionIfNeeded(intent, uri)
+                    _pendingVideoNavigation.value = Screen.VideoPlayer.createRoute(uri.toString())
                 }
                 clearExternalIntentPayload(intent)
             }
@@ -610,6 +658,22 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    private fun isVideoIntent(intent: Intent, uri: android.net.Uri): Boolean {
+        val explicitMime = intent.type
+        if (explicitMime != null) {
+            if (explicitMime.startsWith("video/")) return true
+            if (explicitMime.startsWith("audio/")) return false
+        }
+        val resolvedMime = runCatching { contentResolver.getType(uri) }.getOrNull()
+        if (resolvedMime != null) {
+            if (resolvedMime.startsWith("video/")) return true
+            if (resolvedMime.startsWith("audio/")) return false
+        }
+        val path = uri.toString().substringBefore('?').substringBefore('#').lowercase()
+        val videoExts = listOf(".mp4", ".mkv", ".webm", ".avi", ".mov", ".m4v", ".3gp", ".ts", ".flv", ".wmv")
+        return videoExts.any { path.endsWith(it) }
     }
 
     private fun clearExternalIntentPayload(intent: Intent) {
@@ -691,6 +755,19 @@ class MainActivity : ComponentActivity() {
             } else if (playlistId == null) {
                 processedPlaylistId = null
             }
+        }
+
+        val pendingVideoNav by _pendingVideoNavigation.collectAsStateWithLifecycle()
+        LaunchedEffect(pendingVideoNav) {
+            val route = pendingVideoNav ?: return@LaunchedEffect
+            repeat(50) {
+                if (navController.navigateSafely(route)) {
+                    _pendingVideoNavigation.value = null
+                    return@LaunchedEffect
+                }
+                delay(100)
+            }
+            _pendingVideoNavigation.value = null
         }
 
         val pendingUpdatesNav by _pendingUpdatesNavigation.collectAsStateWithLifecycle()
@@ -927,11 +1004,29 @@ class MainActivity : ComponentActivity() {
         }
 
         val showScrollbar by userPreferencesRepository.showScrollbarFlow.collectAsStateWithLifecycle(initialValue = true)
+        val isInPictureInPicture by _isInPictureInPicture.collectAsStateWithLifecycle()
+        val isVideoPlaying by videoPlaybackHolder.isPlaying.collectAsStateWithLifecycle()
+        val currentVideoItem by videoPlaybackHolder.currentVideo.collectAsStateWithLifecycle()
+        val inVideoPlayerRoute = currentRoute?.startsWith("video_player") == true
+
+        LaunchedEffect(inVideoPlayerRoute, isVideoPlaying, currentVideoItem) {
+            if (inVideoPlayerRoute) {
+                val params = VideoPipContract.buildParams(
+                    context = this@MainActivity,
+                    isPlaying = isVideoPlaying,
+                    videoWidth = currentVideoItem?.width ?: 16,
+                    videoHeight = currentVideoItem?.height ?: 9,
+                    autoEnter = isVideoPlaying
+                )
+                runCatching { setPictureInPictureParams(params) }
+            }
+        }
 
         CompositionLocalProvider(
             LocalAppHapticsConfig provides appHapticsConfig,
             LocalHapticFeedback provides scopedHapticFeedback,
-            LocalShowScrollbar provides showScrollbar
+            LocalShowScrollbar provides showScrollbar,
+            LocalIsInPictureInPicture provides isInPictureInPicture
         ) {
             val sidebarShortcuts by userPreferencesRepository.sidebarShortcutsFlow
                 .collectAsStateWithLifecycle(initialValue = SidebarShortcutKeys.DEFAULT)
@@ -1421,6 +1516,37 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
+    }
+
+    override fun onPictureInPictureModeChanged(
+        isInPictureInPictureMode: Boolean,
+        newConfig: Configuration
+    ) {
+        super.onPictureInPictureModeChanged(isInPictureInPictureMode, newConfig)
+        _isInPictureInPicture.value = isInPictureInPictureMode
+    }
+
+    override fun onUserLeaveHint() {
+        super.onUserLeaveHint()
+        if (PhoneOrientationPolicy.videoPlayerActive &&
+            videoPlaybackHolder.isPlaying.value &&
+            !isInPictureInPictureMode
+        ) {
+            val currentVideo = videoPlaybackHolder.currentVideo.value
+            val params = VideoPipContract.buildParams(
+                context = this,
+                isPlaying = true,
+                videoWidth = currentVideo?.width ?: 16,
+                videoHeight = currentVideo?.height ?: 9,
+                autoEnter = true
+            )
+            runCatching { enterPictureInPictureMode(params) }
+        }
+    }
+
+    override fun onDestroy() {
+        runCatching { unregisterReceiver(videoPipReceiver) }
+        super.onDestroy()
     }
 
     // configChanges keeps this activity alive across fold/unfold, so re-check the phone lock here.
