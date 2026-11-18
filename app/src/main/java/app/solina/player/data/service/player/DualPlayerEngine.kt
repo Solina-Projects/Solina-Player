@@ -1762,6 +1762,9 @@ class DualPlayerEngine @Inject constructor(
         }
         playerB?.release()
         playerB = null
+        navidromeStreamProxy.stop()
+        jellyfinStreamProxy.stop()
+        resolvedUriCache.evictAll()
         isReleased = true
     }
 }

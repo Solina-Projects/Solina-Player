@@ -8,6 +8,7 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import app.solina.player.data.equalizer.EqualizerPreset
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.serialization.decodeFromString
@@ -39,6 +40,28 @@ class EqualizerPreferencesRepository @Inject constructor(
         val PINNED_PRESETS = stringPreferencesKey("pinned_presets_json")
     }
 
+    private fun decodeCustomPresets(preferences: Preferences): List<EqualizerPreset> {
+        val jsonString = preferences[Keys.CUSTOM_PRESETS] ?: return emptyList()
+        return try {
+            json.decodeFromString<List<EqualizerPreset>>(jsonString)
+        } catch (_: Exception) {
+            emptyList()
+        }
+    }
+
+    private fun decodePinnedPresets(preferences: Preferences): List<String> {
+        val jsonString = preferences[Keys.PINNED_PRESETS]
+        return if (jsonString != null) {
+            try {
+                json.decodeFromString<List<String>>(jsonString)
+            } catch (_: Exception) {
+                EqualizerPreset.ALL_PRESETS.map { it.name }
+            }
+        } else {
+            EqualizerPreset.ALL_PRESETS.map { it.name }
+        }
+    }
+
     val equalizerViewModeFlow: Flow<UserPreferencesRepository.EqualizerViewMode> = dataStore.data.map { preferences ->
         val modeString = preferences[Keys.VIEW_MODE]
         if (modeString != null) {
@@ -51,15 +74,15 @@ class EqualizerPreferencesRepository @Inject constructor(
             val isGraph = preferences[booleanPreferencesKey("is_graph_view")] ?: false
             if (isGraph) UserPreferencesRepository.EqualizerViewMode.GRAPH else UserPreferencesRepository.EqualizerViewMode.SLIDERS
         }
-    }
+    }.distinctUntilChanged()
 
     val equalizerEnabledFlow: Flow<Boolean> = dataStore.data.map { preferences ->
         preferences[Keys.EQUALIZER_ENABLED] ?: false
-    }
+    }.distinctUntilChanged()
 
     val equalizerPresetFlow: Flow<String> = dataStore.data.map { preferences ->
         preferences[Keys.EQUALIZER_PRESET] ?: "flat"
-    }
+    }.distinctUntilChanged()
 
     val equalizerCustomBandsFlow: Flow<List<Int>> = dataStore.data.map { preferences ->
         val stored = preferences[Keys.EQUALIZER_CUSTOM_BANDS]
@@ -77,69 +100,51 @@ class EqualizerPreferencesRepository @Inject constructor(
         } else {
             List(10) { 0 }
         }
-    }
+    }.distinctUntilChanged()
 
     val bassBoostStrengthFlow: Flow<Int> = dataStore.data.map { preferences ->
         preferences[Keys.BASS_BOOST_STRENGTH] ?: 0
-    }
+    }.distinctUntilChanged()
 
     val virtualizerStrengthFlow: Flow<Int> = dataStore.data.map { preferences ->
         preferences[Keys.VIRTUALIZER_STRENGTH] ?: 0
-    }
+    }.distinctUntilChanged()
 
     val bassBoostEnabledFlow: Flow<Boolean> = dataStore.data.map { preferences ->
         preferences[Keys.BASS_BOOST_ENABLED] ?: false
-    }
+    }.distinctUntilChanged()
 
     val virtualizerEnabledFlow: Flow<Boolean> = dataStore.data.map { preferences ->
         preferences[Keys.VIRTUALIZER_ENABLED] ?: false
-    }
+    }.distinctUntilChanged()
 
     val loudnessEnhancerEnabledFlow: Flow<Boolean> = dataStore.data.map { preferences ->
         preferences[Keys.LOUDNESS_ENHANCER_ENABLED] ?: false
-    }
+    }.distinctUntilChanged()
 
     val loudnessEnhancerStrengthFlow: Flow<Int> = dataStore.data.map { preferences ->
         (preferences[Keys.LOUDNESS_ENHANCER_STRENGTH] ?: 0).coerceIn(0, 1000)
-    }
+    }.distinctUntilChanged()
 
     val bassBoostDismissedFlow: Flow<Boolean> = dataStore.data.map { preferences ->
         preferences[Keys.BASS_BOOST_DISMISSED] ?: false
-    }
+    }.distinctUntilChanged()
 
     val virtualizerDismissedFlow: Flow<Boolean> = dataStore.data.map { preferences ->
         preferences[Keys.VIRTUALIZER_DISMISSED] ?: false
-    }
+    }.distinctUntilChanged()
 
     val loudnessDismissedFlow: Flow<Boolean> = dataStore.data.map { preferences ->
         preferences[Keys.LOUDNESS_DISMISSED] ?: false
-    }
+    }.distinctUntilChanged()
 
     val customPresetsFlow: Flow<List<EqualizerPreset>> = dataStore.data.map { preferences ->
-        val jsonString = preferences[Keys.CUSTOM_PRESETS]
-        if (jsonString != null) {
-            try {
-                json.decodeFromString<List<EqualizerPreset>>(jsonString)
-            } catch (_: Exception) {
-                emptyList()
-            }
-        } else {
-            emptyList()
-        }
-    }
+        decodeCustomPresets(preferences)
+    }.distinctUntilChanged()
 
     val pinnedPresetsFlow: Flow<List<String>> = dataStore.data.map { preferences ->
-        val jsonString = preferences[Keys.PINNED_PRESETS]
-        if (jsonString != null) {
-            try {
-                json.decodeFromString<List<String>>(jsonString)
-            } catch (_: Exception) {
-                EqualizerPreset.ALL_PRESETS.map { it.name }
-            }
-        } else {
-            EqualizerPreset.ALL_PRESETS.map { it.name }
-        }
-    }
+        decodePinnedPresets(preferences)
+    }.distinctUntilChanged()
 
     suspend fun setEqualizerViewMode(mode: UserPreferencesRepository.EqualizerViewMode) =
         dataStore.edit { preferences ->
@@ -217,59 +222,56 @@ class EqualizerPreferencesRepository @Inject constructor(
         }
 
     suspend fun saveCustomPreset(preset: EqualizerPreset) {
-        val current = customPresetsFlow.first().toMutableList()
-        current.removeAll { it.name == preset.name }
-        current.add(preset)
         dataStore.edit { preferences ->
+            val current = decodeCustomPresets(preferences).toMutableList()
+            current.removeAll { it.name == preset.name }
+            current.add(preset)
             preferences[Keys.CUSTOM_PRESETS] = json.encodeToString(current)
         }
     }
 
     suspend fun deleteCustomPreset(presetName: String) {
-        val current = customPresetsFlow.first().toMutableList()
-        current.removeAll { it.name == presetName }
         dataStore.edit { preferences ->
+            val current = decodeCustomPresets(preferences).toMutableList()
+            current.removeAll { it.name == presetName }
             preferences[Keys.CUSTOM_PRESETS] = json.encodeToString(current)
-        }
 
-        val pinned = pinnedPresetsFlow.first().toMutableList()
-        if (pinned.remove(presetName)) {
-            setPinnedPresets(pinned)
+            val pinned = decodePinnedPresets(preferences).toMutableList()
+            if (pinned.remove(presetName)) {
+                preferences[Keys.PINNED_PRESETS] = json.encodeToString(pinned)
+            }
         }
     }
 
     suspend fun renameCustomPreset(oldName: String, newName: String) {
-        val current = customPresetsFlow.first().toMutableList()
-        val index = current.indexOfFirst { it.name == oldName }
-        if (index == -1) return
-
-        current[index] = current[index].copy(name = newName, displayName = newName)
         dataStore.edit { preferences ->
+            val current = decodeCustomPresets(preferences).toMutableList()
+            val index = current.indexOfFirst { it.name == oldName }
+            if (index == -1) return@edit
+
+            current[index] = current[index].copy(name = newName, displayName = newName)
             preferences[Keys.CUSTOM_PRESETS] = json.encodeToString(current)
-        }
 
-        val pinned = pinnedPresetsFlow.first().toMutableList()
-        val pinnedIndex = pinned.indexOf(oldName)
-        if (pinnedIndex != -1) {
-            pinned[pinnedIndex] = newName
-            setPinnedPresets(pinned)
-        }
+            val pinned = decodePinnedPresets(preferences).toMutableList()
+            val pinnedIndex = pinned.indexOf(oldName)
+            if (pinnedIndex != -1) {
+                pinned[pinnedIndex] = newName
+                preferences[Keys.PINNED_PRESETS] = json.encodeToString(pinned)
+            }
 
-        val activePreset = dataStore.data.first()[Keys.EQUALIZER_PRESET]
-        if (activePreset == oldName) {
-            dataStore.edit { preferences ->
+            if (preferences[Keys.EQUALIZER_PRESET] == oldName) {
                 preferences[Keys.EQUALIZER_PRESET] = newName
             }
         }
     }
 
     suspend fun updateCustomPresetBands(presetName: String, bandLevels: List<Int>) {
-        val current = customPresetsFlow.first().toMutableList()
-        val index = current.indexOfFirst { it.name == presetName }
-        if (index == -1) return
-
-        current[index] = current[index].copy(bandLevels = bandLevels)
         dataStore.edit { preferences ->
+            val current = decodeCustomPresets(preferences).toMutableList()
+            val index = current.indexOfFirst { it.name == presetName }
+            if (index == -1) return@edit
+
+            current[index] = current[index].copy(bandLevels = bandLevels)
             preferences[Keys.CUSTOM_PRESETS] = json.encodeToString(current)
         }
     }

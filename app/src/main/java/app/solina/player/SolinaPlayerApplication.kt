@@ -201,6 +201,7 @@ class SolinaPlayerApplication : Application(), ImageLoaderFactory, Configuration
         ) {
             artistImageRepository.get().clearCache()
             MediaMetadataRetrieverPool.clear()
+            app.solina.player.utils.MultiLangRomanizer.trimMemory()
         }
 
         libraryStateHolder.get().trimMemory(level)

@@ -7,6 +7,7 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -26,27 +27,27 @@ class ThemePreferencesRepository @Inject constructor(
 
     val appThemeModeFlow: Flow<String> = dataStore.data.map { preferences ->
         preferences[Keys.APP_THEME_MODE] ?: AppThemeMode.FOLLOW_SYSTEM
-    }
+    }.distinctUntilChanged()
 
     val playerThemePreferenceFlow: Flow<String> = dataStore.data.map { preferences ->
         preferences[Keys.PLAYER_THEME_PREFERENCE] ?: ThemePreference.ALBUM_ART
-    }
+    }.distinctUntilChanged()
 
     val globalNowPlayingThemeEnabledFlow: Flow<Boolean> = dataStore.data.map { preferences ->
         preferences[Keys.GLOBAL_NOW_PLAYING_THEME_ENABLED] ?: false
-    }
+    }.distinctUntilChanged()
 
     val themePresetFlow: Flow<String> = dataStore.data.map { preferences ->
         ThemePreset.sanitize(preferences[Keys.THEME_PRESET])
-    }
+    }.distinctUntilChanged()
 
     val albumArtPaletteStyleFlow: Flow<AlbumArtPaletteStyle> = dataStore.data.map { preferences ->
         AlbumArtPaletteStyle.fromStorageKey(preferences[Keys.ALBUM_ART_PALETTE_STYLE])
-    }
+    }.distinctUntilChanged()
 
     val albumArtColorAccuracyFlow: Flow<Int> = dataStore.data.map { preferences ->
         AlbumArtColorAccuracy.clamp(preferences[Keys.ALBUM_ART_COLOR_ACCURACY] ?: AlbumArtColorAccuracy.DEFAULT)
-    }
+    }.distinctUntilChanged()
 
     suspend fun setPlayerThemePreference(themeMode: String) =
         dataStore.edit { preferences ->

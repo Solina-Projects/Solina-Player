@@ -50,6 +50,7 @@ import app.solina.player.data.model.SyncedWord
 import kotlinx.coroutines.flow.Flow
 import timber.log.Timber
 
+import java.lang.ref.SoftReference
 import java.text.Normalizer
 import java.util.Locale
 import java.util.regex.Pattern
@@ -58,14 +59,26 @@ import kotlin.math.max
 import kotlin.math.sin
 
 object MultiLangRomanizer {
-    private val kuromojiTokenizer: Tokenizer? by lazy {
-        try {
-            Thread.currentThread().contextClassLoader = MultiLangRomanizer::class.java.classLoader
-            Tokenizer()
-        } catch (e: Throwable) {
-            Timber.e(e)
-            null
+    @Volatile
+    private var kuromojiTokenizerRef: SoftReference<Tokenizer>? = null
+    private val kuromojiLock = Any()
+
+    private fun getKuromojiTokenizer(): Tokenizer? {
+        kuromojiTokenizerRef?.get()?.let { return it }
+        return synchronized(kuromojiLock) {
+            kuromojiTokenizerRef?.get()?.let { return@synchronized it }
+            try {
+                Thread.currentThread().contextClassLoader = MultiLangRomanizer::class.java.classLoader
+                Tokenizer().also { kuromojiTokenizerRef = SoftReference(it) }
+            } catch (e: Throwable) {
+                Timber.e(e)
+                null
+            }
         }
+    }
+
+    fun trimMemory() {
+        kuromojiTokenizerRef = null
     }
 
     private val HANGUL_ROMAJA_MAP = mapOf(
@@ -158,7 +171,7 @@ object MultiLangRomanizer {
     private fun isMacedonian(text: String) = text.any { MACEDONIAN_CYRILLIC_LETTERS.contains(it.toString()) || MACEDONIAN_SPECIFIC_CYRILLIC_LETTERS.contains(it.toString()) } && text.all { MACEDONIAN_CYRILLIC_LETTERS.contains(it.toString()) || MACEDONIAN_SPECIFIC_CYRILLIC_LETTERS.contains(it.toString()) || !it.toString().matches("[\\u0400-\\u04FF]".toRegex()) }
 
     fun romanizeJapanese(japaneseText: String): String? {
-        val tokenizer = kuromojiTokenizer ?: return null
+        val tokenizer = getKuromojiTokenizer() ?: return null
 
         return try {
             val tokens = tokenizer.tokenize(japaneseText)

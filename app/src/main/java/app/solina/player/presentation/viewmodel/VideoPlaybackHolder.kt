@@ -5,6 +5,7 @@ import android.media.MediaCodecList
 import android.media.MediaFormat
 import android.net.Uri
 import androidx.annotation.OptIn
+import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
@@ -177,6 +178,15 @@ class VideoPlaybackHolder @Inject constructor(
 
         override fun onIsPlayingChanged(isPlaying: Boolean) {
             _isPlaying.value = isPlaying
+            if (isPlaying) {
+                startPolling()
+            } else {
+                stopPolling()
+                exoPlayer?.let { p ->
+                    _positionMs.value = p.currentPosition
+                    _durationMs.value = p.duration.coerceAtLeast(0L)
+                }
+            }
         }
 
         override fun onTracksChanged(tracks: Tracks) {
@@ -300,8 +310,14 @@ class VideoPlaybackHolder @Inject constructor(
             else -> DefaultRenderersFactory(context)
                 .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON)
         }
+        val audioAttributes = AudioAttributes.Builder()
+            .setUsage(C.USAGE_MEDIA)
+            .setContentType(C.AUDIO_CONTENT_TYPE_MOVIE)
+            .build()
         return ExoPlayer.Builder(context)
             .setRenderersFactory(renderersFactory)
+            .setAudioAttributes(audioAttributes, true)
+            .setHandleAudioBecomingNoisy(true)
             .build()
             .apply {
                 addListener(playerListener)
@@ -333,20 +349,26 @@ class VideoPlaybackHolder @Inject constructor(
         return player
     }
 
-    /** Poll position / duration / playing state for the bars (250 ms). */
+    /** Poll position / duration / playing state while playback is active (250 ms). */
     private fun startPolling() {
-        pollJob?.cancel()
+        if (pollJob?.isActive == true) return
         pollJob = scope.launch {
             while (isActive) {
                 val p = exoPlayer
-                if (p != null) {
-                    _positionMs.value = p.currentPosition
-                    _durationMs.value = p.duration.coerceAtLeast(0L)
-                    _isPlaying.value = p.isPlaying
+                if (p == null || !p.isPlaying) {
+                    break
                 }
+                _positionMs.value = p.currentPosition
+                _durationMs.value = p.duration.coerceAtLeast(0L)
+                _isPlaying.value = true
                 delay(250)
             }
         }
+    }
+
+    private fun stopPolling() {
+        pollJob?.cancel()
+        pollJob = null
     }
 
     fun play(contentUriString: String, startPositionMs: Long = 0L) {
@@ -447,6 +469,9 @@ class VideoPlaybackHolder @Inject constructor(
         }
         _isLoading.value = true
         startPolling()
+        scope.launch {
+            _currentVideo.value = videoRepository.getVideoByContentUri(contentUriStrings[wantedIndex])
+        }
     }
 
     /** Current position, for the resume point saved on leave. */
@@ -514,7 +539,9 @@ class VideoPlaybackHolder @Inject constructor(
     fun seekTo(positionMs: Long) {
         val player = exoPlayer ?: return
         val duration = player.duration.coerceAtLeast(0L)
-        player.seekTo(positionMs.coerceIn(0L, duration))
+        val clamped = positionMs.coerceIn(0L, duration)
+        player.seekTo(clamped)
+        _positionMs.value = clamped
     }
 
     /** Relative seek (the ±15 s buttons, swipe seek). */

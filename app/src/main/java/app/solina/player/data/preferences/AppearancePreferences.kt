@@ -5,6 +5,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.serialization.Serializable
@@ -527,9 +528,9 @@ class AppearancePreferences @Inject constructor(
     }
 
     /** Whole appearance, live. Falls back to defaults when unset or corrupt. */
-    val appearanceFlow: Flow<AppearanceSettings> = dataStore.data.map { preferences ->
-        val raw = preferences[Keys.APPEARANCE_SETTINGS] ?: return@map defaultSettings()
-        runCatching { json.decodeFromString<AppearanceSettings>(raw) }
+    private fun decodeAppearance(preferences: Preferences): AppearanceSettings {
+        val raw = preferences[Keys.APPEARANCE_SETTINGS] ?: return defaultSettings()
+        return runCatching { json.decodeFromString<AppearanceSettings>(raw) }
             .getOrElse { defaultSettings() }
             // Round 15, wave 2: migrate old stored looks (single corner
             // radius, single glass radius/tint) to the new per-corner /
@@ -537,10 +538,20 @@ class AppearancePreferences @Inject constructor(
             .migrated()
     }
 
+    private fun decodeSavedPresets(preferences: Preferences): List<SavedAppearancePreset> {
+        val raw = preferences[Keys.SAVED_APPEARANCE_PRESETS] ?: return emptyList()
+        return runCatching { json.decodeFromString<List<SavedAppearancePreset>>(raw) }
+            .getOrElse { emptyList() }
+    }
+
+    val appearanceFlow: Flow<AppearanceSettings> = dataStore.data
+        .map { preferences -> decodeAppearance(preferences) }
+        .distinctUntilChanged()
+
     suspend fun update(transform: (AppearanceSettings) -> AppearanceSettings) {
-        val current = appearanceFlow.first()
-        val updated = transform(current)
         dataStore.edit { preferences ->
+            val current = decodeAppearance(preferences)
+            val updated = transform(current)
             preferences[Keys.APPEARANCE_SETTINGS] = json.encodeToString(updated)
         }
     }
@@ -626,45 +637,48 @@ class AppearancePreferences @Inject constructor(
 
     /** Saved looks, live. Falls back to an empty list when unset or corrupt. */
     val savedPresetsFlow: Flow<List<SavedAppearancePreset>> =
-        dataStore.data.map { preferences ->
-            val raw = preferences[Keys.SAVED_APPEARANCE_PRESETS] ?: return@map emptyList()
-            runCatching { json.decodeFromString<List<SavedAppearancePreset>>(raw) }
-                .getOrElse { emptyList() }
-        }
+        dataStore.data
+            .map { preferences -> decodeSavedPresets(preferences) }
+            .distinctUntilChanged()
 
     suspend fun savePreset(name: String, settings: AppearanceSettings): SavePresetResult {
         val trimmed = name.trim()
-        val current = savedPresetsFlow.first()
-        val existingIndex = current.indexOfFirst { it.name.equals(trimmed, ignoreCase = true) }
-        if (existingIndex < 0 && current.size >= MAX_SAVED_APPEARANCE_PRESETS) {
-            return SavePresetResult.LIMIT_REACHED
-        }
-        val updated = if (existingIndex >= 0) {
-            current.toMutableList().also {
-                it[existingIndex] = SavedAppearancePreset(trimmed, settings)
-            }
-        } else {
-            current + SavedAppearancePreset(trimmed, settings)
-        }
+        var result = SavePresetResult.SAVED
         dataStore.edit { preferences ->
+            val current = decodeSavedPresets(preferences)
+            val existingIndex = current.indexOfFirst { it.name.equals(trimmed, ignoreCase = true) }
+            if (existingIndex < 0 && current.size >= MAX_SAVED_APPEARANCE_PRESETS) {
+                result = SavePresetResult.LIMIT_REACHED
+                return@edit
+            }
+            val updated = if (existingIndex >= 0) {
+                current.toMutableList().also {
+                    it[existingIndex] = SavedAppearancePreset(trimmed, settings)
+                }
+            } else {
+                current + SavedAppearancePreset(trimmed, settings)
+            }
             preferences[Keys.SAVED_APPEARANCE_PRESETS] = json.encodeToString(updated)
+            result = SavePresetResult.SAVED
         }
-        return SavePresetResult.SAVED
+        return result
     }
 
     suspend fun applySavedPreset(name: String) {
-        val preset = savedPresetsFlow.first()
-            .firstOrNull { it.name.equals(name.trim(), ignoreCase = true) } ?: return
+        val trimmed = name.trim()
         dataStore.edit { preferences ->
+            val preset = decodeSavedPresets(preferences)
+                .firstOrNull { it.name.equals(trimmed, ignoreCase = true) } ?: return@edit
             preferences[Keys.APPEARANCE_SETTINGS] =
                 json.encodeToString(preset.settings.migrated())
         }
     }
 
     suspend fun deleteSavedPreset(name: String) {
-        val updated = savedPresetsFlow.first()
-            .filterNot { it.name.equals(name.trim(), ignoreCase = true) }
+        val trimmed = name.trim()
         dataStore.edit { preferences ->
+            val updated = decodeSavedPresets(preferences)
+                .filterNot { it.name.equals(trimmed, ignoreCase = true) }
             preferences[Keys.SAVED_APPEARANCE_PRESETS] = json.encodeToString(updated)
         }
     }

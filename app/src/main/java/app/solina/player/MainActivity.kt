@@ -112,6 +112,7 @@ import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.MoreExecutors
+import app.solina.player.data.preferences.AppearanceFontFamilies
 import app.solina.player.data.preferences.AppearancePreferences
 import app.solina.player.data.preferences.AppearanceSettings
 import app.solina.player.data.preferences.AppThemeMode
@@ -161,6 +162,9 @@ import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import timber.log.Timber
 import javax.inject.Inject
@@ -206,6 +210,12 @@ internal val VideoNavItems: ImmutableList<BottomNavItem> = persistentListOf(
 private data class DismissUndoBarSlice(
     val isVisible: Boolean = false,
     val durationMillis: Long = 4000L
+)
+
+private data class NowPlayingRootThemeSlice(
+    val songId: String? = null,
+    val albumArtUriString: String? = null,
+    val isPlaying: Boolean = false
 )
 
 private const val SYSTEM_SPLASH_HANDOFF_MS = 150L
@@ -326,9 +336,12 @@ class MainActivity : ComponentActivity() {
             val appThemeMode by themePreferencesRepository.appThemeModeFlow.collectAsStateWithLifecycle(initialValue = AppThemeMode.FOLLOW_SYSTEM)
             val themePreset by themePreferencesRepository.themePresetFlow.collectAsStateWithLifecycle(initialValue = ThemePreset.DEFAULT)
             // Appearance customisation (bug-fix round 2026-11-17, item 6):
-            // font family + floating music bar colour, live from DataStore.
-            val appearanceSettings by appearancePreferences.appearanceFlow
-                .collectAsStateWithLifecycle(initialValue = AppearanceSettings())
+            // Only observe fontFamily at the root so bar/glass/card changes do not recompose the full app.
+            val appearanceFontFamilyKey by remember(appearancePreferences) {
+                appearancePreferences.appearanceFlow
+                    .map { it.fontFamily }
+                    .distinctUntilChanged()
+            }.collectAsStateWithLifecycle(initialValue = AppearanceFontFamilies.ROUNDED)
             val useDarkTheme = when (appThemeMode) {
                 AppThemeMode.DARK -> true
                 AppThemeMode.LIGHT -> false
@@ -337,18 +350,38 @@ class MainActivity : ComponentActivity() {
             val globalNowPlayingThemeEnabled by themePreferencesRepository
                 .globalNowPlayingThemeEnabledFlow
                 .collectAsStateWithLifecycle(initialValue = false)
-            val activePlayerColorSchemePair by playerViewModel
-                .activePlayerColorSchemePair
-                .collectAsStateWithLifecycle()
-            val themedAlbumArtUri by playerViewModel
-                .currentThemedAlbumArtUri
-                .collectAsStateWithLifecycle()
-            val stablePlayerState by playerViewModel
-                .stablePlayerState
-                .collectAsStateWithLifecycle()
-            val currentSongId = stablePlayerState.currentSong?.id
+            val activePlayerColorSchemePair by remember(globalNowPlayingThemeEnabled, playerViewModel) {
+                if (globalNowPlayingThemeEnabled) {
+                    playerViewModel.activePlayerColorSchemePair
+                } else {
+                    flowOf(null)
+                }
+            }.collectAsStateWithLifecycle(initialValue = null)
+            val themedAlbumArtUri by remember(globalNowPlayingThemeEnabled, playerViewModel) {
+                if (globalNowPlayingThemeEnabled) {
+                    playerViewModel.currentThemedAlbumArtUri
+                } else {
+                    flowOf(null)
+                }
+            }.collectAsStateWithLifecycle(initialValue = null)
+            val nowPlayingThemeSlice by remember(globalNowPlayingThemeEnabled, playerViewModel) {
+                if (globalNowPlayingThemeEnabled) {
+                    playerViewModel.stablePlayerState
+                        .map { state ->
+                            NowPlayingRootThemeSlice(
+                                songId = state.currentSong?.id,
+                                albumArtUriString = state.currentSong?.albumArtUriString,
+                                isPlaying = state.isPlaying
+                            )
+                        }
+                        .distinctUntilChanged()
+                } else {
+                    flowOf(NowPlayingRootThemeSlice())
+                }
+            }.collectAsStateWithLifecycle(initialValue = NowPlayingRootThemeSlice())
+            val currentSongId = nowPlayingThemeSlice.songId
             val currentSongScheme = activePlayerColorSchemePair.takeIf {
-                val artworkUri = stablePlayerState.currentSong?.albumArtUriString
+                val artworkUri = nowPlayingThemeSlice.albumArtUriString
                 !artworkUri.isNullOrBlank() && artworkUri == themedAlbumArtUri
             }
             var lastValidNowPlayingSongId by remember { mutableStateOf<String?>(null) }
@@ -370,7 +403,7 @@ class MainActivity : ComponentActivity() {
             val appWideNowPlayingScheme = resolveAppWideNowPlayingColorSchemePair(
                 enabled = globalNowPlayingThemeEnabled,
                 currentSongId = currentSongId,
-                isPlaying = stablePlayerState.isPlaying,
+                isPlaying = nowPlayingThemeSlice.isPlaying,
                 currentSongScheme = currentSongScheme,
                 lastValidSongId = lastValidNowPlayingSongId,
                 lastValidScheme = lastValidNowPlayingScheme
@@ -380,12 +413,10 @@ class MainActivity : ComponentActivity() {
             var showCrashReportDialog by remember { mutableStateOf(false) }
             var crashLogData by remember { mutableStateOf<CrashLogData?>(null) }
             
+            // Only audio read access gates entry into the main app; video and notification
+            // permissions are optional and requested in Setup/Video without locking out users.
             val permissions = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                listOf(
-                    Manifest.permission.READ_MEDIA_AUDIO,
-                    Manifest.permission.READ_MEDIA_VIDEO,
-                    Manifest.permission.POST_NOTIFICATIONS
-                )
+                listOf(Manifest.permission.READ_MEDIA_AUDIO)
             } else {
                 listOf(Manifest.permission.READ_EXTERNAL_STORAGE)
             }
@@ -418,19 +449,14 @@ class MainActivity : ComponentActivity() {
                 darkTheme = useDarkTheme,
                 colorSchemePairOverride = appWideNowPlayingScheme,
                 themePreset = themePreset,
-                fontFamily = appearanceFontFamily(appearanceSettings.fontFamily)
+                fontFamily = appearanceFontFamily(appearanceFontFamilyKey)
             ) {
-                var contentVisible by remember { mutableStateOf(false) }
+                var contentVisible by remember { mutableStateOf(true) }
                 val contentAlpha by animateFloatAsState(
                     targetValue = if (contentVisible) 1f else 0f,
-                    animationSpec = tween(600, easing = LinearOutSlowInEasing),
+                    animationSpec = tween(250, easing = LinearOutSlowInEasing),
                     label = "AppContentAlpha"
                 )
-
-                LaunchedEffect(Unit) {
-                    delay(100)
-                    contentVisible = true
-                }
 
                 var showAnimatedSplash by remember { mutableStateOf(playAnimatedSplash) }
 

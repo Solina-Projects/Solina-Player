@@ -5,6 +5,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.serialization.Serializable
@@ -76,9 +77,9 @@ class HomeCustomizationRepository @Inject constructor(
     }
 
     /** Ordered, visible-or-not section list. Falls back to defaults when unset or corrupt. */
-    val sectionsFlow: Flow<List<HomeSectionConfig>> = dataStore.data.map { preferences ->
-        val raw = preferences[Keys.HOME_SECTIONS] ?: return@map DEFAULT_SECTIONS
-        runCatching {
+    private fun decodeSections(preferences: Preferences): List<HomeSectionConfig> {
+        val raw = preferences[Keys.HOME_SECTIONS] ?: return DEFAULT_SECTIONS
+        return runCatching {
             val stored = json.decodeFromString<HomeSectionsState>(raw).sections
             // Merge with defaults so a section added by an app update appears.
             val byId = stored.associateBy { it.id }
@@ -88,6 +89,10 @@ class HomeCustomizationRepository @Inject constructor(
             merged.sortedBy { it.order }
         }.getOrElse { DEFAULT_SECTIONS }
     }
+
+    val sectionsFlow: Flow<List<HomeSectionConfig>> = dataStore.data
+        .map { preferences -> decodeSections(preferences) }
+        .distinctUntilChanged()
 
     fun isVisible(sections: List<HomeSectionConfig>, id: HomeSectionId): Boolean =
         sections.firstOrNull { it.id == id.name }?.visible ?: true
@@ -120,10 +125,10 @@ class HomeCustomizationRepository @Inject constructor(
     private suspend fun updateSections(
         transform: (List<HomeSectionConfig>) -> List<HomeSectionConfig>
     ) {
-        val current = sectionsFlow.first()
-        val updated = transform(current).sortedBy { it.order }
-            .mapIndexed { index, config -> config.copy(order = index) }
         dataStore.edit { preferences ->
+            val current = decodeSections(preferences)
+            val updated = transform(current).sortedBy { it.order }
+                .mapIndexed { index, config -> config.copy(order = index) }
             preferences[Keys.HOME_SECTIONS] =
                 json.encodeToString(HomeSectionsState(updated))
         }

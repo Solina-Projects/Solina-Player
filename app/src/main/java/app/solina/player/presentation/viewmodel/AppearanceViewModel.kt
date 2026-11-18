@@ -15,8 +15,11 @@ import app.solina.player.data.preferences.SavedAppearancePreset
 import app.solina.player.data.preferences.SeekBarStyleNames
 import app.solina.player.data.preferences.ThemePreferencesRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import androidx.compose.runtime.Immutable
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -29,6 +32,12 @@ import javax.inject.Inject
  * The app theme mode lives in [ThemePreferencesRepository] and is
  * exposed here too, so the Theme group sits on the same screen.
  */
+@Immutable
+data class ListRowAppearanceSlice(
+    val listFontScale: Float = 1f,
+    val cornerRadiusDp: Int = 20
+)
+
 @HiltViewModel
 class AppearanceViewModel @Inject constructor(
     private val repository: AppearancePreferences,
@@ -41,6 +50,28 @@ class AppearanceViewModel @Inject constructor(
             SharingStarted.WhileSubscribed(5_000),
             AppearancePreferences.defaultSettings()
         )
+
+    /** Sliced state for list rows so unrelated appearance tweaks do not recompose song/video rows. */
+    val listRowSlice: StateFlow<ListRowAppearanceSlice> =
+        repository.appearanceFlow
+            .map { ListRowAppearanceSlice(it.listFontScale, it.listRows.cornerRadiusDp) }
+            .distinctUntilChanged()
+            .stateIn(
+                viewModelScope,
+                SharingStarted.WhileSubscribed(5_000),
+                ListRowAppearanceSlice()
+            )
+
+    /** Sliced seek-bar style so bar/card edits do not recompose the player seek bar. */
+    val seekBarStyle: StateFlow<String> =
+        repository.appearanceFlow
+            .map { it.seekBarStyle }
+            .distinctUntilChanged()
+            .stateIn(
+                viewModelScope,
+                SharingStarted.WhileSubscribed(5_000),
+                SeekBarStyleNames.WAVY
+            )
 
     /** User-saved looks (round 15, wave 2, C7). */
     val savedPresets: StateFlow<List<SavedAppearancePreset>> =

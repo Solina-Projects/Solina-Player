@@ -47,6 +47,7 @@ import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import timber.log.Timber
+import java.io.IOException
 import java.util.concurrent.atomic.AtomicInteger
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -461,6 +462,7 @@ class NavidromeRepository @Inject constructor(
                 val concurrencyLimit = 5
                 val semaphore = Semaphore(concurrencyLimit)
                 val processedCount = AtomicInteger(0)
+                val failedAlbums = AtomicInteger(0)
 
                 val albumSongLists = coroutineScope {
                     fetchedAlbums.map { albumJson ->
@@ -484,6 +486,7 @@ class NavidromeRepository @Inject constructor(
                                         NavidromeResponseParser.parseSongs(songJsons)
                                     },
                                     onFailure = {
+                                        failedAlbums.incrementAndGet()
                                         Timber.w(it, "$TAG: Failed to fetch songs for album $albumId")
                                         emptyList()
                                     }
@@ -491,6 +494,16 @@ class NavidromeRepository @Inject constructor(
                             }
                         }
                     }.awaitAll()
+                }
+
+                val failedAlbumCount = failedAlbums.get()
+                if (failedAlbumCount > 0) {
+                    Timber.w(
+                        "$TAG: Aborting library replacement because $failedAlbumCount of $totalAlbums albums failed"
+                    )
+                    return@withContext Result.failure(
+                        IOException("Failed to fetch $failedAlbumCount of $totalAlbums albums from Navidrome")
+                    )
                 }
 
                 allSongs.addAll(albumSongLists.flatten())

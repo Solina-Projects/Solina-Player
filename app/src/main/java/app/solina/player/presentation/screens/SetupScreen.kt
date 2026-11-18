@@ -634,27 +634,14 @@ private fun isPermissionGateSatisfied(
         SetupPage.MediaPermission -> {
             uiState.mediaPermissionGranted || hasMediaPermissionNow(context)
         }
-        SetupPage.NotificationsPermission -> {
-            uiState.notificationsPermissionGranted ||
-                Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
-                ContextCompat.checkSelfPermission(
-                    context,
-                    Manifest.permission.POST_NOTIFICATIONS
-                ) == PackageManager.PERMISSION_GRANTED
-        }
+        // Notifications are helpful for playback controls, but declining them must not trap the user in Setup.
+        SetupPage.NotificationsPermission -> true
         else -> true
     }
 }
 
 private fun allRequiredPermissionsGrantedNow(context: Context): Boolean {
-    val mediaGranted = hasMediaPermissionNow(context)
-    val notificationsGranted =
-        Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
-            ContextCompat.checkSelfPermission(
-                context,
-                Manifest.permission.POST_NOTIFICATIONS
-            ) == PackageManager.PERMISSION_GRANTED
-    return mediaGranted && notificationsGranted
+    return hasMediaPermissionNow(context)
 }
 
 private fun hasMediaPermissionNow(context: Context): Boolean {

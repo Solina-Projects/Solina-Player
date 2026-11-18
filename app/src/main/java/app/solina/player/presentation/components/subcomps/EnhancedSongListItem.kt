@@ -150,8 +150,8 @@ fun EnhancedSongListItem(
     // 50 dp pill — only the resting radius is tunable.
     appearanceViewModel: AppearanceViewModel = hiltViewModel()
 ) {
-    val appearance by appearanceViewModel.appearance.collectAsStateWithLifecycle()
-    val listFontScale = appearance.listFontScale
+    val listRowSlice by appearanceViewModel.listRowSlice.collectAsStateWithLifecycle()
+    val listFontScale = listRowSlice.listFontScale
     val albumArtTargetSizePx = with(LocalDensity.current) { albumArtSize.roundToPx() }
     val isHighlighted = isCurrentSong && !isLoading
     val transition = updateTransition(
@@ -187,7 +187,7 @@ fun EnhancedSongListItem(
     }
 
     val animatedCornerRadius = lerpDp(
-        appearance.listRows.cornerRadiusDp.dp, 50.dp, highlightProgress
+        listRowSlice.cornerRadiusDp.dp, 50.dp, highlightProgress
     )
     val animatedAlbumCornerRadius = lerpDp(10.dp, 50.dp, highlightProgress)
     val selectionScale = lerpFloat(1f, 0.98f, selectionScaleProgress)

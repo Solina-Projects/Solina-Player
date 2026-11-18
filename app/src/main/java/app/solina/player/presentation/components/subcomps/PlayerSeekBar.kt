@@ -59,7 +59,7 @@ fun PlayerSeekBar(
     // Round 15, wave 2, C4: seek-bar style (wavy / classic).
     appearanceViewModel: AppearanceViewModel = hiltViewModel()
 ) {
-    val appearance by appearanceViewModel.appearance.collectAsStateWithLifecycle()
+    val seekBarStyle by appearanceViewModel.seekBarStyle.collectAsStateWithLifecycle()
     val hapticFeedback = LocalHapticFeedback.current
     val progressFraction = remember(currentPosition, totalDuration) {
         if (totalDuration > 0) {
@@ -122,7 +122,7 @@ fun PlayerSeekBar(
             lastSeekFinishedTime = System.currentTimeMillis()
             isUserSeeking = false
         }
-        if (appearance.seekBarStyle == SeekBarStyleNames.CLASSIC) {
+        if (seekBarStyle == SeekBarStyleNames.CLASSIC) {
             Slider(
                 value = seekFraction,
                 onValueChange = onSeekFractionChange,

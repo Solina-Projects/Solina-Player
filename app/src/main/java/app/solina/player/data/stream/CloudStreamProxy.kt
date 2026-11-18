@@ -15,12 +15,13 @@ import io.ktor.server.routing.get
 import io.ktor.server.routing.routing
 import io.ktor.utils.io.writeFully
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancelChildren
-import kotlinx.coroutines.delay
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
@@ -71,6 +72,9 @@ abstract class CloudStreamProxy<K : Any>(
     private val proxyScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var startJob: Job? = null
 
+    @Volatile
+    private var readySignal: CompletableDeferred<Boolean> = CompletableDeferred()
+
     private val streamingClient: OkHttpClient by lazy {
         okHttpClient.newBuilder()
             .readTimeout(STREAM_READ_TIMEOUT_SECONDS, TimeUnit.SECONDS)
@@ -99,14 +103,7 @@ abstract class CloudStreamProxy<K : Any>(
 
     suspend fun awaitReady(timeoutMs: Long = 10_000L): Boolean {
         if (isReady()) return true
-        val stepMs = 50L
-        var elapsed = 0L
-        while (elapsed < timeoutMs) {
-            if (isReady()) return true
-            delay(stepMs)
-            elapsed += stepMs
-        }
-        return false
+        return withTimeoutOrNull(timeoutMs) { readySignal.await() } ?: isReady()
     }
 
     suspend fun ensureReady(timeoutMs: Long = 10_000L): Boolean {
@@ -135,6 +132,7 @@ abstract class CloudStreamProxy<K : Any>(
 
     fun start() {
         startJob?.cancel()
+        val signal = CompletableDeferred<Boolean>().also { readySignal = it }
         startJob = proxyScope.launch {
             try {
                 sessionToken = generateSessionToken()
@@ -142,10 +140,13 @@ abstract class CloudStreamProxy<K : Any>(
                 createdServer.start(wait = false)
                 server = createdServer
                 actualPort = createdServer.engine.resolvedConnectors().first().port
+                signal.complete(true)
                 Timber.d("$proxyTag started on port $actualPort")
             } catch (_: CancellationException) {
+                signal.complete(false)
                 Timber.d("$proxyTag start cancelled")
             } catch (e: Exception) {
+                signal.complete(false)
                 Timber.e(e, "Failed to start $proxyTag")
             }
         }
@@ -155,11 +156,18 @@ abstract class CloudStreamProxy<K : Any>(
         startJob?.cancel()
         startJob = null
         proxyScope.coroutineContext.cancelChildren()
-        server?.stop(1000, 2000)
+        val serverToStop = server
         server = null
         actualPort = 0
         sessionToken = ""
         urlCache.clear()
+        readySignal.complete(false)
+        readySignal = CompletableDeferred()
+        if (serverToStop != null) {
+            proxyScope.launch(Dispatchers.IO) {
+                runCatching { serverToStop.stop(1000, 2000) }
+            }
+        }
         Timber.d("$proxyTag stopped")
     }
 

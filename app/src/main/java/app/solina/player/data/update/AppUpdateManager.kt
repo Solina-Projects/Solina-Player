@@ -389,8 +389,13 @@ class AppUpdateManager @Inject constructor(
 
     private fun updatesDir() = File(context.cacheDir, UPDATES_DIR)
 
-    private fun downloadedApk(release: AppRelease) =
-        File(updatesDir(), "SolinaPlayer-${release.versionName}.apk")
+    private fun downloadedApk(release: AppRelease): File {
+        val dir = updatesDir()
+        val safeVersion = release.versionName.replace(Regex("[^A-Za-z0-9._-]"), "_")
+        val file = File(dir, "SolinaPlayer-$safeVersion.apk")
+        check(file.canonicalFile.parentFile == dir.canonicalFile) { "Invalid update APK path" }
+        return file
+    }
 
     private companion object {
         const val UPDATES_DIR = "updates"

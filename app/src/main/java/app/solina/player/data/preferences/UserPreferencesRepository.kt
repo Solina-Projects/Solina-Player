@@ -340,7 +340,7 @@ constructor(
     /** Null until the user picks a channel; the updater then follows the installed build. */
     val updateChannelFlow: Flow<UpdateChannel?> = dataStore.data.map { preferences ->
         UpdateChannel.fromStorageKey(preferences[PreferencesKeys.UPDATE_CHANNEL])
-    }
+    }.distinctUntilChanged()
 
     suspend fun setUpdateChannel(channel: UpdateChannel) {
         dataStore.edit { preferences -> preferences[PreferencesKeys.UPDATE_CHANNEL] = channel.storageKey }
@@ -349,7 +349,7 @@ constructor(
     /** Null until the user toggles it; the default depends on the installed channel. */
     val updateAutoCheckFlow: Flow<Boolean?> = dataStore.data.map { preferences ->
         preferences[PreferencesKeys.UPDATE_AUTO_CHECK]
-    }
+    }.distinctUntilChanged()
 
     suspend fun setUpdateAutoCheck(enabled: Boolean) {
         dataStore.edit { preferences -> preferences[PreferencesKeys.UPDATE_AUTO_CHECK] = enabled }
@@ -365,7 +365,7 @@ constructor(
     val appRebrandDialogShownFlow: Flow<Boolean> =
             dataStore.data.map { preferences ->
                 preferences[PreferencesKeys.APP_REBRAND_DIALOG_SHOWN] ?: false
-            }
+            }.distinctUntilChanged()
 
     suspend fun setAppRebrandDialogShown(wasShown: Boolean) {
         dataStore.edit { preferences ->
@@ -388,7 +388,7 @@ constructor(
     val isCrossfadeEnabledFlow: Flow<Boolean> =
             dataStore.data.map { preferences ->
                 preferences[PreferencesKeys.IS_CROSSFADE_ENABLED] ?: false
-            }
+            }.distinctUntilChanged()
 
     suspend fun setCrossfadeEnabled(enabled: Boolean) {
         dataStore.edit { preferences ->
@@ -399,7 +399,7 @@ constructor(
     val smartCrossfadeEnabledFlow: Flow<Boolean> =
             dataStore.data.map { preferences ->
                 preferences[PreferencesKeys.SMART_CROSSFADE_ENABLED] ?: false
-            }
+            }.distinctUntilChanged()
 
     suspend fun setSmartCrossfadeEnabled(enabled: Boolean) {
         dataStore.edit { preferences ->
@@ -424,7 +424,7 @@ constructor(
 
     val backupInfoDismissedFlow: Flow<Boolean> = dataStore.data.map { preferences ->
         preferences[PreferencesKeys.BACKUP_INFO_DISMISSED] ?: false
-    }
+    }.distinctUntilChanged()
 
     suspend fun setBackupInfoDismissed(dismissed: Boolean) {
         dataStore.edit { preferences -> preferences[PreferencesKeys.BACKUP_INFO_DISMISSED] = dismissed }
@@ -437,7 +437,7 @@ constructor(
     val crossfadeDurationFlow: Flow<Int> =
             dataStore.data.map { preferences ->
                 (preferences[PreferencesKeys.CROSSFADE_DURATION] ?: 2000).coerceIn(1000, 12000)
-            }
+            }.distinctUntilChanged()
 
     suspend fun setCrossfadeDuration(duration: Int) {
         dataStore.edit { preferences ->
@@ -465,7 +465,7 @@ constructor(
     val customGenresFlow: Flow<Set<String>> =
         dataStore.data.map { preferences ->
             preferences[PreferencesKeys.CUSTOM_GENRES] ?: emptySet()
-        }
+        }.distinctUntilChanged()
 
     val customGenreIconsFlow: Flow<Map<String, Int>> =
         dataStore.data.map { preferences ->
@@ -479,7 +479,7 @@ constructor(
             } else {
                 emptyMap()
             }
-        }
+        }.distinctUntilChanged()
 
     suspend fun addCustomGenre(genre: String, iconResId: Int? = null) {
         dataStore.edit { preferences ->
@@ -507,7 +507,7 @@ constructor(
     val repeatModeFlow: Flow<Int> =
             dataStore.data.map { preferences ->
                 preferences[PreferencesKeys.REPEAT_MODE] ?: Player.REPEAT_MODE_OFF
-            }
+            }.distinctUntilChanged()
 
     suspend fun setRepeatMode(@Player.RepeatMode mode: Int) {
         dataStore.edit { preferences -> preferences[PreferencesKeys.REPEAT_MODE] = mode }
@@ -516,7 +516,7 @@ constructor(
     val isShuffleOnFlow: Flow<Boolean> =
             dataStore.data.map { preferences ->
                 preferences[PreferencesKeys.IS_SHUFFLE_ON] ?: false
-            }
+            }.distinctUntilChanged()
 
     suspend fun setShuffleOn(on: Boolean) {
         dataStore.edit { preferences -> preferences[PreferencesKeys.IS_SHUFFLE_ON] = on }
@@ -525,7 +525,7 @@ constructor(
     val persistentShuffleEnabledFlow: Flow<Boolean> =
             dataStore.data.map { preferences ->
                 preferences[PreferencesKeys.PERSISTENT_SHUFFLE_ENABLED] ?: false
-            }
+            }.distinctUntilChanged()
 
     suspend fun setPersistentShuffleEnabled(enabled: Boolean) {
         dataStore.edit { preferences -> preferences[PreferencesKeys.PERSISTENT_SHUFFLE_ENABLED] = enabled }
@@ -536,7 +536,7 @@ constructor(
                 preferences[PreferencesKeys.PLAYBACK_QUEUE_SNAPSHOT]?.let { raw ->
                     runCatching { json.decodeFromString<PlaybackQueueSnapshot>(raw) }.getOrNull()
                 }
-            }
+            }.distinctUntilChanged()
 
     suspend fun getPlaybackQueueSnapshotOnce(): PlaybackQueueSnapshot? {
         return playbackQueueSnapshotFlow.first()
@@ -564,7 +564,7 @@ constructor(
                 } else {
                     DEFAULT_ARTIST_DELIMITERS
                 }
-            }
+            }.distinctUntilChanged()
 
     suspend fun setArtistDelimiters(delimiters: List<String>) {
         if (delimiters.isEmpty()) {
@@ -593,7 +593,7 @@ constructor(
             } else {
                 DEFAULT_ARTIST_WORD_DELIMITERS
             }
-        }
+        }.distinctUntilChanged()
 
     suspend fun setArtistWordDelimiters(delimiters: List<String>) {
         dataStore.edit { preferences ->
@@ -609,7 +609,7 @@ constructor(
     val extractArtistsFromTitleFlow: Flow<Boolean> =
         dataStore.data.map { preferences ->
             preferences[PreferencesKeys.EXTRACT_ARTISTS_FROM_TITLE] ?: true
-        }
+        }.distinctUntilChanged()
 
     suspend fun setExtractArtistsFromTitle(enabled: Boolean) {
         dataStore.edit { preferences ->
@@ -621,7 +621,7 @@ constructor(
     val groupByAlbumArtistFlow: Flow<Boolean> =
             dataStore.data.map { preferences ->
                 preferences[PreferencesKeys.GROUP_BY_ALBUM_ARTIST] ?: false
-            }
+            }.distinctUntilChanged()
 
     suspend fun setGroupByAlbumArtist(enabled: Boolean) {
         dataStore.edit { preferences ->
@@ -645,7 +645,7 @@ constructor(
     val artistSettingsRescanRequiredFlow: Flow<Boolean> =
             dataStore.data.map { preferences ->
                 preferences[PreferencesKeys.ARTIST_SETTINGS_RESCAN_REQUIRED] ?: false
-            }
+            }.distinctUntilChanged()
 
     suspend fun clearArtistSettingsRescanRequired() {
         dataStore.edit { preferences ->
@@ -656,17 +656,17 @@ constructor(
     val lastSyncTimestampFlow: Flow<Long> =
             dataStore.data.map { preferences ->
                 preferences[PreferencesKeys.LAST_SYNC_TIMESTAMP] ?: 0L
-            }
+            }.distinctUntilChanged()
 
     val directoryRulesVersionFlow: Flow<Int> =
             dataStore.data.map { preferences ->
                 preferences[PreferencesKeys.DIRECTORY_RULES_VERSION] ?: 0
-            }
+            }.distinctUntilChanged()
 
     val lastAppliedDirectoryRulesVersionFlow: Flow<Int> =
             dataStore.data.map { preferences ->
                 preferences[PreferencesKeys.LAST_APPLIED_DIRECTORY_RULES_VERSION] ?: 0
-            }
+            }.distinctUntilChanged()
 
     suspend fun getLastSyncTimestamp(): Long {
         return lastSyncTimestampFlow.first()
@@ -719,7 +719,7 @@ constructor(
                         emptyMap()
                     }
                 } ?: emptyMap()
-            }
+            }.distinctUntilChanged()
 
     fun getLyricsSyncOffsetFlow(songId: String): Flow<Int> {
         return lyricsSyncOffsetsFlow.map { offsets -> offsets[songId] ?: 0 }
@@ -752,7 +752,7 @@ constructor(
     val lyricsSourcePreferenceFlow: Flow<LyricsSourcePreference> =
             dataStore.data.map { preferences ->
                 LyricsSourcePreference.fromName(preferences[PreferencesKeys.LYRICS_SOURCE_PREFERENCE])
-            }
+            }.distinctUntilChanged()
 
     suspend fun setLyricsSourcePreference(preference: LyricsSourcePreference) {
         dataStore.edit { preferences ->
@@ -788,7 +788,7 @@ constructor(
     val autoScanLrcFilesFlow: Flow<Boolean> =
             dataStore.data.map { preferences ->
                 preferences[PreferencesKeys.AUTO_SCAN_LRC_FILES] ?: false
-            }
+            }.distinctUntilChanged()
 
     suspend fun setAutoScanLrcFiles(enabled: Boolean) {
         dataStore.edit { preferences ->
@@ -799,12 +799,12 @@ constructor(
     val immersiveLyricsEnabledFlow: Flow<Boolean> =
             dataStore.data.map { preferences ->
                 preferences[PreferencesKeys.IMMERSIVE_LYRICS_ENABLED] ?: false
-            }
+            }.distinctUntilChanged()
 
     val immersiveLyricsTimeoutFlow: Flow<Long> =
             dataStore.data.map { preferences ->
                 preferences[PreferencesKeys.IMMERSIVE_LYRICS_TIMEOUT] ?: 4000L
-            }
+            }.distinctUntilChanged()
 
     suspend fun setImmersiveLyricsEnabled(enabled: Boolean) {
         dataStore.edit { preferences ->
@@ -832,7 +832,7 @@ constructor(
                                 ?: TransitionSettings()
 
                 settings.copy(durationMs = duration)
-            }
+            }.distinctUntilChanged()
 
     suspend fun saveGlobalTransitionSettings(settings: TransitionSettings) {
         dataStore.edit { preferences ->
@@ -853,7 +853,7 @@ constructor(
                 } else {
                     emptyList()
                 }
-            }
+            }.distinctUntilChanged()
 
     suspend fun saveDailyMixSongIds(songIds: List<String>) {
         dataStore.edit { preferences ->
@@ -873,7 +873,7 @@ constructor(
                 } else {
                     emptyList()
                 }
-            }
+            }.distinctUntilChanged()
 
     suspend fun saveYourMixSongIds(songIds: List<String>) {
         dataStore.edit { preferences ->
@@ -884,7 +884,7 @@ constructor(
     val isGenreGridViewFlow: Flow<Boolean> =
         dataStore.data.map { preferences ->
             preferences[PreferencesKeys.IS_GENRE_GRID_VIEW] ?: true
-        }
+        }.distinctUntilChanged()
 
     suspend fun setGenreGridView(isGrid: Boolean) {
         dataStore.edit { preferences ->
@@ -895,7 +895,7 @@ constructor(
     val isVideoSearchGridViewFlow: Flow<Boolean> =
         dataStore.data.map { preferences ->
             preferences[PreferencesKeys.IS_VIDEO_SEARCH_GRID_VIEW] ?: true
-        }
+        }.distinctUntilChanged()
 
     suspend fun setVideoSearchGridView(isGrid: Boolean) {
         dataStore.edit { preferences ->
@@ -908,7 +908,7 @@ constructor(
     val isVideoFoldersGridViewFlow: Flow<Boolean> =
         dataStore.data.map { preferences ->
             preferences[PreferencesKeys.IS_VIDEO_FOLDERS_GRID_VIEW] ?: false
-        }
+        }.distinctUntilChanged()
 
     suspend fun setVideoFoldersGridView(isGrid: Boolean) {
         dataStore.edit { preferences ->
@@ -920,7 +920,7 @@ constructor(
     val videoFoldersViewModeFlow: Flow<String> =
         dataStore.data.map { preferences ->
             preferences[PreferencesKeys.VIDEO_FOLDERS_VIEW_MODE] ?: "FOLDERS"
-        }
+        }.distinctUntilChanged()
 
     suspend fun setVideoFoldersViewMode(mode: String) {
         dataStore.edit { preferences ->
@@ -932,7 +932,7 @@ constructor(
     val videoFoldersSortFlow: Flow<String> =
         dataStore.data.map { preferences ->
             preferences[PreferencesKeys.VIDEO_FOLDERS_SORT] ?: "TITLE"
-        }
+        }.distinctUntilChanged()
 
     suspend fun setVideoFoldersSort(sort: String) {
         dataStore.edit { preferences ->
@@ -943,7 +943,7 @@ constructor(
     val videoFoldersSortAscendingFlow: Flow<Boolean> =
         dataStore.data.map { preferences ->
             preferences[PreferencesKeys.VIDEO_FOLDERS_SORT_ASCENDING] ?: true
-        }
+        }.distinctUntilChanged()
 
     suspend fun setVideoFoldersSortAscending(ascending: Boolean) {
         dataStore.edit { preferences ->
@@ -953,15 +953,15 @@ constructor(
 
     /** Last partially-watched video, for the Folders screen's Resume button. */
     val videoResumeUriFlow: Flow<String?> =
-        dataStore.data.map { preferences -> preferences[PreferencesKeys.VIDEO_RESUME_URI] }
+        dataStore.data.map { preferences -> preferences[PreferencesKeys.VIDEO_RESUME_URI] }.distinctUntilChanged()
 
     val videoResumePositionMsFlow: Flow<Long> =
         dataStore.data.map { preferences ->
             preferences[PreferencesKeys.VIDEO_RESUME_POSITION_MS] ?: 0L
-        }
+        }.distinctUntilChanged()
 
     val videoResumeTitleFlow: Flow<String?> =
-        dataStore.data.map { preferences -> preferences[PreferencesKeys.VIDEO_RESUME_TITLE] }
+        dataStore.data.map { preferences -> preferences[PreferencesKeys.VIDEO_RESUME_TITLE] }.distinctUntilChanged()
 
     suspend fun saveVideoResume(uri: String, positionMs: Long, title: String) {
         dataStore.edit { preferences ->
@@ -982,7 +982,7 @@ constructor(
     val videoBackgroundPlaybackFlow: Flow<Boolean> =
         dataStore.data.map { preferences ->
             preferences[PreferencesKeys.VIDEO_BACKGROUND_PLAYBACK] ?: false
-        }
+        }.distinctUntilChanged()
 
     suspend fun setVideoBackgroundPlayback(enabled: Boolean) {
         dataStore.edit { preferences ->
@@ -993,7 +993,7 @@ constructor(
     val videoNightLightFlow: Flow<Boolean> =
         dataStore.data.map { preferences ->
             preferences[PreferencesKeys.VIDEO_NIGHT_LIGHT] ?: false
-        }
+        }.distinctUntilChanged()
 
     suspend fun setVideoNightLight(enabled: Boolean) {
         dataStore.edit { preferences ->
@@ -1005,7 +1005,7 @@ constructor(
     val videoBrightnessFlow: Flow<Int> =
         dataStore.data.map { preferences ->
             preferences[PreferencesKeys.VIDEO_BRIGHTNESS] ?: 40
-        }
+        }.distinctUntilChanged()
 
     suspend fun setVideoBrightness(percent: Int) {
         dataStore.edit { preferences ->
@@ -1017,7 +1017,7 @@ constructor(
     val videoAspectModeFlow: Flow<String> =
         dataStore.data.map { preferences ->
             preferences[PreferencesKeys.VIDEO_ASPECT_MODE] ?: "FIT"
-        }
+        }.distinctUntilChanged()
 
     suspend fun setVideoAspectMode(mode: String) {
         dataStore.edit { preferences ->
@@ -1028,7 +1028,7 @@ constructor(
     val videoVolumeFlow: Flow<Float> =
         dataStore.data.map { preferences ->
             preferences[PreferencesKeys.VIDEO_VOLUME] ?: 1f
-        }
+        }.distinctUntilChanged()
 
     suspend fun setVideoVolume(volume: Float) {
         dataStore.edit { preferences ->
@@ -1039,7 +1039,7 @@ constructor(
     val videoPlaybackSpeedFlow: Flow<Float> =
         dataStore.data.map { preferences ->
             preferences[PreferencesKeys.VIDEO_PLAYBACK_SPEED] ?: 1f
-        }
+        }.distinctUntilChanged()
 
     suspend fun setVideoPlaybackSpeed(speed: Float) {
         dataStore.edit { preferences ->
@@ -1054,7 +1054,7 @@ constructor(
     val videoPlayerVisibleButtonsFlow: Flow<Set<String>> =
         dataStore.data.map { preferences ->
             preferences[PreferencesKeys.VIDEO_PLAYER_VISIBLE_BUTTONS] ?: emptySet()
-        }
+        }.distinctUntilChanged()
 
     suspend fun setVideoPlayerVisibleButtons(buttonIds: Set<String>) {
         dataStore.edit { preferences ->
@@ -1073,7 +1073,7 @@ constructor(
             runCatching {
                 json.decodeFromString<List<VideoBookmark>>(raw)
             }.getOrElse { emptyList() }
-        }
+        }.distinctUntilChanged()
 
     suspend fun addVideoBookmark(bookmark: VideoBookmark) {
         dataStore.edit { preferences ->
@@ -1112,7 +1112,7 @@ constructor(
     val videoFavouriteUrisFlow: Flow<Set<String>> =
         dataStore.data.map { preferences ->
             preferences[PreferencesKeys.VIDEO_FAVOURITE_URIS] ?: emptySet()
-        }
+        }.distinctUntilChanged()
 
     suspend fun setVideoFavourite(uri: String, favourite: Boolean) {
         dataStore.edit { preferences ->
@@ -1134,7 +1134,7 @@ constructor(
             runCatching {
                 json.decodeFromString<List<VideoPlaylistEntry>>(raw)
             }.getOrElse { emptyList() }
-        }
+        }.distinctUntilChanged()
 
     /** Adds to the "Videos" playlist; returns false when already in it. */
     suspend fun addToVideoPlaylist(entry: VideoPlaylistEntry): Boolean {
@@ -1162,7 +1162,7 @@ constructor(
             runCatching {
                 json.decodeFromString<List<ExternalVideoSubtitle>>(raw)
             }.getOrElse { emptyList() }
-        }
+        }.distinctUntilChanged()
 
     suspend fun setExternalVideoSubtitle(entry: ExternalVideoSubtitle) {
         dataStore.edit { preferences ->
@@ -1181,7 +1181,7 @@ constructor(
     val videoSubtitleTextSizeFlow: Flow<Float> =
         dataStore.data.map { preferences ->
             preferences[PreferencesKeys.VIDEO_SUBTITLE_TEXT_SIZE] ?: 20f
-        }
+        }.distinctUntilChanged()
 
     suspend fun setVideoSubtitleTextSize(sizeSp: Float) {
         dataStore.edit { preferences ->
@@ -1194,7 +1194,7 @@ constructor(
     val videoSubtitleTextColorFlow: Flow<Int> =
         dataStore.data.map { preferences ->
             preferences[PreferencesKeys.VIDEO_SUBTITLE_TEXT_COLOR] ?: -1
-        }
+        }.distinctUntilChanged()
 
     suspend fun setVideoSubtitleTextColor(argb: Int) {
         dataStore.edit { preferences ->
@@ -1206,7 +1206,7 @@ constructor(
     val videoSubtitleBackgroundFlow: Flow<Int> =
         dataStore.data.map { preferences ->
             preferences[PreferencesKeys.VIDEO_SUBTITLE_BACKGROUND] ?: 1
-        }
+        }.distinctUntilChanged()
 
     suspend fun setVideoSubtitleBackground(mode: Int) {
         dataStore.edit { preferences ->
@@ -1221,7 +1221,7 @@ constructor(
     val videoDecoderModeFlow: Flow<String> =
         dataStore.data.map { preferences ->
             preferences[PreferencesKeys.VIDEO_DECODER_MODE] ?: "auto"
-        }
+        }.distinctUntilChanged()
 
     suspend fun setVideoDecoderMode(mode: String) {
         dataStore.edit { preferences ->
@@ -1234,7 +1234,7 @@ constructor(
     val videoResumeBehaviourFlow: Flow<String> =
         dataStore.data.map { preferences ->
             preferences[PreferencesKeys.VIDEO_RESUME_BEHAVIOUR] ?: "always"
-        }
+        }.distinctUntilChanged()
 
     suspend fun setVideoResumeBehaviour(behaviour: String) {
         dataStore.edit { preferences ->
@@ -1247,7 +1247,7 @@ constructor(
     val videoSwipeGesturesEnabledFlow: Flow<Boolean> =
         dataStore.data.map { preferences ->
             preferences[PreferencesKeys.VIDEO_SWIPE_GESTURES_ENABLED] ?: true
-        }
+        }.distinctUntilChanged()
 
     suspend fun setVideoSwipeGesturesEnabled(enabled: Boolean) {
         dataStore.edit { preferences ->
@@ -1259,7 +1259,7 @@ constructor(
     val developerModeEnabledFlow: Flow<Boolean> =
         dataStore.data.map { preferences ->
             preferences[PreferencesKeys.DEVELOPER_MODE_ENABLED] ?: false
-        }
+        }.distinctUntilChanged()
 
     suspend fun setDeveloperModeEnabled(enabled: Boolean) {
         dataStore.edit { preferences ->
@@ -1270,7 +1270,7 @@ constructor(
     val isAlbumsListViewFlow: Flow<Boolean> =
         dataStore.data.map { preferences ->
             preferences[PreferencesKeys.IS_ALBUMS_LIST_VIEW] ?: false
-        }
+        }.distinctUntilChanged()
 
     suspend fun setAlbumsListView(isList: Boolean) {
         dataStore.edit { preferences ->
@@ -1282,7 +1282,7 @@ constructor(
     val isPlaylistsGridViewFlow: Flow<Boolean> =
         dataStore.data.map { preferences ->
             preferences[PreferencesKeys.IS_PLAYLISTS_GRID_VIEW] ?: false
-        }
+        }.distinctUntilChanged()
 
     suspend fun setPlaylistsGridView(isGrid: Boolean) {
         dataStore.edit { preferences ->
@@ -1293,7 +1293,7 @@ constructor(
     val showScrollbarFlow: Flow<Boolean> =
         dataStore.data.map { preferences ->
             preferences[PreferencesKeys.SHOW_SCROLLBAR] ?: true
-        }
+        }.distinctUntilChanged()
 
     suspend fun setShowScrollbar(enabled: Boolean) {
         dataStore.edit { preferences ->
@@ -1304,7 +1304,7 @@ constructor(
     val sidebarShortcutsFlow: Flow<Set<String>> =
         dataStore.data.map { preferences ->
             preferences[PreferencesKeys.SIDEBAR_SHORTCUTS] ?: SidebarShortcutKeys.DEFAULT
-        }
+        }.distinctUntilChanged()
 
     suspend fun setSidebarShortcuts(shortcuts: Set<String>) {
         dataStore.edit { preferences ->
@@ -1315,7 +1315,7 @@ constructor(
     val lastDailyMixUpdateFlow: Flow<Long> =
             dataStore.data.map { preferences ->
                 preferences[PreferencesKeys.LAST_DAILY_MIX_UPDATE] ?: 0L
-            }
+            }.distinctUntilChanged()
 
     suspend fun saveLastDailyMixUpdateTimestamp(timestamp: Long) {
         dataStore.edit { preferences ->
@@ -1327,7 +1327,7 @@ constructor(
     val dailyMixReplacedAtFlow: Flow<Long> =
             dataStore.data.map { preferences ->
                 preferences[PreferencesKeys.DAILY_MIX_REPLACED_AT] ?: 0L
-            }
+            }.distinctUntilChanged()
 
     suspend fun saveDailyMixReplacedAt(timestamp: Long) {
         dataStore.edit { preferences ->
@@ -1339,7 +1339,7 @@ constructor(
     val minSongDurationFlow: Flow<Int> =
         dataStore.data.map { preferences ->
             (preferences[PreferencesKeys.MIN_SONG_DURATION] ?: 10000).coerceIn(0, 120000)
-        }
+        }.distinctUntilChanged()
 
     suspend fun setMinSongDuration(durationMs: Int) {
         dataStore.edit { preferences ->
@@ -1365,12 +1365,12 @@ constructor(
     val replayGainEnabledFlow: Flow<Boolean> =
         dataStore.data.map { preferences ->
             preferences[PreferencesKeys.REPLAYGAIN_ENABLED] ?: false
-        }
+        }.distinctUntilChanged()
 
     val replayGainUseAlbumGainFlow: Flow<Boolean> =
         dataStore.data.map { preferences ->
             preferences[PreferencesKeys.REPLAYGAIN_USE_ALBUM_GAIN] ?: false
-        }
+        }.distinctUntilChanged()
 
     suspend fun setReplayGainEnabled(enabled: Boolean) {
         dataStore.edit { preferences ->
@@ -1397,12 +1397,12 @@ constructor(
     val initialSetupDoneFlow: Flow<Boolean> =
             dataStore.data.map { preferences ->
                 preferences[PreferencesKeys.INITIAL_SETUP_DONE] ?: false
-            }
+            }.distinctUntilChanged()
 
     val keepPlayingInBackgroundFlow: Flow<Boolean> =
             dataStore.data.map { preferences ->
                 preferences[PreferencesKeys.KEEP_PLAYING_IN_BACKGROUND] ?: true
-            }
+            }.distinctUntilChanged()
 
     val keepScreenAwakeWhilePlayingFlow: Flow<Boolean> =
             dataStore.data.map { preferences ->
@@ -1412,12 +1412,12 @@ constructor(
     val resumeOnHeadsetReconnectFlow: Flow<Boolean> =
             dataStore.data.map { preferences ->
                 preferences[PreferencesKeys.RESUME_ON_HEADSET_RECONNECT] ?: false
-            }
+            }.distinctUntilChanged()
 
     val showQueueHistoryFlow: Flow<Boolean> =
             dataStore.data.map { preferences ->
                 preferences[PreferencesKeys.SHOW_QUEUE_HISTORY] ?: false
-            }
+            }.distinctUntilChanged()
 
     suspend fun setShowQueueHistory(show: Boolean) {
         dataStore.edit { preferences ->
@@ -1428,7 +1428,7 @@ constructor(
     val showPlayerFileInfoFlow: Flow<Boolean> =
             dataStore.data.map { preferences ->
                 preferences[PreferencesKeys.FULL_PLAYER_SHOW_FILE_INFO] ?: true
-            }
+            }.distinctUntilChanged()
 
     suspend fun setShowPlayerFileInfo(show: Boolean) {
         dataStore.edit { preferences ->
@@ -1458,13 +1458,13 @@ constructor(
                 contentAppearThresholdPercent = preferences[PreferencesKeys.FULL_PLAYER_DELAY_THRESHOLD] ?: 98,
                 contentCloseThresholdPercent = preferences[PreferencesKeys.FULL_PLAYER_CLOSE_THRESHOLD] ?: 0
             )
-        }
+        }.distinctUntilChanged()
 
     val favoriteSongIdsFlow: Flow<Set<String>> =
             dataStore.data
                     .map { preferences ->
                 preferences[PreferencesKeys.FAVORITE_SONG_IDS] ?: emptySet()
-            }
+            }.distinctUntilChanged()
 
     val playlistSongOrderModesFlow: Flow<Map<String, String>> =
             dataStore.data.map { preferences ->
@@ -1475,7 +1475,7 @@ constructor(
                     runCatching { json.decodeFromString<Map<String, String>>(serializedModes) }
                             .getOrDefault(emptyMap())
                 }
-            }
+            }.distinctUntilChanged()
 
     val legacyUserPlaylistsFlow: Flow<List<Playlist>> =
             dataStore.data.map { preferences ->
@@ -1486,7 +1486,7 @@ constructor(
                 } else {
                     emptyList()
                 }
-            }
+            }.distinctUntilChanged()
 
     suspend fun getLegacyUserPlaylistsOnce(): List<Playlist> = legacyUserPlaylistsFlow.first()
 
@@ -1607,7 +1607,7 @@ constructor(
                                 SortOption.SongTitleAZ
                         )
                         .storageKey
-            }
+            }.distinctUntilChanged()
 
     val albumsSortOptionFlow: Flow<String> =
             dataStore.data.map { preferences ->
@@ -1617,7 +1617,7 @@ constructor(
                                 SortOption.AlbumTitleAZ
                         )
                         .storageKey
-            }
+            }.distinctUntilChanged()
 
     val artistsSortOptionFlow: Flow<String> =
             dataStore.data.map { preferences ->
@@ -1627,7 +1627,7 @@ constructor(
                                 SortOption.ArtistNameAZ
                         )
                         .storageKey
-            }
+            }.distinctUntilChanged()
 
     val playlistsSortOptionFlow: Flow<String> =
             dataStore.data.map { preferences ->
@@ -1637,7 +1637,7 @@ constructor(
                                 SortOption.PlaylistNameAZ
                         )
                         .storageKey
-            }
+            }.distinctUntilChanged()
 
     val foldersSortOptionFlow: Flow<String> =
             dataStore.data.map { preferences ->
@@ -1647,12 +1647,12 @@ constructor(
                                 SortOption.FolderNameAZ
                         )
                         .storageKey
-            }
+            }.distinctUntilChanged()
 
     val folderSongsSortOptionFlow: Flow<String> =
             dataStore.data.map { preferences ->
                 resolveFolderSongsSortOption(preferences).storageKey
-            }
+            }.distinctUntilChanged()
 
     /**
      * Folder songs used to follow the folder sort: Name (Z-A) listed them Z-A too. Until a folder
@@ -1687,7 +1687,7 @@ constructor(
                                 SortOption.GenreNameAZ
                         )
                         .storageKey
-            }
+            }.distinctUntilChanged()
 
     val likedSongsSortOptionFlow: Flow<String> =
             dataStore.data.map { preferences ->
@@ -1697,7 +1697,7 @@ constructor(
                                 SortOption.LikedSongDateLiked
                         )
                         .storageKey
-            }
+            }.distinctUntilChanged()
 
     suspend fun setSongsSortOption(optionKey: String) {
         dataStore.edit { preferences ->
@@ -1835,7 +1835,7 @@ constructor(
     val lastLibraryTabIndexFlow: Flow<Int> =
             dataStore.data.map { preferences ->
                 preferences[PreferencesKeys.LAST_LIBRARY_TAB_INDEX] ?: 0
-            }
+            }.distinctUntilChanged()
 
     suspend fun saveLastLibraryTabIndex(tabIndex: Int) {
         dataStore.edit { preferences ->
@@ -1850,7 +1850,7 @@ constructor(
                 "OFFLINE" -> StorageFilter.OFFLINE
                 else      -> StorageFilter.ALL
             }
-        }
+        }.distinctUntilChanged()
 
     suspend fun saveLastStorageFilter(filter: StorageFilter) {
         dataStore.edit { preferences ->
@@ -1861,7 +1861,7 @@ constructor(
     val mockGenresEnabledFlow: Flow<Boolean> =
             dataStore.data.map { preferences ->
                 preferences[PreferencesKeys.MOCK_GENRES_ENABLED] ?: false
-            }
+            }.distinctUntilChanged()
 
     suspend fun setMockGenresEnabled(enabled: Boolean) {
         dataStore.edit { preferences -> preferences[PreferencesKeys.MOCK_GENRES_ENABLED] = enabled }
@@ -1893,7 +1893,7 @@ constructor(
     val navBarCornerRadiusFlow: Flow<Int> =
             dataStore.data.map { preferences ->
                 sanitizeNavBarCornerRadius(preferences[PreferencesKeys.NAV_BAR_CORNER_RADIUS] ?: 32)
-            }
+            }.distinctUntilChanged()
 
     suspend fun setNavBarCornerRadius(radius: Int) {
         dataStore.edit { preferences ->
@@ -1904,7 +1904,7 @@ constructor(
     val navBarStyleFlow: Flow<String> =
             dataStore.data.map { preferences ->
                 preferences[PreferencesKeys.NAV_BAR_STYLE] ?: NavBarStyle.DEFAULT
-            }
+            }.distinctUntilChanged()
 
     suspend fun setNavBarStyle(style: String) {
         dataStore.edit { preferences -> preferences[PreferencesKeys.NAV_BAR_STYLE] = style }
@@ -1913,7 +1913,7 @@ constructor(
     val navBarCompactModeFlow: Flow<Boolean> =
             dataStore.data.map { preferences ->
                 preferences[PreferencesKeys.NAV_BAR_COMPACT_MODE] ?: false
-            }
+            }.distinctUntilChanged()
 
     suspend fun setNavBarCompactMode(enabled: Boolean) {
         dataStore.edit { preferences ->
@@ -1925,7 +1925,7 @@ constructor(
             dataStore.data.map { preferences ->
                 preferences[PreferencesKeys.LIBRARY_NAVIGATION_MODE]
                         ?: LibraryNavigationMode.TAB_ROW
-            }
+            }.distinctUntilChanged()
 
     suspend fun setLibraryNavigationMode(mode: String) {
         dataStore.edit { preferences ->
@@ -1936,7 +1936,7 @@ constructor(
     val carouselStyleFlow: Flow<String> =
             dataStore.data.map { preferences ->
                 preferences[PreferencesKeys.CAROUSEL_STYLE] ?: CarouselStyle.NO_PEEK
-            }
+            }.distinctUntilChanged()
 
     suspend fun setCarouselStyle(style: String) {
         dataStore.edit { preferences -> preferences[PreferencesKeys.CAROUSEL_STYLE] = style }
@@ -1945,7 +1945,7 @@ constructor(
     val launchTabFlow: Flow<String> =
             dataStore.data.map { preferences ->
                 preferences[PreferencesKeys.LAUNCH_TAB] ?: LaunchTab.HOME
-            }
+            }.distinctUntilChanged()
 
     suspend fun setLaunchTab(tab: String) {
         dataStore.edit { preferences -> preferences[PreferencesKeys.LAUNCH_TAB] = tab }
@@ -2054,7 +2054,7 @@ constructor(
     val useAnimatedLyricsFlow: Flow<Boolean> = dataStore.data
         .map { preferences ->
             preferences[PreferencesKeys.USE_ANIMATED_LYRICS] ?: false
-        }
+        }.distinctUntilChanged()
 
     suspend fun setUseAnimatedLyrics(enabled: Boolean) {
         dataStore.edit { preferences ->
@@ -2065,7 +2065,7 @@ constructor(
     val animatedLyricsBlurEnabledFlow: Flow<Boolean> = dataStore.data
         .map { preferences ->
             preferences[PreferencesKeys.ANIMATED_LYRICS_BLUR_ENABLED] ?: true
-        }
+        }.distinctUntilChanged()
 
     suspend fun setAnimatedLyricsBlurEnabled(enabled: Boolean) {
         dataStore.edit { preferences ->
@@ -2076,7 +2076,7 @@ constructor(
     val animatedLyricsBlurStrengthFlow: Flow<Float> = dataStore.data
         .map { preferences ->
             preferences[PreferencesKeys.ANIMATED_LYRICS_BLUR_STRENGTH] ?: 2.5f
-        }
+        }.distinctUntilChanged()
 
     suspend fun setAnimatedLyricsBlurStrength(strength: Float) {
         dataStore.edit { preferences ->
@@ -2135,7 +2135,7 @@ constructor(
     val libraryTabsOrderFlow: Flow<String?> = dataStore.data
         .map { preferences ->
             preferences[PreferencesKeys.LIBRARY_TABS_ORDER]
-        }
+        }.distinctUntilChanged()
 
     suspend fun saveLibraryTabsOrder(order: String) {
         dataStore.edit { preferences -> preferences[PreferencesKeys.LIBRARY_TABS_ORDER] = order }
@@ -2196,7 +2196,7 @@ constructor(
     val isFolderFilterActiveFlow: Flow<Boolean> =
             dataStore.data.map { preferences ->
                 preferences[PreferencesKeys.IS_FOLDER_FILTER_ACTIVE] ?: false
-            }
+            }.distinctUntilChanged()
 
     suspend fun setFolderFilterActive(isActive: Boolean) {
         dataStore.edit { preferences ->
@@ -2207,7 +2207,7 @@ constructor(
     val isFoldersPlaylistViewFlow: Flow<Boolean> = dataStore.data
         .map { preferences ->
             preferences[PreferencesKeys.IS_FOLDERS_PLAYLIST_VIEW] ?: false
-        }
+        }.distinctUntilChanged()
 
     val hideLocalMediaFlow: Flow<Boolean> = dataStore.data
         .map { preferences ->
@@ -2217,7 +2217,7 @@ constructor(
     val foldersSourceFlow: Flow<FolderSource> = dataStore.data
         .map { preferences ->
             FolderSource.fromStorageKey(preferences[PreferencesKeys.FOLDERS_SOURCE])
-        }
+        }.distinctUntilChanged()
 
     val navidromeSelectedMusicFolderIdsFlow: Flow<Set<String>> = dataStore.data
         .map { preferences ->
@@ -2234,12 +2234,12 @@ constructor(
     val folderBackGestureNavigationFlow: Flow<Boolean> = dataStore.data
         .map { preferences ->
             preferences[PreferencesKeys.FOLDER_BACK_GESTURE_NAVIGATION] ?: true
-        }
+        }.distinctUntilChanged()
 
     val useSmoothCornersFlow: Flow<Boolean> = dataStore.data
         .map { preferences ->
             preferences[PreferencesKeys.USE_SMOOTH_CORNERS] ?: false
-        }
+        }.distinctUntilChanged()
 
     suspend fun setUseSmoothCorners(enabled: Boolean) {
         dataStore.edit { preferences ->
@@ -2316,7 +2316,7 @@ constructor(
                     catch (e: Exception) { AlbumArtQuality.MEDIUM }
                 }
                 ?: AlbumArtQuality.MEDIUM
-        }
+        }.distinctUntilChanged()
 
     suspend fun setAlbumArtQuality(quality: AlbumArtQuality) {
         dataStore.edit { preferences ->
@@ -2327,7 +2327,7 @@ constructor(
     val albumArtCacheLimitMbFlow: Flow<Int> =
         dataStore.data.map { preferences ->
             preferences[PreferencesKeys.ALBUM_ART_CACHE_LIMIT_MB] ?: DEFAULT_ALBUM_ART_CACHE_LIMIT_MB
-        }
+        }.distinctUntilChanged()
 
     suspend fun setAlbumArtCacheLimitMb(limitMb: Int) {
         dataStore.edit { preferences ->
@@ -2364,7 +2364,7 @@ constructor(
     val folderAlbumArtCacheStateFlow: Flow<Boolean?> =
         dataStore.data.map { preferences ->
             preferences[PreferencesKeys.FOLDER_ALBUM_ART_CACHE_STATE]
-        }
+        }.distinctUntilChanged()
 
     suspend fun setFolderAlbumArtCacheState(enabled: Boolean) {
         dataStore.edit { preferences ->
@@ -2379,7 +2379,7 @@ constructor(
     val tapBackgroundClosesPlayerFlow: Flow<Boolean> =
         dataStore.data.map { preferences ->
             preferences[PreferencesKeys.TAP_BACKGROUND_CLOSES_PLAYER] ?: false
-        }
+        }.distinctUntilChanged()
 
     suspend fun setTapBackgroundClosesPlayer(enabled: Boolean) {
         dataStore.edit { preferences ->
@@ -2394,7 +2394,7 @@ constructor(
     val miniPlayerSwipeToSkipFlow: Flow<Boolean> =
         dataStore.data.map { preferences ->
             preferences[PreferencesKeys.MINI_PLAYER_SWIPE_TO_SKIP] ?: false
-        }
+        }.distinctUntilChanged()
 
     suspend fun setMiniPlayerSwipeToSkip(enabled: Boolean) {
         dataStore.edit { preferences ->
@@ -2446,7 +2446,7 @@ constructor(
     val hapticsEnabledFlow: Flow<Boolean> =
         dataStore.data.map { preferences ->
             preferences[PreferencesKeys.HAPTICS_ENABLED] ?: true
-        }
+        }.distinctUntilChanged()
 
     suspend fun setHapticsEnabled(enabled: Boolean) {
         dataStore.edit { preferences ->
@@ -2633,7 +2633,7 @@ constructor(
     val collagePatternFlow: Flow<CollagePattern> =
         dataStore.data.map { preferences ->
             CollagePattern.fromStorageKey(preferences[PreferencesKeys.COLLAGE_PATTERN])
-        }
+        }.distinctUntilChanged()
 
     suspend fun setCollagePattern(pattern: CollagePattern) {
         dataStore.edit { preferences ->
@@ -2644,7 +2644,7 @@ constructor(
     val collageAutoRotateFlow: Flow<Boolean> =
         dataStore.data.map { preferences ->
             preferences[PreferencesKeys.COLLAGE_AUTO_ROTATE] ?: false
-        }
+        }.distinctUntilChanged()
 
     suspend fun setCollageAutoRotate(enabled: Boolean) {
         dataStore.edit { preferences ->
@@ -2655,10 +2655,10 @@ constructor(
     val lastPlaylistIdFlow: Flow<String?> =
         dataStore.data.map { preferences ->
             preferences[PreferencesKeys.LAST_PLAYLIST_ID]?.takeIf { it.isNotBlank() }
-        }
+        }.distinctUntilChanged()
 
     val lastPlaylistNameFlow: Flow<String?> =
-        dataStore.data.map { it[PreferencesKeys.LAST_PLAYLIST_NAME] }
+        dataStore.data.map { it[PreferencesKeys.LAST_PLAYLIST_NAME] }.distinctUntilChanged()
 
     suspend fun setLastPlaylist(playlistId: String, playlistName: String) {
         dataStore.edit {

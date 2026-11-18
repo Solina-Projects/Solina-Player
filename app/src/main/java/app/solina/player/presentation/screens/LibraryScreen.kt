@@ -1595,6 +1595,14 @@ fun LibraryScreen(
                                     LibraryTabId.ARTISTS -> {
                                         val artistsLazyPagingItems = libraryViewModel.artistsPagingFlow.collectAsLazyPagingItems()
                                         val isLoading = playerUiState.isLoadingLibraryCategories
+                                        val stableOnArtistClick: (Long) -> Unit = remember(navController) {
+                                            { artistId: Long ->
+                                                navController.navigateSafelyReplacing(
+                                                    route = Screen.ArtistDetail.createRoute(artistId),
+                                                    patternToPop = Screen.ArtistDetail.route
+                                                )
+                                            }
+                                        }
 
                                         LibraryArtistsTab(
                                             artists = artistsLazyPagingItems,
@@ -1602,12 +1610,7 @@ fun LibraryScreen(
                                             playerViewModel = playerViewModel,
                                             bottomBarHeight = bottomBarHeightDp,
                                             currentArtistSortOption = playerUiState.currentArtistSortOption,
-                                            onArtistClick = { artistId ->
-                                                navController.navigateSafelyReplacing(
-                                                    route = Screen.ArtistDetail.createRoute(artistId),
-                                                    patternToPop = Screen.ArtistDetail.route
-                                                )
-                                            },
+                                            onArtistClick = stableOnArtistClick,
                                             isRefreshing = isRefreshing,
                                             onRefresh = onRefresh,
                                             isSelectionMode = isArtistSelectionMode,
