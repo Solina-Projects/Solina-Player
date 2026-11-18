@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="collage_pattern_cosmic_swirl">Espiral cósmica</string>
+    <string name="collage_pattern_honeycomb_groove">Sulco colmeia</string>
+    <string name="collage_pattern_vinyl_stack">Pilha de vinil</string>
+    <string name="collage_pattern_pixel_mosaic">Mosaico de pixels</string>
+    <string name="collage_pattern_stardust_scatter">Poeira estelar</string>
+    <string name="collage_pattern_soft_orbit">Órbita suave</string>
+    <string name="collage_pattern_arrow_fanfare">Fanfarra de setas</string>
+    <string name="collage_pattern_sunny_bloom">Flor solar</string>
+    <string name="collage_pattern_pixel_cookie">Biscoito pixel</string>
+    <string name="collage_pattern_heart_garden">Jardim de corações</string>
+    <plurals name="cloud_download_selected_started">
+        <item quantity="one">Preparando %1$d faixa da nuvem para reprodução offline</item>
+        <item quantity="other">Preparando %1$d faixas da nuvem para reprodução offline</item>
+    </plurals>
+</resources>

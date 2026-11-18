@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="setup_gate_preparing">Preparando configuração…</string>
+    <string name="song_info_label_provider">Provedor</string>
+    <string name="song_info_label_path">Caminho</string>
+    <string name="cd_playlist_artwork">Lista de reprodução</string>
+    <string name="home_your_mix_subtitle">Mix de hoje para você</string>
+    <string name="home_your_mix_play">Reproduzir mix de hoje</string>
+    <string name="home_your_mix_queue_name">Seu Mix</string>
+    <string name="queue_name_liked_songs">Músicas curtidas</string>
+    <string name="queue_name_all_songs_shuffled">Todas as músicas (Aleatório)</string>
+    <string name="queue_name_liked_songs_shuffled">Músicas curtidas (Aleatório)</string>
+    <string name="queue_name_selected_songs">Músicas selecionadas</string>
+
+    <!-- Player sheet, mini player and full player chrome -->
+    <string name="cd_player_sheet_collapsed">Painel do reprodutor Solina Player recolhido, %1$s</string>
+    <string name="cd_player_sheet_expanded">Painel do reprodutor Solina Player expandido, %1$s</string>
+    <string name="cd_player_sheet_collapsed_no_track">Painel do reprodutor Solina Player recolhido</string>
+    <string name="cd_player_sheet_expanded_no_track">Painel do reprodutor Solina Player expandido</string>
+    <string name="mini_player_connecting_device">Conectando ao dispositivo…</string>
+    <string name="mini_player_preparing_playback">Preparando reprodução…</string>
+    <string name="mini_player_loading_audio">Carregando áudio…</string>
+    <string name="cd_shuffle">Aleatório</string>
+    <string name="cd_playback_position">Posição da reprodução</string>
+    <string name="add_bookmark_title">Salvar marcador</string>
+    <string name="add_bookmark_saved_point">Ponto de reprodução salvo</string>
+    <string name="add_bookmark_use_lyric_line">Usar linha da letra</string>
+    <string name="add_bookmark_default_name">Marcador @ %1$s</string>
+</resources>

@@ -15,6 +15,7 @@ import app.solina.player.data.model.Artist
 import app.solina.player.data.model.LibraryTabId
 import app.solina.player.data.model.Song
 import app.solina.player.data.model.SortOption
+import app.solina.player.data.cloud.CloudFeatures
 import app.solina.player.data.model.StorageFilter
 import app.solina.player.data.preferences.ThemePreferencesRepository
 import app.solina.player.data.preferences.UserPreferencesRepository
@@ -796,8 +797,13 @@ class PlayerViewModelTest {
 
             playerViewModel.getSongsForCurrentFavoriteSelection()
 
-            coVerify { mockMusicRepository.getFavoriteSongIdsSorted(any(), StorageFilter.ONLINE) }
-            coVerify(exactly = 0) { mockMusicRepository.getFavoriteSongIdsSorted(any(), StorageFilter.ALL) }
+            if (CloudFeatures.ENABLED) {
+                coVerify { mockMusicRepository.getFavoriteSongIdsSorted(any(), StorageFilter.ONLINE) }
+                coVerify(exactly = 0) { mockMusicRepository.getFavoriteSongIdsSorted(any(), StorageFilter.ALL) }
+            } else {
+                coVerify { mockMusicRepository.getFavoriteSongIdsSorted(any(), StorageFilter.ALL) }
+                coVerify(exactly = 0) { mockMusicRepository.getFavoriteSongIdsSorted(any(), StorageFilter.ONLINE) }
+            }
         }
     }
 
