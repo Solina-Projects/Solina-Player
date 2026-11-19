@@ -236,5 +236,11 @@ class AppearanceViewModel @Inject constructor(
     fun resetSectionColors() = viewModelScope.launch { repository.resetSectionColors() }
     fun resetTypography() = viewModelScope.launch { repository.resetTypography() }
     fun resetGlass() = viewModelScope.launch { repository.resetGlass() }
+    fun resetHomeSectionPalette() = viewModelScope.launch { repository.resetHomeSectionPalette() }
+    fun resetMusicSectionPalette() = viewModelScope.launch { repository.resetMusicSectionPalette() }
+    fun resetVideoSectionPalette() = viewModelScope.launch { repository.resetVideoSectionPalette() }
+    fun resetHomeAppearance() = viewModelScope.launch { repository.resetHomeAppearance() }
+    fun resetMusicAppearance() = viewModelScope.launch { repository.resetMusicAppearance() }
+    fun resetVideoAppearance() = viewModelScope.launch { repository.resetVideoAppearance() }
     fun resetAll() = viewModelScope.launch { repository.resetAll() }
 }

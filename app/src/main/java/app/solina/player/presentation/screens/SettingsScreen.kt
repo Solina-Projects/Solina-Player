@@ -296,36 +296,52 @@ fun SettingsScreen(
                 Spacer(modifier = Modifier.height(4.dp))
             }
 
-            item {
-                val colorScheme = MaterialTheme.colorScheme
-                ExpressiveSettingsGroup {
-                    mainSettingsEntries.forEachIndexed { index, entry ->
-                        val shape = settingsGroupItemShape(index, mainSettingsEntries.size)
-                        val colors = colorScheme.settingsIconColors(entry.iconTone)
+            mainSettingsGroups.forEach { group ->
+                item(key = "settings_group_${group.titleRes}") {
+                    val colorScheme = MaterialTheme.colorScheme
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text(
+                            text = stringResource(group.titleRes),
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.SemiBold,
+                            color = colorScheme.primary,
+                            modifier = Modifier.padding(start = 8.dp, top = 8.dp)
+                        )
+                        ExpressiveSettingsGroup {
+                            group.entries.forEachIndexed { index, entry ->
+                                val shape = settingsGroupItemShape(index, group.entries.size)
+                                val colors = colorScheme.settingsIconColors(entry.iconTone)
 
-                        when (entry) {
-                            is MainSettingsEntry.Category -> ExpressiveCategoryItem(
-                                category = entry.category,
-                                customColors = colors,
-                                onClick = { navController.navigateSafely(entry.route) },
-                                shape = shape
-                            )
-                            is MainSettingsEntry.Destination -> ExpressiveNavigationItem(
-                                title = stringResource(entry.titleRes),
-                                subtitle = stringResource(entry.subtitleRes),
-                                icon = entry.icon,
-                                colors = colors,
-                                onClick = { navController.navigateSafely(entry.route) },
-                                shape = shape
-                            )
-                        }
-                        if (index < mainSettingsEntries.lastIndex) {
-                            Spacer(modifier = Modifier.height(2.dp))
+                                when (entry) {
+                                    is MainSettingsEntry.Category -> ExpressiveCategoryItem(
+                                        category = entry.category,
+                                        customColors = colors,
+                                        onClick = { navController.navigateSafely(entry.route) },
+                                        shape = shape
+                                    )
+                                    is MainSettingsEntry.Destination -> ExpressiveNavigationItem(
+                                        title = stringResource(entry.titleRes),
+                                        subtitle = stringResource(entry.subtitleRes),
+                                        icon = entry.icon,
+                                        colors = colors,
+                                        onClick = { navController.navigateSafely(entry.route) },
+                                        shape = shape
+                                    )
+                                }
+                                if (index < group.entries.lastIndex) {
+                                    Spacer(modifier = Modifier.height(2.dp))
+                                }
+                            }
                         }
                     }
                 }
+            }
 
-                Spacer(modifier = Modifier.height(32.dp))
+            item(key = "settings_bottom_spacer") {
+                Spacer(modifier = Modifier.height(16.dp))
             }
         }
         CollapsibleCommonTopBar(

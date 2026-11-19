@@ -16,6 +16,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.DashboardCustomize
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material3.Card
@@ -82,6 +83,16 @@ fun VideoLibraryScreen(
                         Icon(
                             imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
                             contentDescription = null
+                        )
+                    }
+                },
+                actions = {
+                    IconButton(onClick = {
+                        navController.navigateSafely(Screen.VideoCustomization.route)
+                    }) {
+                        Icon(
+                            imageVector = Icons.Rounded.DashboardCustomize,
+                            contentDescription = stringResource(R.string.video_customize_title)
                         )
                     }
                 }

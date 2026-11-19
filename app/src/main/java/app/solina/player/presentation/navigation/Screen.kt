@@ -129,6 +129,8 @@ sealed class Screen(val route: String) {
         }
     }
     object HomeCustomization : Screen("home_customization")
+    object MusicCustomization : Screen("music_customization")
+    object VideoCustomization : Screen("video_customization")
 
     // Appearance customisation (bug-fix round 2026-11-17, item 6):
     // per-section look of bars, cards, colours and fonts.

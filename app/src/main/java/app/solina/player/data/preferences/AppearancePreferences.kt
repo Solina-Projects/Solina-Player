@@ -628,6 +628,49 @@ class AppearancePreferences @Inject constructor(
 
     suspend fun resetGlass() = update { it.copy(glass = GlassAppearance()) }
 
+    suspend fun resetHomeSectionPalette() =
+        update { it.copy(homeSectionPalette = AppearancePaletteNames.DEFAULT) }
+
+    suspend fun resetMusicSectionPalette() =
+        update { it.copy(musicSectionPalette = AppearancePaletteNames.DEFAULT) }
+
+    suspend fun resetVideoSectionPalette() =
+        update { it.copy(videoSectionPalette = AppearancePaletteNames.DEFAULT) }
+
+    suspend fun resetHomeAppearance() = update {
+        it.copy(
+            homeSectionPalette = AppearancePaletteNames.DEFAULT,
+            homeCards = CardAppearance(),
+            recentMusicCards = RecentCardsAppearance(),
+            recentVideoCards = RecentCardsAppearance(),
+            yourMixCard = CardAppearance(cornerDp = 30),
+            homeMusicBar = BarAppearance(),
+            homeVideoBar = BarAppearance()
+        )
+    }
+
+    suspend fun resetMusicAppearance() = update {
+        it.copy(
+            musicSectionPalette = AppearancePaletteNames.DEFAULT,
+            floatingMusicBarPalette = AppearancePaletteNames.DEFAULT,
+            floatingMusicBar = BarAppearance(
+                corners = FLOATING_MUSIC_BAR_DEFAULT_CORNERS,
+                palette = AppearancePaletteNames.DEFAULT
+            ),
+            seekBarStyle = SeekBarStyleNames.WAVY,
+            listRows = ListRowsAppearance(),
+            listFontScalePercent = 100
+        )
+    }
+
+    suspend fun resetVideoAppearance() = update {
+        it.copy(
+            videoSectionPalette = AppearancePaletteNames.DEFAULT,
+            sectionVideoBar = BarAppearance(),
+            recentVideoCards = RecentCardsAppearance()
+        )
+    }
+
     // ---- User-saved looks (round 15, wave 2, C7) ----
     // Stored as a JSON list under its own key, separate from the live
     // appearance, so saving a look never touches the current look.

@@ -161,6 +161,25 @@ class SettingsMainListTest {
         assertEquals(Screen.CloudDownloads.route, MainSettingsEntry.Destination.DOWNLOADS.route)
         assertEquals(Screen.Accounts.createRoute(), MainSettingsEntry.Destination.ACCOUNTS.route)
         assertEquals(Screen.Updates.route, MainSettingsEntry.Destination.UPDATES.route)
+        assertEquals(Screen.HomeCustomization.route, MainSettingsEntry.Destination.HOME_CUSTOMIZATION.route)
+        assertEquals(Screen.MusicCustomization.route, MainSettingsEntry.Destination.MUSIC_CUSTOMIZATION.route)
+        assertEquals(Screen.VideoCustomization.route, MainSettingsEntry.Destination.VIDEO_CUSTOMIZATION.route)
+    }
+
+    @Test
+    fun `settings groups partition main list cleanly with personalisation first`() {
+        assertEquals(4, mainSettingsGroups.size)
+        assertEquals(mainSettingsEntries, mainSettingsGroups.flatMap { it.entries })
+        val personalisationEntries = mainSettingsGroups.first().entries
+        assertEquals(
+            listOf(
+                MainSettingsEntry.Destination.HOME_CUSTOMIZATION,
+                MainSettingsEntry.Destination.MUSIC_CUSTOMIZATION,
+                MainSettingsEntry.Destination.VIDEO_CUSTOMIZATION,
+                MainSettingsEntry.Category(SettingsCategory.APPEARANCE)
+            ),
+            personalisationEntries
+        )
     }
 
     private fun ColorScheme.containerPairs(): Set<Pair<Color, Color>> = setOf(

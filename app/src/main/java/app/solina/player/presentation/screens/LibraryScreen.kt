@@ -58,6 +58,7 @@ import androidx.compose.material.icons.filled.Album
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.rounded.Bookmark
+import androidx.compose.material.icons.rounded.DashboardCustomize
 import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material.icons.rounded.MoreHoriz
 import androidx.compose.material.icons.rounded.SelectAll
@@ -876,6 +877,20 @@ fun LibraryScreen(
                         }
                     },
                     actions = {
+                        FilledIconButton(
+                            colors = IconButtonDefaults.filledIconButtonColors(
+                                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                                contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                            ),
+                            onClick = {
+                                navController.navigateSafely(Screen.MusicCustomization.route)
+                            }
+                        ) {
+                            Icon(
+                                imageVector = Icons.Rounded.DashboardCustomize,
+                                contentDescription = stringResource(R.string.music_customize_title)
+                            )
+                        }
                         FilledIconButton(
                             colors = IconButtonDefaults.filledIconButtonColors(
                                 containerColor = MaterialTheme.colorScheme.primaryContainer,

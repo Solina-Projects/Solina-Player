@@ -857,6 +857,8 @@ class MainActivity : ComponentActivity() {
                 Screen.VideoPlayer.route,
                 Screen.Home.route,
                 Screen.HomeCustomization.route,
+                Screen.MusicCustomization.route,
+                Screen.VideoCustomization.route,
                 Screen.AppearanceCustomization.route,
                 Screen.Settings.route,
                 Screen.Accounts.route,

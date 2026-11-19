@@ -586,6 +586,36 @@ object SettingsRegistry {
                 onAction = { it.navigateSafely(Screen.HomeCustomization.route) }
             ),
             SettingSpec(
+                id = "appearance_customize_music",
+                itemKey = "item_music_customization",
+                titleRes = R.string.music_customize_title,
+                subtitleRes = R.string.music_customize_subtitle,
+                category = SettingsCategory.APPEARANCE,
+                subscreenRoute = Screen.MusicCustomization.route,
+                type = SettingType.ACTION,
+                keywordsStatic = listOf(
+                    "music", "customise", "customize", "mini player", "seek bar",
+                    "list rows", "music palette", "carousel", "now playing",
+                    "موزیک", "شخصی‌سازی موزیک", "نوار موزیک", "پخش‌کننده", "فهرست آهنگ"
+                ),
+                onAction = { it.navigateSafely(Screen.MusicCustomization.route) }
+            ),
+            SettingSpec(
+                id = "appearance_customize_video",
+                itemKey = "item_video_customization",
+                titleRes = R.string.video_customize_title,
+                subtitleRes = R.string.video_customize_subtitle,
+                category = SettingsCategory.VIDEO,
+                subscreenRoute = Screen.VideoCustomization.route,
+                type = SettingType.ACTION,
+                keywordsStatic = listOf(
+                    "video", "customise", "customize", "video bar", "video cards",
+                    "video palette", "subtitles", "aspect ratio", "video player",
+                    "ویدیو", "شخصی‌سازی ویدیو", "نوار ویدیو", "کارت ویدیو", "زیرنویس"
+                ),
+                onAction = { it.navigateSafely(Screen.VideoCustomization.route) }
+            ),
+            SettingSpec(
                 id = "appearance_customize_appearance",
                 itemKey = "item_appearance_customization",
                 titleRes = R.string.appearance_customize_title,

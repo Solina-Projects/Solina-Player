@@ -39,6 +39,7 @@ import androidx.compose.material.icons.rounded.FolderCopy
 import androidx.compose.material.icons.rounded.GridView
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material.icons.rounded.DashboardCustomize
 import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material.icons.rounded.ViewList
 import androidx.compose.material3.AlertDialog
@@ -249,6 +250,10 @@ fun VideoFoldersScreen(
             onLayoutChange = { videoViewModel.toggleVideoFoldersViewMode() },
             onSortChange = { videoViewModel.setVideoFoldersSort(it.name) },
             onSortDirectionChange = { videoViewModel.setVideoFoldersSortAscending(it) },
+            onOpenVideoCustomization = {
+                showSettings = false
+                navController.navigateSafely(Screen.VideoCustomization.route)
+            },
             onDismiss = { showSettings = false }
         )
     }
@@ -285,6 +290,14 @@ fun VideoFoldersScreen(
                         Icon(
                             imageVector = Icons.Rounded.PlaylistPlay,
                             contentDescription = stringResource(R.string.video_playlist_title)
+                        )
+                    }
+                    IconButton(onClick = {
+                        navController.navigateSafely(Screen.VideoCustomization.route)
+                    }) {
+                        Icon(
+                            imageVector = Icons.Rounded.DashboardCustomize,
+                            contentDescription = stringResource(R.string.video_customize_title)
                         )
                     }
                     IconButton(onClick = { showSettings = true }) {
@@ -957,6 +970,7 @@ private fun VideoFoldersSettingsDialog(
     onLayoutChange: () -> Unit,
     onSortChange: (FolderSort) -> Unit,
     onSortDirectionChange: (Boolean) -> Unit,
+    onOpenVideoCustomization: () -> Unit,
     onDismiss: () -> Unit
 ) {
     AlertDialog(
@@ -1127,6 +1141,11 @@ private fun VideoFoldersSettingsDialog(
                 }
             }
         },
+        dismissButton = {
+            TextButton(onClick = onOpenVideoCustomization) {
+                Text(text = stringResource(R.string.video_customize_title))
+            }
+        },
         confirmButton = {
             TextButton(onClick = onDismiss) {
                 Text(text = stringResource(android.R.string.ok))
@@ -1175,6 +1194,16 @@ fun VideoFolderDetailScreen(
                         Icon(
                             imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
                             contentDescription = null
+                        )
+                    }
+                },
+                actions = {
+                    IconButton(onClick = {
+                        navController.navigateSafely(Screen.VideoCustomization.route)
+                    }) {
+                        Icon(
+                            imageVector = Icons.Rounded.DashboardCustomize,
+                            contentDescription = stringResource(R.string.video_customize_title)
                         )
                     }
                 }

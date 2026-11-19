@@ -50,6 +50,8 @@ import app.solina.player.presentation.screens.LyricsSettingsScreen
 import app.solina.player.presentation.screens.GenreDetailScreen
 import app.solina.player.presentation.screens.AppearanceCustomizationScreen
 import app.solina.player.presentation.screens.HomeCustomizationScreen
+import app.solina.player.presentation.screens.MusicCustomizationScreen
+import app.solina.player.presentation.screens.VideoCustomizationScreen
 import app.solina.player.presentation.screens.HomeScreen
 import app.solina.player.presentation.screens.LibraryScreen
 import app.solina.player.presentation.screens.MashupScreen
@@ -840,6 +842,28 @@ fun AppNavigation(
             ) {
                 ScreenWrapper(navController = navController, playerViewModel = playerViewModel) {
                     HomeCustomizationScreen(navController = navController)
+                }
+            }
+            composable(
+                Screen.MusicCustomization.route,
+                enterTransition = { enterTransition() },
+                exitTransition = { exitTransition() },
+                popEnterTransition = { popEnterTransition() },
+                popExitTransition = { popExitTransition() },
+            ) {
+                ScreenWrapper(navController = navController, playerViewModel = playerViewModel) {
+                    MusicCustomizationScreen(navController = navController)
+                }
+            }
+            composable(
+                Screen.VideoCustomization.route,
+                enterTransition = { enterTransition() },
+                exitTransition = { exitTransition() },
+                popEnterTransition = { popEnterTransition() },
+                popExitTransition = { popExitTransition() },
+            ) {
+                ScreenWrapper(navController = navController, playerViewModel = playerViewModel) {
+                    VideoCustomizationScreen(navController = navController)
                 }
             }
             composable(
