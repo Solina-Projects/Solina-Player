@@ -34,7 +34,7 @@ This fork stays under the same license — see [LICENSE](LICENSE).
 Changes in this fork: rebranded to Solina Player (`app.solina.player`),
 Android 12 (API 31) minimum, and arm64-v8a builds only.
 
-## Music + Video (branch `feature/music-and-video`, not merged)
+## Music + Video
 
 The player plays both music and video, kept separate — never mixed.
 Home offers two entry cards (Music / Video), separate audio and video
@@ -167,7 +167,7 @@ This fork is not published on F-Droid.
 
 ### Alpha builds
 
-Every merge into `main` automatically publishes a pre-release tagged like `v0.4.0-alpha.N` on the [releases page](https://github.com/Solina-Projects/Solina-player/releases). These are cutting-edge builds for testing new changes before they reach a stable release — expect rough edges.
+Every merge into `main` automatically publishes a pre-release tagged like `v1.0.0-alpha.N` on the [releases page](https://github.com/Solina-Projects/Solina-player/releases). These are cutting-edge builds for testing new changes before they reach a stable release — expect rough edges.
 
 To install one, download the arm64-v8a APK for your device from the release assets and sideload it.
 
