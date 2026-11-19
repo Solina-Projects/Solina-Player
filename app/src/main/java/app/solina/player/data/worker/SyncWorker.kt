@@ -48,6 +48,7 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.Locale
 import java.util.concurrent.atomic.AtomicLong
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -546,6 +547,7 @@ constructor(
                     artistImageRepository.clearCache()
                     Result.success(workDataOf(OUTPUT_TOTAL_SONGS to finalTotalSongs))
                 } catch (e: Exception) {
+                    if (e is CancellationException) throw e
                     Timber.tag(TAG).e(e, "Error during MediaStore synchronization")
                     AdvancedPerformanceDiagnostics.recordEventIfEnabled(
                         type = AdvancedPerformanceDiagnostics.EventTypes.WORKER,
@@ -830,6 +832,7 @@ constructor(
             }.awaitAll()
             
         } catch (e: Exception) {
+            if (e is CancellationException) throw e
             Timber.tag(TAG).e(e, "Error fetching genre map")
         }
         

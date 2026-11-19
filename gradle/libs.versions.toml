@@ -68,6 +68,7 @@ javax-inject = "1"
 ksp = "2.3.10"
 smoothCornerRectAndroidCompose = "v1.0.0"
 wavySlider = "2.2.0"
+blurCompose = "1.0.0"
 workRuntimeKtx = "2.11.2"
 composeTesting = "1.0.0-alpha03"
 timber = "5.0.1"
@@ -156,6 +157,7 @@ accompanist-permissions = { module = "com.google.accompanist:accompanist-permiss
 smooth-corner-rect-android-compose = { module = "com.github.racra:smooth-corner-rect-android-compose", version.ref = "smoothCornerRectAndroidCompose" }
 timber = { module = "com.jakewharton.timber:timber", version.ref = "timber" }
 wavy-slider = { module = "ir.mahozad.multiplatform:wavy-slider", version.ref = "wavySlider" }
+blur-compose = { group = "io.github.mrsluffy", name = "blur-compose", version.ref = "blurCompose" }
 taglib = { group = "io.github.kyant0", name = "taglib", version.ref = "taglib" }
 jaudiotagger = { group = "net.jthink", name = "jaudiotagger", version.ref = "jaudiotagger" }
 vorbisjava-core = { group = "org.gagravarr", name = "vorbis-java-core", version.ref = "vorbisjava" }

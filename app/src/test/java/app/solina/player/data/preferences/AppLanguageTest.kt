@@ -11,6 +11,7 @@ class AppLanguageTest {
     private val labels = mapOf(
         AppLanguage.SYSTEM to "System default",
         AppLanguage.ENGLISH to "English",
+        AppLanguage.PERSIAN to "فارسی",
         AppLanguage.ARABIC to "العربية",
         AppLanguage.GERMAN to "Deutsch",
         AppLanguage.SPANISH to "Español",

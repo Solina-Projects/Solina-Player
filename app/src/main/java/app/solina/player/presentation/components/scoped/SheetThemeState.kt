@@ -64,7 +64,11 @@ internal fun rememberSheetThemeState(
     themedAlbumArtUri: String?,
     preparingSongId: String?,
     systemColorScheme: ColorScheme,
-    isAmoledTheme: Boolean = false
+    isAmoledTheme: Boolean = false,
+    // Appearance customisation (bug-fix round 2026-11-17, item 6):
+    // a chosen floating-music-bar colour overrides the album-art
+    // scheme for the mini player only; null = follow the theme.
+    miniPlayerSchemeOverride: ColorScheme? = null
 ): SheetThemeState {
     val isAlbumArtTheme = playerThemePreference == ThemePreference.ALBUM_ART
     val hasAlbumArt = !currentSong?.albumArtUriString.isNullOrBlank()
@@ -128,7 +132,9 @@ internal fun rememberSheetThemeState(
         )
     }
 
-    val rawMiniPlayerScheme = rawAlbumColorScheme
+    // Appearance customisation (bug-fix round 2026-11-17, item 6): a
+    // chosen floating-music-bar colour wins over the album-art scheme.
+    val rawMiniPlayerScheme = miniPlayerSchemeOverride ?: rawAlbumColorScheme
 
     val albumColorScheme = rememberBatchAnimatedColorScheme(rawAlbumColorScheme)
     val miniPlayerScheme = rememberBatchAnimatedColorScheme(rawMiniPlayerScheme)

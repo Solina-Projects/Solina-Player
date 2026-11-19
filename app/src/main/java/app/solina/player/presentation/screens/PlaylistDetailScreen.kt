@@ -72,7 +72,7 @@ import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.TwoRowsTopAppBar
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
+import app.solina.player.presentation.components.GlassModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -908,7 +908,7 @@ fun PlaylistDetailScreen(
     if (showPlaylistOptionsSheet && !isFolderPlaylist) {
         val sheetState = rememberModalSheetState(skipPartiallyExpanded = true)
 
-        ModalBottomSheet(
+        GlassModalBottomSheet(
             onDismissRequest = { showPlaylistOptionsSheet = false },
             sheetState = sheetState,
             containerColor = MaterialTheme.colorScheme.surfaceContainerLow,

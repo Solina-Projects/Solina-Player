@@ -12,6 +12,8 @@
         android:name="android.permission.BLUETOOTH_SCAN"
         android:usesPermissionFlags="neverForLocation" />
     <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
+    <!-- Video library: the video player reads local video files via MediaStore.Video. -->
+    <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
     <!-- Optional: only requested when the user enables folder cover images, which reads
          cover.jpg/folder.jpg next to audio files. READ_MEDIA_AUDIO does not cover image files. -->
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
@@ -57,6 +59,7 @@
             android:theme="@style/Theme.App.Starting"
             android:launchMode="singleTop"
             android:resizeableActivity="true"
+            android:supportsPictureInPicture="true"
             android:configChanges="orientation|screenSize|keyboardHidden|screenLayout|smallestScreenSize"
             android:windowSoftInputMode="adjustResize">
             <intent-filter>
@@ -72,6 +75,19 @@
             <intent-filter>
                 <action android:name="app.solina.player.action.OPEN_PLAYER" />
                 <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="content" />
+                <data android:scheme="file" />
+                <data android:mimeType="video/*" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="video/*" />
             </intent-filter>
             <meta-data
                 android:name="android.app.shortcuts"
@@ -117,6 +133,15 @@
                 <data android:mimeType="audio/*" />
             </intent-filter>
         </activity>
+
+        <service
+            android:name=".data.service.VideoPlaybackService"
+            android:exported="false"
+            android:foregroundServiceType="mediaPlayback">
+            <intent-filter>
+                <action android:name="androidx.media3.session.MediaSessionService" />
+            </intent-filter>
+        </service>
 
         <service
             android:name=".data.service.MusicService"

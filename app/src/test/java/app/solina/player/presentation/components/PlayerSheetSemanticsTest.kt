@@ -89,11 +89,11 @@ class PlayerSheetSemanticsTest {
         val english = resourcesFor("values")
 
         assertEquals(
-            "SolinaPlayer player sheet collapsed, Bones",
+            "Solina Player player sheet collapsed, Bones",
             playerSheetContentDescription(english, PlayerSheetState.COLLAPSED, "Bones"),
         )
         assertEquals(
-            "SolinaPlayer player sheet expanded, Bones",
+            "Solina Player player sheet expanded, Bones",
             playerSheetContentDescription(english, PlayerSheetState.EXPANDED, "Bones"),
         )
     }
@@ -103,11 +103,11 @@ class PlayerSheetSemanticsTest {
         val english = resourcesFor("values")
 
         assertEquals(
-            "SolinaPlayer player sheet collapsed",
+            "Solina Player player sheet collapsed",
             playerSheetContentDescription(english, PlayerSheetState.COLLAPSED, null),
         )
         assertEquals(
-            "SolinaPlayer player sheet expanded",
+            "Solina Player player sheet expanded",
             playerSheetContentDescription(english, PlayerSheetState.EXPANDED, "  "),
         )
     }
@@ -120,7 +120,7 @@ class PlayerSheetSemanticsTest {
             "Bones",
         )
 
-        assertEquals("SolinaPlayer 播放器面板已收起，Bones", description)
+        assertEquals("Solina Player 播放器面板已收起，Bones", description)
     }
 
     @Test

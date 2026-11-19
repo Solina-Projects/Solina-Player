@@ -28,6 +28,7 @@ import androidx.compose.material.icons.rounded.SelectAll
 import androidx.compose.material.icons.rounded.Sync
 import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material3.*
+import app.solina.player.presentation.components.GlassModalBottomSheet
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -720,7 +721,7 @@ private fun LibrarySelectorSheet(
     val availableIds = remember(musicFolders) { musicFolders.map { it.id }.toSet() }
     val effectiveSelectedIds = selectedNavidromeMusicFolderIds(musicFolders, selectedMusicFolderIds)
 
-    ModalBottomSheet(onDismissRequest = onDismiss) {
+    GlassModalBottomSheet(onDismissRequest = onDismiss) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()

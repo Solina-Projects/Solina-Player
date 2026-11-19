@@ -1,5 +1,6 @@
 package app.solina.player.data.worker
 
+import app.solina.player.data.cloud.CloudFeatures
 import app.solina.player.data.jellyfin.JellyfinRepository
 import app.solina.player.data.navidrome.NavidromeRepository
 import javax.inject.Inject
@@ -11,11 +12,14 @@ class CloudSyncCoordinator @Inject constructor(
     private val navidromeRepository: NavidromeRepository,
     private val jellyfinRepository: JellyfinRepository
 ) {
+    // Cloud disabled (2026-11-16, user: fully offline for now):
+    // no cloud sync is ever needed, so SyncWorker skips it entirely.
     val needsActiveCloudSync: Boolean
-        get() = navidromeRepository.isLoggedIn &&
+        get() = CloudFeatures.ENABLED && navidromeRepository.isLoggedIn &&
             (System.currentTimeMillis() - navidromeRepository.lastFullSyncTime >= NavidromeRepository.SYNC_THRESHOLD_MS)
 
     suspend fun syncUnifiedCloudLibraries() {
+        if (!CloudFeatures.ENABLED) return
         syncNavidromeData()
         syncJellyfinCache()
     }

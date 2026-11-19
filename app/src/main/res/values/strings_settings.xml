@@ -94,6 +94,7 @@
     <string name="setcat_app_language_desc">Choose the language used across the app interface.</string>
     <string name="setcat_language_system">System default</string>
     <string name="setcat_language_english" translatable="false">English</string>
+    <string name="setcat_language_persian" translatable="false">فارسی</string>
     <string name="setcat_language_arabic" translatable="false">العربية</string>
     <string name="setcat_language_german" translatable="false">Deutsch</string>
     <string name="setcat_language_spanish" translatable="false">Español</string>
@@ -212,8 +213,8 @@
     <string name="setcat_player_gestures">Player Gestures</string>
     <string name="setcat_tap_bg_closes_title">Tap background closes player</string>
     <string name="setcat_tap_bg_closes_subtitle">Tap the blurred background to close the player sheet.</string>
-    <string name="setcat_mini_player_swipe_to_skip_title">Swipe to change song</string>
-    <string name="setcat_mini_player_swipe_to_skip_subtitle">Swipe the mini player left for the next song and right for the previous one. Dismiss it by swiping down instead.</string>
+    <string name="setcat_mini_player_swipe_to_skip_title">Swipe to change track</string>
+    <string name="setcat_mini_player_swipe_to_skip_subtitle">Swipe any mini player bar left for the next track and right for the previous one — music and video. On the floating bar, dismiss it by swiping down instead.</string>
     <string name="setcat_playback_behavior">Playback</string>
     <string name="setcat_autoplay_on_skip_title">Auto-play on skip</string>
     <string name="setcat_autoplay_on_skip_subtitle">Start playing automatically when you skip to another song while paused.</string>
@@ -397,4 +398,140 @@
     <string name="updates_notification_text">Solina Player %1$s is ready to install.</string>
     <string name="updates_notification_confirm_title">Finish updating Solina Player</string>
     <string name="updates_notification_confirm_text">Tap to confirm the installation.</string>
+
+    <!-- Appearance customisation (bug-fix round 2026-11-17, item 6) -->
+    <string name="appearance_customize_title">Glass, fonts &amp; presets</string>
+    <string name="appearance_customize_subtitle">Blur &amp; glass effects, global fonts, presets and saved looks</string>
+    <string name="appearance_preset_title">Ready-made looks</string>
+    <string name="appearance_preset_default">Default</string>
+    <string name="appearance_preset_compact">Compact</string>
+    <string name="appearance_preset_bold">Bold</string>
+    <string name="appearance_preset_night">Night</string>
+    <string name="appearance_theme_title">Theme</string>
+    <string name="appearance_theme_system">System</string>
+    <string name="appearance_theme_light">Light</string>
+    <string name="appearance_theme_dark">Dark</string>
+    <string name="appearance_home_cards_title">Home cards</string>
+    <string name="appearance_home_music_bar_title">Home music bar</string>
+    <string name="appearance_home_video_bar_title">Home video bar</string>
+    <string name="appearance_section_video_bar_title">Video section bar</string>
+    <string name="appearance_floating_music_bar_title">Floating music bar</string>
+    <string name="appearance_floating_music_bar_note">Corners shape the collapsed mini bar — the two top corners share one radius and the two bottom corners share one — and fade to square as the player expands. Size stays fixed by the player sheet.</string>
+    <string name="appearance_section_colors_title">Section colours</string>
+    <string name="appearance_section_home">Home</string>
+    <string name="appearance_section_music">Music</string>
+    <string name="appearance_section_video">Video</string>
+    <string name="appearance_typography_title">Fonts</string>
+    <string name="appearance_font_family_title">Font family</string>
+    <string name="appearance_font_rounded">Rounded</string>
+    <string name="appearance_font_vazirmatn">Vazirmatn</string>
+    <string name="appearance_font_system">System</string>
+    <string name="appearance_font_size_title">Font size</string>
+    <string name="appearance_show">Show</string>
+    <string name="appearance_size">Size</string>
+    <string name="appearance_corners">Corner radius</string>
+    <string name="appearance_colour">Colour</string>
+    <string name="appearance_reset_section">Reset this section</string>
+    <string name="appearance_reset_all">Reset everything</string>
+    <string name="appearance_palette_default">Default</string>
+    <string name="appearance_palette_blue">Blue</string>
+    <string name="appearance_palette_green">Green</string>
+    <string name="appearance_palette_purple">Purple</string>
+    <string name="appearance_palette_orange">Orange</string>
+    <string name="appearance_palette_teal">Teal</string>
+
+    <!-- Glass & blur (blur-engine test build) -->
+    <string name="appearance_glass_title">Glass &amp; blur</string>
+    <string name="appearance_glass_subtitle">Frosted and liquid-glass surfaces. Off by default — glass costs a blur per surface, so turn it on only where you like it.</string>
+    <string name="appearance_glass_enable">Glass effects</string>
+    <string name="appearance_glass_mini_bars">Mini-player bars</string>
+    <string name="appearance_glass_sheets">Bottom sheets</string>
+    <string name="appearance_glass_dialogs">Dialogs &amp; menus</string>
+    <string name="appearance_glass_now_playing">Now Playing background</string>
+    <string name="appearance_glass_radius">Blur radius</string>
+    <string name="appearance_glass_tint">Tint strength</string>
+    <string name="appearance_glass_saturation">Saturation</string>
+    <string name="appearance_glass_refraction">Refraction</string>
+    <string name="appearance_glass_refraction_note">Liquid glass only · Android 13+</string>
+    <string name="appearance_glass_style">Glass style</string>
+    <string name="appearance_glass_style_frosted">Frosted</string>
+    <string name="appearance_glass_style_liquid">Liquid glass</string>
+    <string name="appearance_glass_style_clear">Clear glass</string>
+    <string name="appearance_glass_preset_title">Glass presets</string>
+    <string name="appearance_glass_preset_off">Off</string>
+    <string name="appearance_glass_preset_subtle">Subtle</string>
+    <string name="appearance_glass_preset_frosted">Frosted</string>
+    <string name="appearance_glass_preset_liquid">Liquid</string>
+    <string name="appearance_glass_video_note">Video-player bars stay solid: video can\'t be blurred, so glass over playing video would show a black hole.</string>
+
+    <!-- More customisation (round 15, wave 2, C1–C5, C7) -->
+    <string name="appearance_corners_link_all">Same radius for all corners</string>
+    <string name="appearance_corner_top_start">Top start corner</string>
+    <string name="appearance_corner_top_end">Top end corner</string>
+    <string name="appearance_corner_bottom_start">Bottom start corner</string>
+    <string name="appearance_corner_bottom_end">Bottom end corner</string>
+    <string name="appearance_gap">Gap between cards</string>
+    <string name="appearance_recent_cards_title">Recent cards</string>
+    <string name="appearance_recent_music_cards_title">Recent music cards</string>
+    <string name="appearance_recent_video_cards_title">Recent video cards</string>
+    <string name="appearance_your_mix_title">Your Mix card</string>
+    <string name="appearance_list_rows_title">List rows</string>
+    <string name="appearance_list_rows_note">Library, search and video-list rows. The song row still morphs into a pill while it plays — this only moves its resting corners.</string>
+    <string name="appearance_list_font_size_title">List font size</string>
+    <string name="appearance_seek_bar_title">Seek bar style</string>
+    <string name="appearance_seek_bar_wavy">Wavy</string>
+    <string name="appearance_seek_bar_classic">Classic</string>
+    <string name="appearance_glass_sheets_group">Sheets &amp; dialogs</string>
+    <string name="appearance_saved_presets_title">Your saved looks</string>
+    <string name="appearance_saved_preset_hint">Tap a look to apply it. Saving with a name you already used overwrites that look.</string>
+    <string name="appearance_save_current_look">Save current look</string>
+    <string name="appearance_save_look_title">Save current look</string>
+    <string name="appearance_save_look_body">Give this look a name. You can apply it again later from this list.</string>
+    <string name="appearance_preset_name_label">Look name</string>
+    <string name="appearance_saved_preset_saved">Look saved</string>
+    <string name="appearance_saved_preset_applied">Look applied</string>
+    <string name="appearance_saved_preset_deleted">Look deleted</string>
+    <string name="appearance_saved_preset_empty">No saved looks yet. Tune the appearance, then save it here.</string>
+    <string name="appearance_saved_preset_limit">You already have 10 saved looks. Delete one to save a new look.</string>
+    <string name="appearance_saved_preset_delete">Delete look</string>
+
+    <!-- Settings reorg + Video settings (round 15, wave 1, 2026-11-17) -->
+    <string name="settings_category_video_title">Video</string>
+    <string name="settings_category_video_subtitle">Aspect, decoder, subtitles, speed and resume</string>
+    <string name="setcat_appearance_customise_section">Customise</string>
+    <string name="setcat_lyrics_sources_section">Lyrics sources</string>
+    <string name="setcat_lyrics_display_section">Lyrics display</string>
+    <string name="setcat_video_playback_section">Playback</string>
+    <string name="setcat_video_subtitles_section">Subtitles</string>
+    <string name="setcat_video_aspect_title">Default aspect</string>
+    <string name="setcat_video_aspect_desc">How videos fit the screen when they start playing.</string>
+    <string name="setcat_video_decoder_title">Decoder</string>
+    <string name="setcat_video_decoder_desc">Auto lets the player choose. Hardware uses the device decoder; Software decodes on the CPU. Applies to the next video you play.</string>
+    <string name="setcat_video_decoder_auto">Auto</string>
+    <string name="setcat_video_decoder_hardware">Hardware</string>
+    <string name="setcat_video_decoder_software">Software</string>
+    <string name="setcat_video_default_speed_title">Default speed</string>
+    <string name="setcat_video_default_speed_desc">Speed new videos start at. Changing the speed during playback still works as before.</string>
+    <string name="setcat_video_resume_title">Resume behaviour</string>
+    <string name="setcat_video_resume_desc">What happens when you reopen a video you left halfway. “Ask” falls back to resuming for now — there is no resume prompt yet.</string>
+    <string name="setcat_video_resume_always">Always resume</string>
+    <string name="setcat_video_resume_ask">Ask every time</string>
+    <string name="setcat_video_resume_start_over">Start over</string>
+    <string name="setcat_video_background_title">Background playback</string>
+    <string name="setcat_video_background_desc">Keep the video’s audio playing when the app goes to the background, like music.</string>
+    <string name="setcat_video_gestures_title">Swipe gestures</string>
+    <string name="setcat_video_gestures_desc">Swipe on the video to seek, change brightness (left half) and volume (right half). Tap, hold-for-speed and pinch zoom always work.</string>
+    <string name="setcat_video_subtitle_size_title">Subtitle text size</string>
+    <string name="setcat_video_subtitle_size_desc">Default size for subtitles in the video player.</string>
+    <string name="setcat_video_subtitle_color_title">Subtitle colour</string>
+    <string name="setcat_video_subtitle_color_desc">Default subtitle colour.</string>
+    <string name="setcat_video_subtitle_white">White</string>
+    <string name="setcat_video_subtitle_yellow">Yellow</string>
+    <string name="setcat_video_subtitle_cyan">Cyan</string>
+    <string name="setcat_video_subtitle_bg_title">Subtitle background</string>
+    <string name="setcat_video_subtitle_bg_desc">Background behind the subtitle text.</string>
+    <string name="setcat_developer_locked_title">Developer actions are locked</string>
+    <string name="setcat_developer_locked_desc">Tap the version in About 7 times to unlock them.</string>
+    <string name="setcat_developer_mode_enabled">Developer mode enabled</string>
+    <string name="setcat_developer_mode_already">Developer mode is already on</string>
 </resources>

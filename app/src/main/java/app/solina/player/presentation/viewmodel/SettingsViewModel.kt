@@ -131,7 +131,18 @@ data class SettingsUiState(
     val minSongDuration: Int = 10000,
     val minTracksPerAlbum: Int = 1,
     val replayGainEnabled: Boolean = false,
-    val replayGainUseAlbumGain: Boolean = false
+    val replayGainUseAlbumGain: Boolean = false,
+    // Video settings category + developer-mode unlock (round 15, wave 1).
+    val videoAspectMode: String = "FIT",
+    val videoDecoderMode: String = "auto",
+    val videoBackgroundPlayback: Boolean = false,
+    val videoPlaybackSpeed: Float = 1f,
+    val videoResumeBehaviour: String = "always",
+    val videoSubtitleTextSizeSp: Float = 20f,
+    val videoSubtitleTextColorArgb: Int = -1,
+    val videoSubtitleBackgroundMode: Int = 1,
+    val videoSwipeGesturesEnabled: Boolean = true,
+    val developerModeEnabled: Boolean = false
 )
 
 data class FailedSongInfo(
@@ -414,6 +425,67 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             userPreferencesRepository.keepScreenAwakeWhilePlayingFlow.collect { enabled ->
                 _uiState.update { it.copy(keepScreenAwakeWhilePlaying = enabled) }
+            }
+        }
+
+        // Video settings category + developer-mode unlock (round 15, wave 1).
+        viewModelScope.launch {
+            userPreferencesRepository.videoAspectModeFlow.collect { mode ->
+                _uiState.update { it.copy(videoAspectMode = mode) }
+            }
+        }
+
+        viewModelScope.launch {
+            userPreferencesRepository.videoDecoderModeFlow.collect { mode ->
+                _uiState.update { it.copy(videoDecoderMode = mode) }
+            }
+        }
+
+        viewModelScope.launch {
+            userPreferencesRepository.videoBackgroundPlaybackFlow.collect { enabled ->
+                _uiState.update { it.copy(videoBackgroundPlayback = enabled) }
+            }
+        }
+
+        viewModelScope.launch {
+            userPreferencesRepository.videoPlaybackSpeedFlow.collect { speed ->
+                _uiState.update { it.copy(videoPlaybackSpeed = speed) }
+            }
+        }
+
+        viewModelScope.launch {
+            userPreferencesRepository.videoResumeBehaviourFlow.collect { behaviour ->
+                _uiState.update { it.copy(videoResumeBehaviour = behaviour) }
+            }
+        }
+
+        viewModelScope.launch {
+            combine(
+                userPreferencesRepository.videoSubtitleTextSizeFlow,
+                userPreferencesRepository.videoSubtitleTextColorFlow,
+                userPreferencesRepository.videoSubtitleBackgroundFlow
+            ) { sizeSp, colorArgb, backgroundMode ->
+                Triple(sizeSp, colorArgb, backgroundMode)
+            }.collect { (sizeSp, colorArgb, backgroundMode) ->
+                _uiState.update {
+                    it.copy(
+                        videoSubtitleTextSizeSp = sizeSp,
+                        videoSubtitleTextColorArgb = colorArgb,
+                        videoSubtitleBackgroundMode = backgroundMode
+                    )
+                }
+            }
+        }
+
+        viewModelScope.launch {
+            userPreferencesRepository.videoSwipeGesturesEnabledFlow.collect { enabled ->
+                _uiState.update { it.copy(videoSwipeGesturesEnabled = enabled) }
+            }
+        }
+
+        viewModelScope.launch {
+            userPreferencesRepository.developerModeEnabledFlow.collect { enabled ->
+                _uiState.update { it.copy(developerModeEnabled = enabled) }
             }
         }
 
@@ -740,6 +812,68 @@ class SettingsViewModel @Inject constructor(
     fun setKeepScreenAwakeWhilePlaying(enabled: Boolean) {
         viewModelScope.launch {
             userPreferencesRepository.setKeepScreenAwakeWhilePlaying(enabled)
+        }
+    }
+
+    // ---- Video settings category + developer-mode unlock (round 15, wave 1) ----
+
+    fun setVideoAspectMode(mode: String) {
+        viewModelScope.launch {
+            userPreferencesRepository.setVideoAspectMode(mode)
+        }
+    }
+
+    fun setVideoDecoderMode(mode: String) {
+        viewModelScope.launch {
+            userPreferencesRepository.setVideoDecoderMode(mode)
+        }
+    }
+
+    fun setVideoBackgroundPlayback(enabled: Boolean) {
+        viewModelScope.launch {
+            userPreferencesRepository.setVideoBackgroundPlayback(enabled)
+        }
+    }
+
+    fun setVideoPlaybackSpeed(speed: Float) {
+        viewModelScope.launch {
+            userPreferencesRepository.setVideoPlaybackSpeed(speed)
+        }
+    }
+
+    fun setVideoResumeBehaviour(behaviour: String) {
+        viewModelScope.launch {
+            userPreferencesRepository.setVideoResumeBehaviour(behaviour)
+        }
+    }
+
+    fun setVideoSubtitleTextSize(sizeSp: Float) {
+        viewModelScope.launch {
+            userPreferencesRepository.setVideoSubtitleTextSize(sizeSp)
+        }
+    }
+
+    fun setVideoSubtitleTextColor(argb: Int) {
+        viewModelScope.launch {
+            userPreferencesRepository.setVideoSubtitleTextColor(argb)
+        }
+    }
+
+    fun setVideoSubtitleBackground(mode: Int) {
+        viewModelScope.launch {
+            userPreferencesRepository.setVideoSubtitleBackground(mode)
+        }
+    }
+
+    fun setVideoSwipeGesturesEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            userPreferencesRepository.setVideoSwipeGesturesEnabled(enabled)
+        }
+    }
+
+    fun setDeveloperModeEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            userPreferencesRepository.setDeveloperModeEnabled(enabled)
         }
     }
 

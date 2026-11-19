@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import app.solina.player.data.database.ListenBrainzSource
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
@@ -26,9 +27,9 @@ class ListenBrainzPreferencesRepository @Inject constructor(
         val SCROBBLE_JELLYFIN = booleanPreferencesKey("listenbrainz_scrobble_jellyfin")
     }
 
-    val scrobbleLocalFlow: Flow<Boolean> = dataStore.data.map { it[Keys.SCROBBLE_LOCAL] ?: true }
-    val scrobbleNavidromeFlow: Flow<Boolean> = dataStore.data.map { it[Keys.SCROBBLE_NAVIDROME] ?: true }
-    val scrobbleJellyfinFlow: Flow<Boolean> = dataStore.data.map { it[Keys.SCROBBLE_JELLYFIN] ?: true }
+    val scrobbleLocalFlow: Flow<Boolean> = dataStore.data.map { it[Keys.SCROBBLE_LOCAL] ?: true }.distinctUntilChanged()
+    val scrobbleNavidromeFlow: Flow<Boolean> = dataStore.data.map { it[Keys.SCROBBLE_NAVIDROME] ?: true }.distinctUntilChanged()
+    val scrobbleJellyfinFlow: Flow<Boolean> = dataStore.data.map { it[Keys.SCROBBLE_JELLYFIN] ?: true }.distinctUntilChanged()
 
     suspend fun setScrobbleLocal(enabled: Boolean) {
         dataStore.edit { it[Keys.SCROBBLE_LOCAL] = enabled }

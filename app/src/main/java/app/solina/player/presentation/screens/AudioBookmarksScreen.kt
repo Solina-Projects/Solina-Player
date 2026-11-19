@@ -147,7 +147,7 @@ import app.solina.player.R
 import app.solina.player.data.database.AudioBookmarkEntity
 import app.solina.player.data.database.backupSongIdOfRestoredBookmark
 import app.solina.player.data.model.Song
-import androidx.compose.material3.ModalBottomSheet
+import app.solina.player.presentation.components.GlassModalBottomSheet
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import app.solina.player.presentation.components.CollapsibleCommonTopBar
 import app.solina.player.presentation.components.MiniPlayerHeight
@@ -1995,7 +1995,7 @@ private fun BookmarkMomentActionsBottomSheet(
     val sheetState = rememberModalSheetState(skipPartiallyExpanded = true)
     val formattedTime = remember(bookmark.timestampMs) { formatBookmarkTime(bookmark.timestampMs) }
 
-    ModalBottomSheet(
+    GlassModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
         shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp),

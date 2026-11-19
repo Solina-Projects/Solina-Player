@@ -35,7 +35,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
+import app.solina.player.presentation.components.GlassModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -60,6 +60,7 @@ import app.solina.player.presentation.library.LibraryTabId
 import app.solina.player.presentation.utils.LocalAppHapticsConfig
 import app.solina.player.presentation.utils.performAppCompatHapticFeedback
 import app.solina.player.ui.theme.RoundedSans
+import app.solina.player.ui.theme.contentColorFor
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import racra.compose.smooth_corner_rect_library.AbsoluteSmoothCornerShape
@@ -154,7 +155,7 @@ fun ReorderTabsSheet(
 
     val hiddenTabs = remember(localTabs) { hiddenLibraryTabs(localTabs) }
 
-    ModalBottomSheet(
+    GlassModalBottomSheet(
         onDismissRequest = { onDismiss() },
         sheetState = sheetState,
         containerColor = MaterialTheme.colorScheme.surface
@@ -349,7 +350,12 @@ private fun VisibleTabRow(
                     Icon(
                         painter = painterResource(id = tabId.iconRes()),
                         contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onPrimary
+                        // The disc must stay primary to stand out from the
+                        // primaryContainer row, so its icon colour is
+                        // computed from the disc's actual luminance instead
+                        // of trusting onPrimary (pale with a pale dynamic
+                        // primary, white icon invisible).
+                        tint = contentColorFor(MaterialTheme.colorScheme.primary)
                     )
                 }
             }

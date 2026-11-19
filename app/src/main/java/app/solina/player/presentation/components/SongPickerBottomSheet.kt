@@ -48,7 +48,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.LargeExtendedFloatingActionButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
+import app.solina.player.presentation.components.GlassModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Scaffold
@@ -56,6 +56,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextFieldDefaults
 import app.solina.player.data.model.StorageFilter
+import app.solina.player.data.cloud.CloudFeatures
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -113,7 +114,7 @@ fun SongPickerBottomSheet(
         }
     }
 
-    ModalBottomSheet(
+    GlassModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
         containerColor = MaterialTheme.colorScheme.surface,
@@ -136,7 +137,9 @@ fun SongPickerContent(
 ) {
     val storageFilter by playerViewModel.playlistPickerStorageFilter.collectAsStateWithLifecycle()
     val hasCloudSongs by playerViewModel.hasCloudSongsFlow.collectAsStateWithLifecycle()
-    val showCloudFilter = hasCloudSongs != false
+    // Cloud disabled (2026-11-16, user: fully offline for now): the
+    // Offline / Online filter tabs are not shown at all.
+    val showCloudFilter = CloudFeatures.ENABLED && hasCloudSongs != false
 
     LaunchedEffect(hasCloudSongs, storageFilter) {
         if (hasCloudSongs == false && storageFilter != StorageFilter.OFFLINE) {

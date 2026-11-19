@@ -3,6 +3,7 @@
 package app.solina.player.presentation.screens
 
 import app.solina.player.presentation.navigation.navigateSafely
+import app.solina.player.data.cloud.CloudFeatures
 import app.solina.player.presentation.navigation.navigateSafelyReplacing
 
 import android.os.Trace
@@ -57,6 +58,7 @@ import androidx.compose.material.icons.filled.Album
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.rounded.Bookmark
+import androidx.compose.material.icons.rounded.DashboardCustomize
 import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material.icons.rounded.MoreHoriz
 import androidx.compose.material.icons.rounded.SelectAll
@@ -243,7 +245,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.CancellationException
 import racra.compose.smooth_corner_rect_library.AbsoluteSmoothCornerShape
 import androidx.compose.material3.FilledIconButton
-import androidx.compose.material3.ModalBottomSheet
+import app.solina.player.presentation.components.GlassModalBottomSheet
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
@@ -881,6 +883,20 @@ fun LibraryScreen(
                                 contentColor = MaterialTheme.colorScheme.onPrimaryContainer
                             ),
                             onClick = {
+                                navController.navigateSafely(Screen.MusicCustomization.route)
+                            }
+                        ) {
+                            Icon(
+                                imageVector = Icons.Rounded.DashboardCustomize,
+                                contentDescription = stringResource(R.string.music_customize_title)
+                            )
+                        }
+                        FilledIconButton(
+                            colors = IconButtonDefaults.filledIconButtonColors(
+                                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                                contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                            ),
+                            onClick = {
                                 navController.navigateSafely(Screen.AudioBookmarks.route)
                             }
                         ) {
@@ -911,17 +927,31 @@ fun LibraryScreen(
                     )
                 )
                 if (!isCompactNavigation) {
-                    val showTabIndicator = false
+                    // Gliding pill (d3motion segmented-control): one
+                    // pill that glides between tabs with the row's
+                    // built-in spring, instead of each tab jumping its
+                    // own background. The tabs themselves paint no
+                    // background (paintBackground = false below).
+                    val showTabIndicator = true
                     PrimaryScrollableTabRow(
                         selectedTabIndex = currentTabIndex,
                         containerColor = Color.Transparent,
                         edgePadding = 12.dp,
                         indicator = {
                             if (showTabIndicator) {
-                                TabRowDefaults.PrimaryIndicator(
-                                    modifier = Modifier.tabIndicatorOffset(selectedTabIndex = currentTabIndex),
-                                    height = 3.dp,
-                                    color = MaterialTheme.colorScheme.primary
+                                Box(
+                                    modifier = Modifier
+                                        .tabIndicatorOffset(
+                                            selectedTabIndex = currentTabIndex
+                                        )
+                                        .padding(5.dp)
+                                        .clip(CircleShape)
+                                        .background(
+                                            // Container pair (see TabAnimation): a pale
+                                            // dynamic primary would make white tab text
+                                            // unreadable on this pill.
+                                            MaterialTheme.colorScheme.primaryContainer
+                                        )
                                 )
                             }
                         },
@@ -933,6 +963,7 @@ fun LibraryScreen(
                                 index = index,
                                 title = tabId.storageKey,
                                 selectedIndex = currentTabIndex,
+                                paintBackground = false,
                                 onClick = {
                                     scope.launch {
                                         pagerState.animateScrollToPage(
@@ -1243,7 +1274,12 @@ fun LibraryScreen(
                                     onFolderClick = { playerViewModel.navigateToFolder(it) },
                                     onNavigateBack = { playerViewModel.navigateBackFolder() },
                                     isShuffleEnabled = isShuffleEnabled,
-                                    showStorageFilterButton = visibleCurrentTabId.hasStorageFilterButton(),
+                                    // Cloud disabled (2026-11-16, user: fully
+                                    // offline for now): the storage filter
+                                    // cycles through the ONLINE (cloud-only)
+                                    // mode, so the button is hidden.
+                                    showStorageFilterButton = CloudFeatures.ENABLED &&
+                                        visibleCurrentTabId.hasStorageFilterButton(),
                                     currentStorageFilter = playerUiState.currentStorageFilter,
                                     onStorageFilterClick = { playerViewModel.toggleStorageFilter() }
                                 )
@@ -1467,7 +1503,10 @@ fun LibraryScreen(
                                         }
                                     }
                                     // Genres span every source, so "cloud only" would not change that tab.
-                                    if (!isFoldersTab && !isGenresTab) {
+                                    // Cloud disabled (2026-11-16, user: fully offline
+                                    // for now): the whole "Cloud sources" block
+                                    // (heading + "Cloud only" toggle) is hidden.
+                                    if (!isFoldersTab && !isGenresTab && CloudFeatures.ENABLED) {
                                         Spacer(modifier = Modifier.height(12.dp))
                                         Text(
                                             text = stringResource(R.string.presentation_batch_d_cloud_sources_heading),
@@ -1571,6 +1610,14 @@ fun LibraryScreen(
                                     LibraryTabId.ARTISTS -> {
                                         val artistsLazyPagingItems = libraryViewModel.artistsPagingFlow.collectAsLazyPagingItems()
                                         val isLoading = playerUiState.isLoadingLibraryCategories
+                                        val stableOnArtistClick: (Long) -> Unit = remember(navController) {
+                                            { artistId: Long ->
+                                                navController.navigateSafelyReplacing(
+                                                    route = Screen.ArtistDetail.createRoute(artistId),
+                                                    patternToPop = Screen.ArtistDetail.route
+                                                )
+                                            }
+                                        }
 
                                         LibraryArtistsTab(
                                             artists = artistsLazyPagingItems,
@@ -1578,12 +1625,7 @@ fun LibraryScreen(
                                             playerViewModel = playerViewModel,
                                             bottomBarHeight = bottomBarHeightDp,
                                             currentArtistSortOption = playerUiState.currentArtistSortOption,
-                                            onArtistClick = { artistId ->
-                                                navController.navigateSafelyReplacing(
-                                                    route = Screen.ArtistDetail.createRoute(artistId),
-                                                    patternToPop = Screen.ArtistDetail.route
-                                                )
-                                            },
+                                            onArtistClick = stableOnArtistClick,
                                             isRefreshing = isRefreshing,
                                             onRefresh = onRefresh,
                                             isSelectionMode = isArtistSelectionMode,
@@ -2621,7 +2663,7 @@ private fun LibraryTabSwitcherSheet(
 ) {
     val sheetState = rememberModalSheetState(skipPartiallyExpanded = true)
 
-    ModalBottomSheet(
+    GlassModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
         containerColor = MaterialTheme.colorScheme.surface,

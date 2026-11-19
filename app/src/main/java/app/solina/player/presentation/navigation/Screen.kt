@@ -94,4 +94,56 @@ sealed class Screen(val route: String) {
         fun createRoute(songId: String) = "audio_bookmarks/${Uri.encode(songId)}"
     }
 
+    // Music + Video: video library, video player and Home customisation.
+    // Video stays separate from music — its own library, player and routes.
+    object VideoLibrary : Screen("video_library")
+    object VideoPlayer : Screen("video_player/{videoUri}") {
+        fun createRoute(videoUri: String) =
+            "video_player/${Uri.encode(videoUri)}"
+
+        /** Play a queue of videos: the player starts at [startUri] and the
+         *  PlayerView next/previous controls step through [queueUris]. The
+         *  queue is passed as one encoded route argument (URIs joined by
+         *  newline); empty queue = single-video playback as before. */
+        fun createRoute(startUri: String, queueUris: List<String>) =
+            createRoute(startUri, queueUris, startPositionMs = 0L)
+
+        /** Same as [createRoute], but the first video starts at
+         *  [startPositionMs] — used by the Folders screen's Resume button. */
+        fun createRoute(
+            startUri: String,
+            queueUris: List<String>,
+            startPositionMs: Long
+        ): String {
+            val queueKey = VideoQueueStore.stage(queueUris)
+            val base = if (queueKey == null) {
+                createRoute(startUri)
+            } else {
+                "video_player/${Uri.encode(startUri)}?queueKey=${Uri.encode(queueKey)}"
+            }
+            return if (startPositionMs > 0) {
+                "$base${if (base.contains("?")) "&" else "?"}startMs=$startPositionMs"
+            } else {
+                base
+            }
+        }
+    }
+    object HomeCustomization : Screen("home_customization")
+    object MusicCustomization : Screen("music_customization")
+    object VideoCustomization : Screen("video_customization")
+
+    // Appearance customisation (bug-fix round 2026-11-17, item 6):
+    // per-section look of bars, cards, colours and fonts.
+    object AppearanceCustomization : Screen("appearance_customization")
+
+    // Bottom-bar feedback (2026-11-16): the video section gets its own
+    // bottom bar — Home, video Search, Folders — instead of the music
+    // Home / Search / Library bar.
+    object VideoSearch : Screen("video_search")
+    object VideoFolders : Screen("video_folders")
+    object VideoFolderDetail : Screen("video_folder/{folderPath}") {
+        fun createRoute(folderPath: String) =
+            "video_folder/${Uri.encode(folderPath)}"
+    }
+
 }

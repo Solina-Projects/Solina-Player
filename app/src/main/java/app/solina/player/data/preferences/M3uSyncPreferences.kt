@@ -9,6 +9,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
@@ -53,7 +54,7 @@ class M3uSyncPreferences @Inject constructor(
         preferences[CONFIG_KEY]
             ?.let { encoded -> runCatching { json.decodeFromString<M3uSyncConfig>(encoded) }.getOrNull() }
             ?: M3uSyncConfig()
-    }
+    }.distinctUntilChanged()
 
     internal suspend fun snapshot(): M3uSyncConfig = configFlow.first()
 

@@ -286,7 +286,7 @@ internal fun rememberMiniPlayerDismissGestureHandler(
 /**
  * Single pointer-input node for the collapsed mini player's horizontal gesture.
  *
- * Which handler receives the drag depends on [skipMode], so flipping the "swipe to change song"
+ * Which handler receives the drag depends on [skipMode], so flipping the "swipe to change track"
  * preference swaps the behavior without changing the shape of the modifier chain around the
  * player card. With [skipMode] on, every horizontal swipe changes track and dismissal moves to a
  * downward swipe; otherwise short swipes change track and long swipes dismiss.

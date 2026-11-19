@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="collage_pattern_cosmic_swirl">چرخش کیهانی</string>
+    <string name="collage_pattern_honeycomb_groove">شیار کندوی عسل</string>
+    <string name="collage_pattern_vinyl_stack">پشتهٔ وینیل</string>
+    <string name="collage_pattern_pixel_mosaic">موزاییک پیکسلی</string>
+    <string name="collage_pattern_stardust_scatter">پراکندگی غبار ستاره</string>
+    <string name="collage_pattern_soft_orbit">مدار نرم</string>
+    <string name="collage_pattern_arrow_fanfare">رژهٔ پیکان‌ها</string>
+    <string name="collage_pattern_sunny_bloom">شکوفهٔ آفتابی</string>
+    <string name="collage_pattern_pixel_cookie">کوکی پیکسلی</string>
+    <string name="collage_pattern_heart_garden">باغ قلب</string>
+
+    <plurals name="cloud_download_selected_started">
+        <item quantity="one">در حال آماده‌سازی %1$d آهنگ ابری برای پخش آفلاین</item>
+        <item quantity="other">در حال آماده‌سازی %1$d آهنگ ابری برای پخش آفلاین</item>
+    </plurals>
+</resources>

@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/PixelPlayerOSS.svg" alt="App Icon" height="250"/>
+  <img src="assets/solina_player_icon.svg" alt="Solina Player icon" width="160" height="160"/>
 </p>
 
 <p align="center">
@@ -33,6 +33,29 @@ The original code is copyright its authors and licensed under the
 This fork stays under the same license — see [LICENSE](LICENSE).
 Changes in this fork: rebranded to Solina Player (`app.solina.player`),
 Android 12 (API 31) minimum, and arm64-v8a builds only.
+
+## Music + Video
+
+The player plays both music and video, kept separate — never mixed.
+Home offers two entry cards (Music / Video), separate audio and video
+file counts, a recently-added music row and a recently-added videos row.
+Video uses its own ExoPlayer/Media3 player with its own library
+(MediaStore.Video), library screen and player screen (seek, speed,
+fullscreen, subtitle tracks when the file carries them), in the same
+Material 3 Expressive style as the music player. Home sections — new
+and existing — can be shown, hidden and reordered from
+Settings → Customise Home. The video section has its own bottom bar
+(Home / Search / Folders): Home always returns to the main Home page,
+video Search lists all videos and searches within them, and Folders
+groups videos by folder with sort and Play-all actions, a settings
+dialog (view mode / layout / sort), search, and a floating Resume
+button that continues the last partially-watched video. While a video
+plays, the floating bottom bar is hidden and an extra control bar —
+opened with an animated arrow — offers aspect / rotation, speed,
+screenshot, audio settings, sleep mode, night light and background
+playback. Video formats are what ExoPlayer plus the
+bundled FFmpeg decoders support (common containers such as MP4, MKV,
+WebM, MOV, AVI, 3GP and FLV); the music player behaviour is unchanged.
 
 ## What It Is
 
@@ -144,7 +167,7 @@ This fork is not published on F-Droid.
 
 ### Alpha builds
 
-Every merge into `main` automatically publishes a pre-release tagged like `v0.4.0-alpha.N` on the [releases page](https://github.com/Solina-Projects/Solina-player/releases). These are cutting-edge builds for testing new changes before they reach a stable release — expect rough edges.
+Every merge into `main` automatically publishes a pre-release tagged like `v1.0.0-alpha.N` on the [releases page](https://github.com/Solina-Projects/Solina-player/releases). These are cutting-edge builds for testing new changes before they reach a stable release — expect rough edges.
 
 To install one, download the arm64-v8a APK for your device from the release assets and sideload it.
 

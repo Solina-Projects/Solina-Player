@@ -48,9 +48,18 @@ import app.solina.player.presentation.screens.EasterEggScreen
 import app.solina.player.presentation.screens.ExperimentalSettingsScreen
 import app.solina.player.presentation.screens.LyricsSettingsScreen
 import app.solina.player.presentation.screens.GenreDetailScreen
+import app.solina.player.presentation.screens.AppearanceCustomizationScreen
+import app.solina.player.presentation.screens.HomeCustomizationScreen
+import app.solina.player.presentation.screens.MusicCustomizationScreen
+import app.solina.player.presentation.screens.VideoCustomizationScreen
 import app.solina.player.presentation.screens.HomeScreen
 import app.solina.player.presentation.screens.LibraryScreen
 import app.solina.player.presentation.screens.MashupScreen
+import app.solina.player.presentation.screens.VideoLibraryScreen
+import app.solina.player.presentation.screens.VideoPlayerScreen
+import app.solina.player.presentation.screens.VideoFolderDetailScreen
+import app.solina.player.presentation.screens.VideoFoldersScreen
+import app.solina.player.presentation.screens.VideoSearchScreen
 import app.solina.player.presentation.screens.NavBarCornerRadiusScreen
 import app.solina.player.presentation.screens.PaletteStyleSettingsScreen
 import app.solina.player.presentation.screens.PlaylistDetailScreen
@@ -742,6 +751,131 @@ fun AppNavigation(
                     navController = navController,
                     playerViewModel = playerViewModel
                 )
+            }
+            composable(
+                Screen.VideoLibrary.route,
+                enterTransition = { enterTransition() },
+                exitTransition = { exitTransition() },
+                popEnterTransition = { popEnterTransition() },
+                popExitTransition = { popExitTransition() },
+            ) {
+                ScreenWrapper(navController = navController, playerViewModel = playerViewModel) {
+                    VideoLibraryScreen(navController = navController)
+                }
+            }
+            composable(
+                route = Screen.VideoPlayer.route + "?queueKey={queueKey}&startMs={startMs}",
+                arguments = listOf(
+                    navArgument("videoUri") { type = NavType.StringType },
+                    navArgument("queueKey") {
+                        type = NavType.StringType
+                        nullable = true
+                        defaultValue = null
+                    },
+                    navArgument("startMs") {
+                        type = NavType.LongType
+                        defaultValue = 0L
+                    }
+                ),
+                enterTransition = { enterTransition() },
+                exitTransition = { exitTransition() },
+                popEnterTransition = { popEnterTransition() },
+                popExitTransition = { popExitTransition() },
+            ) { backStackEntry ->
+                val videoUri = backStackEntry.arguments?.getString("videoUri").orEmpty()
+                val queueKey = backStackEntry.arguments?.getString("queueKey")
+                val videoQueue = VideoQueueStore.get(queueKey)
+                val startMs = backStackEntry.arguments?.getLong("startMs") ?: 0L
+                ScreenWrapper(navController = navController, playerViewModel = playerViewModel) {
+                    VideoPlayerScreen(
+                        navController = navController,
+                        videoUri = videoUri,
+                        videoQueue = videoQueue,
+                        startPositionMs = startMs
+                    )
+                }
+            }
+            composable(
+                Screen.VideoSearch.route,
+                enterTransition = { enterTransition() },
+                exitTransition = { exitTransition() },
+                popEnterTransition = { popEnterTransition() },
+                popExitTransition = { popExitTransition() },
+            ) {
+                ScreenWrapper(navController = navController, playerViewModel = playerViewModel) {
+                    VideoSearchScreen(navController = navController)
+                }
+            }
+            composable(
+                Screen.VideoFolders.route,
+                enterTransition = { enterTransition() },
+                exitTransition = { exitTransition() },
+                popEnterTransition = { popEnterTransition() },
+                popExitTransition = { popExitTransition() },
+            ) {
+                ScreenWrapper(navController = navController, playerViewModel = playerViewModel) {
+                    VideoFoldersScreen(navController = navController)
+                }
+            }
+            composable(
+                route = Screen.VideoFolderDetail.route,
+                arguments = listOf(navArgument("folderPath") { type = NavType.StringType }),
+                enterTransition = { enterTransition() },
+                exitTransition = { exitTransition() },
+                popEnterTransition = { popEnterTransition() },
+                popExitTransition = { popExitTransition() },
+            ) { backStackEntry ->
+                val folderPath = backStackEntry.arguments?.getString("folderPath").orEmpty()
+                ScreenWrapper(navController = navController, playerViewModel = playerViewModel) {
+                    VideoFolderDetailScreen(
+                        navController = navController,
+                        folderPathArg = folderPath
+                    )
+                }
+            }
+            composable(
+                Screen.HomeCustomization.route,
+                enterTransition = { enterTransition() },
+                exitTransition = { exitTransition() },
+                popEnterTransition = { popEnterTransition() },
+                popExitTransition = { popExitTransition() },
+            ) {
+                ScreenWrapper(navController = navController, playerViewModel = playerViewModel) {
+                    HomeCustomizationScreen(navController = navController)
+                }
+            }
+            composable(
+                Screen.MusicCustomization.route,
+                enterTransition = { enterTransition() },
+                exitTransition = { exitTransition() },
+                popEnterTransition = { popEnterTransition() },
+                popExitTransition = { popExitTransition() },
+            ) {
+                ScreenWrapper(navController = navController, playerViewModel = playerViewModel) {
+                    MusicCustomizationScreen(navController = navController)
+                }
+            }
+            composable(
+                Screen.VideoCustomization.route,
+                enterTransition = { enterTransition() },
+                exitTransition = { exitTransition() },
+                popEnterTransition = { popEnterTransition() },
+                popExitTransition = { popExitTransition() },
+            ) {
+                ScreenWrapper(navController = navController, playerViewModel = playerViewModel) {
+                    VideoCustomizationScreen(navController = navController)
+                }
+            }
+            composable(
+                Screen.AppearanceCustomization.route,
+                enterTransition = { enterTransition() },
+                exitTransition = { exitTransition() },
+                popEnterTransition = { popEnterTransition() },
+                popExitTransition = { popExitTransition() },
+            ) {
+                ScreenWrapper(navController = navController, playerViewModel = playerViewModel) {
+                    AppearanceCustomizationScreen(navController = navController)
+                }
             }
         }
     }

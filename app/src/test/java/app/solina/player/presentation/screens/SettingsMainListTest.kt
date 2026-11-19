@@ -6,6 +6,7 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import app.solina.player.data.cloud.CloudFeatures
 import app.solina.player.presentation.model.SettingsCategory
 import app.solina.player.presentation.navigation.Screen
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -53,9 +54,14 @@ class SettingsMainListTest {
     }
 
     @Test
-    fun `main list shows every category and destination exactly once`() {
+    fun `main list shows every enabled category and destination exactly once`() {
+        val enabledDestinations = MainSettingsEntry.Destination.entries.filter {
+            CloudFeatures.ENABLED ||
+                (it != MainSettingsEntry.Destination.DOWNLOADS &&
+                    it != MainSettingsEntry.Destination.ACCOUNTS)
+        }
         val expected = SettingsCategory.entries.map { MainSettingsEntry.Category(it) } +
-            MainSettingsEntry.Destination.entries
+            enabledDestinations
 
         assertEquals(expected.size, mainSettingsEntries.size)
         assertEquals(expected.toSet(), mainSettingsEntries.toSet())
@@ -145,7 +151,7 @@ class SettingsMainListTest {
             Screen.SettingsCategory.createRoute("library"),
             MainSettingsEntry.Category(SettingsCategory.LIBRARY).route
         )
-        assertEquals(Screen.Equalizer.createRoute(), MainSettingsEntry.Category(SettingsCategory.EQUALIZER).route)
+        assertEquals(Screen.Equalizer.createRoute(), MainSettingsEntry.Destination.EQUALIZER.route)
         assertEquals(
             Screen.DeviceCapabilities.createRoute(),
             MainSettingsEntry.Category(SettingsCategory.DEVICE_CAPABILITIES).route
@@ -155,6 +161,25 @@ class SettingsMainListTest {
         assertEquals(Screen.CloudDownloads.route, MainSettingsEntry.Destination.DOWNLOADS.route)
         assertEquals(Screen.Accounts.createRoute(), MainSettingsEntry.Destination.ACCOUNTS.route)
         assertEquals(Screen.Updates.route, MainSettingsEntry.Destination.UPDATES.route)
+        assertEquals(Screen.HomeCustomization.route, MainSettingsEntry.Destination.HOME_CUSTOMIZATION.route)
+        assertEquals(Screen.MusicCustomization.route, MainSettingsEntry.Destination.MUSIC_CUSTOMIZATION.route)
+        assertEquals(Screen.VideoCustomization.route, MainSettingsEntry.Destination.VIDEO_CUSTOMIZATION.route)
+    }
+
+    @Test
+    fun `settings groups partition main list cleanly with personalisation first`() {
+        assertEquals(4, mainSettingsGroups.size)
+        assertEquals(mainSettingsEntries, mainSettingsGroups.flatMap { it.entries })
+        val personalisationEntries = mainSettingsGroups.first().entries
+        assertEquals(
+            listOf(
+                MainSettingsEntry.Destination.HOME_CUSTOMIZATION,
+                MainSettingsEntry.Destination.MUSIC_CUSTOMIZATION,
+                MainSettingsEntry.Destination.VIDEO_CUSTOMIZATION,
+                MainSettingsEntry.Category(SettingsCategory.APPEARANCE)
+            ),
+            personalisationEntries
+        )
     }
 
     private fun ColorScheme.containerPairs(): Set<Pair<Color, Color>> = setOf(

@@ -31,7 +31,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearWavyProgressIndicator
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
+import app.solina.player.presentation.components.GlassModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -132,7 +132,7 @@ fun MashupScreen(
             }
 
             if (mashupUiState.showSongPickerForDeck != null) {
-                ModalBottomSheet(
+                GlassModalBottomSheet(
                     onDismissRequest = { mashupViewModel.closeSongPicker() },
                     sheetState = sheetState
                 ) {

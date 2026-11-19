@@ -14,6 +14,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -34,8 +36,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.solina.player.R
+import app.solina.player.data.preferences.SeekBarStyleNames
 import app.solina.player.presentation.components.WavySliderExpressive
+import app.solina.player.presentation.viewmodel.AppearanceViewModel
 import app.solina.player.utils.formatDuration
 import kotlin.math.roundToLong
 
@@ -49,8 +55,11 @@ fun PlayerSeekBar(
     onSeek: (Long) -> Unit,
     onSeekPreview: ((Long?) -> Unit)? = null,
     isPlaying: Boolean,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    // Round 15, wave 2, C4: seek-bar style (wavy / classic).
+    appearanceViewModel: AppearanceViewModel = hiltViewModel()
 ) {
+    val seekBarStyle by appearanceViewModel.seekBarStyle.collectAsStateWithLifecycle()
     val hapticFeedback = LocalHapticFeedback.current
     val progressFraction = remember(currentPosition, totalDuration) {
         if (totalDuration > 0) {
@@ -92,37 +101,59 @@ fun PlayerSeekBar(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        WavySliderExpressive(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 0.dp),
-            value = { seekFraction },
-            onValueChange = { newFraction ->
-                isUserSeeking = true
-                seekFraction = newFraction
-                onSeekPreview?.invoke((newFraction * totalDuration).roundToLong())
-                val quantized = (newFraction.coerceIn(0f, 1f) * 20f).toInt()
-                if (quantized != lastHapticStep[0]) {
-                    lastHapticStep[0] = quantized
-                    hapticFeedback.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                }
-            },
-            onValueCommit = { finalFraction ->
-                seekFraction = finalFraction
-                onSeek((finalFraction * totalDuration).roundToLong())
-                onSeekPreview?.invoke(null)
-                targetSeekFraction = finalFraction
-                lastSeekFinishedTime = System.currentTimeMillis()
-                isUserSeeking = false
-            },
-            strokeWidth = 5.dp,
-            thumbRadius = 8.dp,
-            activeTrackColor = primaryColor,
-            inactiveTrackColor = primaryColor.copy(alpha = 0.2f),
-            thumbColor = primaryColor,
-            wavelength = 30.dp,
-            isPlaying = isPlaying,
-            semanticsLabel = stringResource(R.string.cd_playback_position)
-        )
+        // Round 15, wave 2, C4: seek-bar style — wavy or classic.
+        // Same seek behaviour (preview while dragging, commit on
+        // release, haptic steps); only the slider changes.
+        val onSeekFractionChange: (Float) -> Unit = { newFraction ->
+            isUserSeeking = true
+            seekFraction = newFraction
+            onSeekPreview?.invoke((newFraction * totalDuration).roundToLong())
+            val quantized = (newFraction.coerceIn(0f, 1f) * 20f).toInt()
+            if (quantized != lastHapticStep[0]) {
+                lastHapticStep[0] = quantized
+                hapticFeedback.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+            }
+        }
+        val onSeekFractionCommit: (Float) -> Unit = { finalFraction ->
+            seekFraction = finalFraction
+            onSeek((finalFraction * totalDuration).roundToLong())
+            onSeekPreview?.invoke(null)
+            targetSeekFraction = finalFraction
+            lastSeekFinishedTime = System.currentTimeMillis()
+            isUserSeeking = false
+        }
+        if (seekBarStyle == SeekBarStyleNames.CLASSIC) {
+            Slider(
+                value = seekFraction,
+                onValueChange = onSeekFractionChange,
+                onValueChangeFinished = { onSeekFractionCommit(seekFraction) },
+                valueRange = 0f..1f,
+                colors = SliderDefaults.colors(
+                    thumbColor = primaryColor,
+                    activeTrackColor = primaryColor,
+                    inactiveTrackColor = primaryColor.copy(alpha = 0.2f)
+                ),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 0.dp)
+            )
+        } else {
+            WavySliderExpressive(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 0.dp),
+                value = { seekFraction },
+                onValueChange = onSeekFractionChange,
+                onValueCommit = onSeekFractionCommit,
+                strokeWidth = 5.dp,
+                thumbRadius = 8.dp,
+                activeTrackColor = primaryColor,
+                inactiveTrackColor = primaryColor.copy(alpha = 0.2f),
+                thumbColor = primaryColor,
+                wavelength = 30.dp,
+                isPlaying = isPlaying,
+                semanticsLabel = stringResource(R.string.cd_playback_position)
+            )
+        }
     }
 }

@@ -1,6 +1,7 @@
 package app.solina.player.presentation.components
 
 import android.widget.Toast
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.Spring
@@ -19,6 +20,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.ui.layout.layout
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
@@ -60,10 +62,13 @@ import androidx.media3.common.util.UnstableApi
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import app.solina.player.presentation.viewmodel.AppearanceViewModel
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.currentBackStackEntryAsState
 import app.solina.player.data.model.Song
+import app.solina.player.data.preferences.NavBarStyle
 import app.solina.player.data.preferences.sanitizeNavBarCornerRadius
 import app.solina.player.presentation.components.scoped.PlayerAlbumNavigationEffect
 import app.solina.player.presentation.components.scoped.PlayerArtistNavigationEffect
@@ -125,7 +130,14 @@ fun UnifiedPlayerSheetV2(
     navController: NavHostController,
     hideMiniPlayer: Boolean = false,
     isNavBarHidden: Boolean = false,
-    containerWidth: Dp = Dp.Unspecified
+    containerWidth: Dp = Dp.Unspecified,
+    // Appearance customisation (bug-fix round 2026-11-17, item 6):
+    // a chosen floating-music-bar colour; null = follow the theme.
+    miniPlayerSchemeOverride: ColorScheme? = null,
+    // Glass & blur (blur-engine test build, 2026-11-17): the floating
+    // bar's glass settings; also drives the player-area background
+    // transparency below.
+    appearanceViewModel: AppearanceViewModel = hiltViewModel()
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -199,6 +211,41 @@ fun UnifiedPlayerSheetV2(
     val playerConfig by playerViewModel.playerConfigSlice.collectAsStateWithLifecycle()
     val navBarCornerRadius = sanitizeNavBarCornerRadius(playerConfig.navBarCornerRadius)
     val navBarStyle = playerConfig.navBarStyle
+
+    // Round 16, item 6: the floating music bar's corner settings.
+    // The sheet's shape carries ONE top radius (both top corners)
+    // and ONE bottom radius (both bottom corners), so the two top
+    // sliders average into one top radius and the two bottom sliders
+    // into one bottom radius — the Appearance screen's note says so.
+    // The radii only shape the COLLAPSED mini bar: the sheet lerps
+    // them to 0 dp as the player expands (see the provider scaling
+    // below), so the expanded player stays square.
+    val floatingBarAppearance by appearanceViewModel.appearance.collectAsStateWithLifecycle()
+    val floatingBarCorners = floatingBarAppearance.effectiveFloatingMusicBar.effectiveCorners
+    val floatingTopRadiusState = rememberUpdatedState(
+        ((floatingBarCorners.topStart + floatingBarCorners.topEnd) / 2).dp
+    )
+    val floatingBottomRadiusState = rememberUpdatedState(
+        ((floatingBarCorners.bottomStart + floatingBarCorners.bottomEnd) / 2).dp
+    )
+    // The sheet's own collapsed targets (mirrors
+    // rememberSheetVisualState — top follows the nav-bar radius in
+    // the default style, 32 dp otherwise; bottom is 10 dp in the
+    // default style, 32 dp otherwise). The wrappers below scale the
+    // providers against these, so a user value of 32/10 reproduces
+    // today's shape exactly.
+    val collapsedSheetTopRadiusState = rememberUpdatedState(
+        if (isNavBarHidden) 32.dp
+        else if (navBarStyle == NavBarStyle.DEFAULT) navBarCornerRadius.dp
+        else if (navBarStyle == NavBarStyle.FULL_WIDTH) 32.dp
+        else navBarCornerRadius.dp
+    )
+    val collapsedSheetBottomRadiusState = rememberUpdatedState(
+        if (isNavBarHidden) 32.dp
+        else if (navBarStyle == NavBarStyle.DEFAULT) 10.dp
+        else if (navBarStyle == NavBarStyle.FULL_WIDTH) 32.dp
+        else navBarCornerRadius.dp
+    )
     val carouselStyle = playerConfig.carouselStyle
     val fullPlayerLoadingTweaks = playerConfig.fullPlayerLoadingTweaks
     val tapBackgroundClosesPlayer = playerConfig.tapBackgroundClosesPlayer
@@ -404,8 +451,35 @@ fun UnifiedPlayerSheetV2(
     val baseBottomPadding = sheetVisualState.baseBottomPadding
     val playerContentAreaHeightPxProvider = sheetVisualState.playerContentAreaHeightPxProvider
     val visualSheetTranslationYProvider = sheetVisualState.visualSheetTranslationYProvider
-    val overallSheetTopCornerRadiusProvider = sheetVisualState.overallSheetTopCornerRadiusProvider
-    val playerContentActualBottomRadiusProvider = sheetVisualState.playerContentActualBottomRadiusProvider
+    // Round 16, item 6: scale the sheet's radius providers by the
+    // user's floating-bar corners. Each provider lerps its collapsed
+    // target to 0 dp as the player expands, so scaling the OUTPUT by
+    // (user target / sheet target) keeps the lerp exact — collapsed
+    // the bar shows the user's corners, expanded it is square, and
+    // mid-drag it tracks the expansion. The corner states are read
+    // through rememberUpdatedState, so a slider drag takes effect
+    // without recomposing the sheet. When the sheet target is 0 dp
+    // the output stays 0 dp: corners stay bounded by the sheet math.
+    val baseTopRadiusProvider = sheetVisualState.overallSheetTopCornerRadiusProvider
+    val baseBottomRadiusProvider = sheetVisualState.playerContentActualBottomRadiusProvider
+    val overallSheetTopCornerRadiusProvider: () -> Dp = remember(baseTopRadiusProvider) {
+        {
+            scaleSheetRadius(
+                base = baseTopRadiusProvider(),
+                sheetTarget = collapsedSheetTopRadiusState.value,
+                userTarget = floatingTopRadiusState.value
+            )
+        }
+    }
+    val playerContentActualBottomRadiusProvider: () -> Dp = remember(baseBottomRadiusProvider) {
+        {
+            scaleSheetRadius(
+                base = baseBottomRadiusProvider(),
+                sheetTarget = collapsedSheetBottomRadiusState.value,
+                userTarget = floatingBottomRadiusState.value
+            )
+        }
+    }
     val currentHorizontalPaddingStartPxProvider = sheetVisualState.currentHorizontalPaddingStartPxProvider
     val currentHorizontalPaddingEndPxProvider = sheetVisualState.currentHorizontalPaddingEndPxProvider
 
@@ -573,7 +647,8 @@ fun UnifiedPlayerSheetV2(
         themedAlbumArtUri = themedAlbumArtUri,
         preparingSongId = preparingSongId,
         systemColorScheme = MaterialTheme.colorScheme,
-        isAmoledTheme = LocalSolinaPlayerAmoledTheme.current
+        isAmoledTheme = LocalSolinaPlayerAmoledTheme.current,
+        miniPlayerSchemeOverride = miniPlayerSchemeOverride
     )
     val albumColorScheme = sheetThemeState.albumColorScheme
     val miniPlayerScheme = sheetThemeState.miniPlayerScheme
@@ -581,6 +656,22 @@ fun UnifiedPlayerSheetV2(
     val miniReadyAlpha = sheetThemeState.miniReadyAlpha
     val miniAppearScale = sheetThemeState.miniAppearScale
     val playerAreaBackground = sheetThemeState.playerAreaBackground
+    // Glass & blur (blur-engine test build, 2026-11-17): the pill
+    // background of the floating mini bar IS this player-area
+    // background, so for the glass to show through it must go
+    // transparent while the sheet is collapsed. The colour animates
+    // (no pop) and flips back to solid as the full player expands —
+    // the mini bar has already faded out by then.
+    val appearance by appearanceViewModel.appearance.collectAsStateWithLifecycle()
+    val floatingGlassOn = appearance.glass.enabled && appearance.glass.miniBars
+    val animatedPlayerAreaBackground by animateColorAsState(
+        targetValue = if (floatingGlassOn && playerContentExpansionFraction.value < 0.5f) {
+            Color.Transparent
+        } else {
+            playerAreaBackground
+        },
+        label = "playerAreaBackground"
+    )
     val isDragging = sheetBackAndDragState.isDragging
     val visualCardShadowElevation by remember(showQueueSheet, miniReadyAlpha, isDragging) {
         derivedStateOf {
@@ -703,7 +794,7 @@ fun UnifiedPlayerSheetV2(
                                 clip = false
                             )
                             .background(
-                                color = playerAreaBackground,
+                                color = animatedPlayerAreaBackground,
                                 shape = sheetInteractionState.playerShadowShape
                             )
                             .clip(sheetInteractionState.playerShadowShape)
@@ -789,7 +880,12 @@ fun UnifiedPlayerSheetV2(
                                 onQueueDragStart = sheetActionHandlers.beginQueueDrag,
                                 onQueueDrag = sheetActionHandlers.dragQueueBy,
                                 onQueueRelease = sheetActionHandlers.endQueueDrag,
-                                onSongInfoClick = { song -> sheetActionHandlers.onSelectedSongForInfoChange(song) }
+                                onSongInfoClick = { song -> sheetActionHandlers.onSelectedSongForInfoChange(song) },
+                                // Glass & blur (blur-engine test build): the
+                                // floating bar's glass settings.
+                                glass = appearance.glass,
+                                // Round 15, wave 2: font scale + seek-bar style.
+                                appearance = appearance
                             )
                         }
                     }
@@ -811,7 +907,11 @@ fun UnifiedPlayerSheetV2(
                     onShowQueueClicked = sheetActionHandlers.openQueueSheet,
                     onQueueDragStart = sheetActionHandlers.beginQueueDrag,
                     onQueueDrag = sheetActionHandlers.dragQueueBy,
-                    onQueueRelease = sheetActionHandlers.endQueueDrag
+                    onQueueRelease = sheetActionHandlers.endQueueDrag,
+                    // Glass & blur (blur-engine test build).
+                    glass = appearance.glass,
+                    // Round 15, wave 2: font scale + seek-bar style.
+                    appearance = appearance
                 )
             }
 
@@ -860,4 +960,19 @@ fun UnifiedPlayerSheetV2(
         pendingOverlay = pendingSaveQueueOverlay,
         onDismissOverlay = { sheetModalOverlayController.dismissSaveQueueOverlay() }
     )
+}
+
+/**
+ * Round 16, item 6: rescale one sheet radius by the user's floating-bar
+ * corners. [base] is the sheet provider's output — its collapsed target
+ * lerped towards 0 dp as the player expands — and [sheetTarget] is that
+ * collapsed target. Scaling by (userTarget / sheetTarget) keeps the
+ * lerp exact: collapsed the bar shows the user's corners, expanded it
+ * is square. A zero target or a zero base stays zero, so the corners
+ * never escape the sheet's layout math (and the transient swipe-dismiss
+ * morph, which lerps between two targets, is scaled the same way).
+ */
+private fun scaleSheetRadius(base: Dp, sheetTarget: Dp, userTarget: Dp): Dp {
+    if (base <= 0.dp || sheetTarget <= 0.dp) return 0.dp
+    return (base.value / sheetTarget.value * userTarget.value).dp.coerceAtLeast(0.dp)
 }

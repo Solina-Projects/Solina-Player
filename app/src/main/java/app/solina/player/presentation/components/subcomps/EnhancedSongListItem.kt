@@ -63,9 +63,12 @@ import app.solina.player.data.model.Song
 import app.solina.player.presentation.components.AutoScrollingText
 import app.solina.player.presentation.components.ShimmerBox
 import androidx.compose.ui.res.stringResource
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.solina.player.R
 import app.solina.player.presentation.components.SmartImage
 import app.solina.player.presentation.components.SwipeToQueueBox
+import app.solina.player.presentation.viewmodel.AppearanceViewModel
 
 @Immutable
 private data class EnhancedSongAnimationTarget(
@@ -139,8 +142,16 @@ fun EnhancedSongListItem(
     onLongPress: () -> Unit = {},
     onSwipeToQueue: (() -> Unit)? = null,
     onMoreOptionsClick: (Song) -> Unit,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    // Round 15, wave 2, C2 + C4: list font size + row corner radius
+    // come from the appearance settings, so every library / search /
+    // queue caller gets them without touching its call site. The
+    // highlight morph still animates from the resting radius to the
+    // 50 dp pill — only the resting radius is tunable.
+    appearanceViewModel: AppearanceViewModel = hiltViewModel()
 ) {
+    val listRowSlice by appearanceViewModel.listRowSlice.collectAsStateWithLifecycle()
+    val listFontScale = listRowSlice.listFontScale
     val albumArtTargetSizePx = with(LocalDensity.current) { albumArtSize.roundToPx() }
     val isHighlighted = isCurrentSong && !isLoading
     val transition = updateTransition(
@@ -175,7 +186,9 @@ fun EnhancedSongListItem(
         if (state.isSelected) 1f else 0f
     }
 
-    val animatedCornerRadius = lerpDp(24.dp, 50.dp, highlightProgress)
+    val animatedCornerRadius = lerpDp(
+        listRowSlice.cornerRadiusDp.dp, 50.dp, highlightProgress
+    )
     val animatedAlbumCornerRadius = lerpDp(10.dp, 50.dp, highlightProgress)
     val selectionScale = lerpFloat(1f, 0.98f, selectionScaleProgress)
     val selectionBorderWidth = lerpDp(0.dp, 2.5.dp, selectionVisualProgress)
@@ -391,14 +404,19 @@ fun EnhancedSongListItem(
                     if (isHighlighted && !isSelectionMode) {
                         AutoScrollingText(
                             text = song.title,
-                            style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold),
+                            style = MaterialTheme.typography.bodyLarge.copy(
+                                fontWeight = FontWeight.SemiBold,
+                                fontSize = MaterialTheme.typography.bodyLarge.fontSize * listFontScale
+                            ),
                             gradientEdgeColor = containerColor,
                         )
 
                     } else {
                         Text(
                             text = song.title,
-                            style = MaterialTheme.typography.bodyLarge,
+                            style = MaterialTheme.typography.bodyLarge.copy(
+                                fontSize = MaterialTheme.typography.bodyLarge.fontSize * listFontScale
+                            ),
                             fontWeight = FontWeight.SemiBold,
                             maxLines = 1,
                             color = contentColor,
@@ -408,7 +426,9 @@ fun EnhancedSongListItem(
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         text = song.displayArtist,
-                        style = MaterialTheme.typography.bodyMedium,
+                        style = MaterialTheme.typography.bodyMedium.copy(
+                            fontSize = MaterialTheme.typography.bodyMedium.fontSize * listFontScale
+                        ),
                         color = contentColor.copy(alpha = 0.7f),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis

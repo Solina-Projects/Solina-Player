@@ -9,6 +9,7 @@ import kotlinx.coroutines.withContext
 import androidx.compose.animation.core.Animatable
 import androidx.core.content.ContextCompat
 import app.solina.player.data.model.LibraryTabId
+import app.solina.player.data.cloud.CloudFeatures
 import androidx.core.net.toUri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -1946,6 +1947,10 @@ class PlayerViewModel @Inject constructor(
     }
 
     fun setHideLocalMedia(hide: Boolean) {
+        // Cloud disabled (2026-11-16, user: fully offline for now):
+        // "hide local media" forces the ONLINE (cloud-only) filter, so
+        // it is a no-op while cloud is off.
+        if (!CloudFeatures.ENABLED) return
         viewModelScope.launch {
             userPreferencesRepository.setHideLocalMedia(hide)
         }
@@ -1954,7 +1959,13 @@ class PlayerViewModel @Inject constructor(
     fun toggleStorageFilter() {
         val current = _playerUiState.value.currentStorageFilter
         val next = when (current) {
-            app.solina.player.data.model.StorageFilter.ALL -> app.solina.player.data.model.StorageFilter.ONLINE
+            // Cloud disabled (2026-11-16): the ONLINE (cloud-only)
+            // mode is never selected; the filter toggles ALL <-> OFFLINE.
+            app.solina.player.data.model.StorageFilter.ALL -> if (CloudFeatures.ENABLED) {
+                app.solina.player.data.model.StorageFilter.ONLINE
+            } else {
+                app.solina.player.data.model.StorageFilter.OFFLINE
+            }
             app.solina.player.data.model.StorageFilter.ONLINE -> app.solina.player.data.model.StorageFilter.OFFLINE
             app.solina.player.data.model.StorageFilter.OFFLINE -> app.solina.player.data.model.StorageFilter.ALL
         }
@@ -2203,6 +2214,23 @@ class PlayerViewModel @Inject constructor(
         if (resetPredictiveState) {
             resetPredictiveBackState()
         }
+    }
+
+    // Round 21: the Home music bar must open the full player, but expanding
+    // BEFORE navigating to the Music section is lost — the expand fires
+    // while the sheet is hidden on Home, and the sheet's syncToExpansion
+    // (MutatorMutex) then cancels it on the route change, leaving the
+    // sheet collapsed on Library. So Home requests the expand first and
+    // MainActivity consumes it once the Library route is active.
+    private val _pendingExpandPlayerSheet = MutableStateFlow(false)
+    val pendingExpandPlayerSheet: StateFlow<Boolean> = _pendingExpandPlayerSheet.asStateFlow()
+
+    fun requestExpandPlayerSheetAfterNavigation() {
+        _pendingExpandPlayerSheet.value = true
+    }
+
+    fun clearPendingExpandPlayerSheet() {
+        _pendingExpandPlayerSheet.value = false
     }
 
     fun collapsePlayerSheet(resetPredictiveState: Boolean = true) {

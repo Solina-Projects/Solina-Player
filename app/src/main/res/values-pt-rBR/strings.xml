@@ -288,5 +288,7 @@
     <string name="musicbrainz_match_score">Confiabilidade da correspondência: %1$d%%</string>
     <string name="musicbrainz_applied">Identificadores do MusicBrainz salvos. O ano que faltava e os nomes genéricos foram preenchidos.</string>
 
+    <string name="tab_home">Início</string>
+    <string name="tab_library">Biblioteca</string>
 </resources>
 

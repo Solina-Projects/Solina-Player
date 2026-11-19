@@ -13,6 +13,7 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -84,6 +85,7 @@ import app.solina.player.presentation.components.SmartImage
 import app.solina.player.presentation.components.SmartImageListTargetSize
 import app.solina.player.presentation.components.SongInfoBottomSheet
 import app.solina.player.presentation.viewmodel.PlayerViewModel
+import app.solina.player.presentation.viewmodel.VideoViewModel
 import app.solina.player.presentation.viewmodel.sharedPlayerViewModel
 import app.solina.player.ui.theme.LocalSolinaPlayerDarkTheme
 import androidx.compose.material.icons.rounded.DeleteForever
@@ -123,6 +125,9 @@ import app.solina.player.presentation.screens.search.components.GenreCategoriesG
 import app.solina.player.presentation.selection.dragToSelect
 import app.solina.player.presentation.selection.rememberDragToSelectState
 import app.solina.player.presentation.viewmodel.PlaylistViewModel
+import app.solina.player.data.model.VideoItem
+import app.solina.player.presentation.components.VideoThumbnail
+import app.solina.player.utils.formatDuration
 import app.solina.player.utils.formatSongCount
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
@@ -305,6 +310,27 @@ fun SearchScreen(
         playerViewModel.performSearch(searchQuery)
     }
     val searchResults = searchUiState.searchResults
+    // Video search (Home feedback, 2026-11-16): videos are searched separately
+    // from music — the video list comes from VideoRepository (MediaStore.Video)
+    // and is filtered here by title / mime type. Never mixed into the music
+    // results; shown as their own "Videos" section below.
+    val videoViewModel: VideoViewModel = hiltViewModel()
+    val allVideos by videoViewModel.videos.collectAsStateWithLifecycle()
+    val videoResults = remember(searchQuery, allVideos) {
+        val query = searchQuery.trim()
+        if (query.isBlank()) {
+            persistentListOf<VideoItem>()
+        } else {
+            allVideos.filter { video ->
+                video.displayTitle.contains(query, ignoreCase = true) ||
+                    (video.mimeType?.contains(query, ignoreCase = true) == true)
+            }.take(50).toImmutableList()
+        }
+    }
+    val showVideoResults = currentFilter == SearchFilterType.ALL ||
+        currentFilter == SearchFilterType.VIDEOS
+    val visibleVideoResults = if (showVideoResults) videoResults else persistentListOf<VideoItem>()
+    val hasAnyResults = searchResults.isNotEmpty() || visibleVideoResults.isNotEmpty()
     val handleSongMoreOptionsClick: (Song) -> Unit = { song ->
         playerViewModel.selectSongForInfo(song)
         showSongInfoBottomSheet = true
@@ -551,6 +577,7 @@ fun SearchScreen(
                                 ) {
                                     SearchFilterChip(SearchFilterType.ALL, currentFilter, playerViewModel)
                                     SearchFilterChip(SearchFilterType.SONGS, currentFilter, playerViewModel)
+                                    SearchFilterChip(SearchFilterType.VIDEOS, currentFilter, playerViewModel)
                                     SearchFilterChip(SearchFilterType.ALBUMS, currentFilter, playerViewModel)
                                     SearchFilterChip(SearchFilterType.ARTISTS, currentFilter, playerViewModel)
                                     SearchFilterChip(SearchFilterType.PLAYLISTS, currentFilter, playerViewModel)
@@ -601,7 +628,7 @@ fun SearchScreen(
                         }
                         Box(modifier = Modifier.fillMaxSize()) {
                             Crossfade(
-                                targetState = searchResults.isEmpty(),
+                                targetState = !hasAnyResults,
                                 animationSpec = tween(durationMillis = 190),
                                 label = "search_results_fade"
                             ) { isEmpty ->
@@ -613,6 +640,15 @@ fun SearchScreen(
                                 } else {
                                     SearchResultsList(
                                         results = searchResults,
+                                        videoResults = visibleVideoResults,
+                                        onVideoClick = { video ->
+                                            navController.navigateSafely(
+                                                Screen.VideoPlayer.createRoute(video.contentUriString)
+                                            )
+                                            if (searchQuery.isNotBlank()) {
+                                                playerViewModel.onSearchQuerySubmitted(searchQuery)
+                                            }
+                                        },
                                         searchQuery = searchQuery,
                                         selectedFilter = currentFilter,
                                         playerViewModel = playerViewModel,
@@ -1132,6 +1168,8 @@ fun EmptySearchResults(searchQuery: String, colorScheme: ColorScheme) {
 @Composable
 fun SearchResultsList(
     results: ImmutableList<SearchResultItem>,
+    videoResults: ImmutableList<VideoItem> = persistentListOf(),
+    onVideoClick: (VideoItem) -> Unit = {},
     searchQuery: String,
     selectedFilter: SearchFilterType,
     playerViewModel: PlayerViewModel,
@@ -1161,7 +1199,7 @@ fun SearchResultsList(
     val localDensity = LocalDensity.current
     val playerStableState by playerViewModel.stablePlayerState.collectAsStateWithLifecycle()
 
-    if (results.isEmpty()) {
+    if (results.isEmpty() && videoResults.isEmpty()) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -1435,6 +1473,78 @@ fun SearchResultsList(
                 }
             }
         }
+        // Videos are their own section, after the music sections: video rows
+        // are not songs, so they stay out of the song drag-select index map
+        // built above (which only covers the music sections).
+        if (videoResults.isNotEmpty()) {
+            item(key = "header_videos") {
+                SearchResultSectionHeader(title = stringResource(searchFilterLabelRes(SearchFilterType.VIDEOS)))
+            }
+            items(
+                count = videoResults.size,
+                key = { index -> "video_${videoResults[index].id}" },
+                contentType = { "search_video" }
+            ) { index ->
+                val video = videoResults[index]
+                Box(modifier = Modifier.padding(bottom = 12.dp)) {
+                    SearchResultVideoItem(
+                        video = video,
+                        onClick = { onVideoClick(video) }
+                    )
+                }
+            }
+        }
+    }
+}
+
+/** One video in the search results: thumbnail, title, duration and type. */
+@Composable
+private fun SearchResultVideoItem(
+    video: VideoItem,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 4.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        VideoThumbnail(
+            video = video,
+            modifier = Modifier
+                .size(width = 72.dp, height = 54.dp)
+                .clip(RoundedCornerShape(12.dp))
+        )
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(2.dp)
+        ) {
+            Text(
+                text = video.displayTitle,
+                style = MaterialTheme.typography.bodyLarge,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Text(
+                text = listOfNotNull(
+                    formatDuration(video.durationMs).takeIf { video.durationMs > 0 },
+                    video.mimeType
+                ).joinToString(" • "),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+        Icon(
+            imageVector = Icons.Rounded.PlayArrow,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary
+        )
     }
 }
 
@@ -1851,6 +1961,7 @@ internal fun SearchResultsHeader(
 private fun searchFilterLabelRes(filterType: SearchFilterType): Int = when (filterType) {
     SearchFilterType.ALL -> R.string.search_filter_all
     SearchFilterType.SONGS -> R.string.library_tab_songs
+    SearchFilterType.VIDEOS -> R.string.search_filter_videos
     SearchFilterType.ALBUMS -> R.string.library_tab_albums
     SearchFilterType.ARTISTS -> R.string.library_tab_artists
     SearchFilterType.PLAYLISTS -> R.string.library_tab_playlists

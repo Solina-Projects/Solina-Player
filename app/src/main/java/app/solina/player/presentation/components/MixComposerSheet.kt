@@ -31,6 +31,7 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.ArrowForwardIos
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.ArrowForward
 import androidx.compose.material.icons.automirrored.rounded.DirectionsRun
@@ -481,7 +482,7 @@ private fun MixRefineRow(selectedCount: Int?, selectedEnergy: Int?, enabled: Boo
                 RefineValue(Icons.Rounded.Bolt, energy)
             }
         }
-        Icon(Icons.Rounded.ChevronRight, null, Modifier.padding(end = 8.dp).size(22.dp), tint = colors.onSurface)
+        Icon(Icons.AutoMirrored.Rounded.ArrowForwardIos, null, Modifier.padding(end = 8.dp).size(22.dp), tint = colors.onSurface)
     }
 }
 

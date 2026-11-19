@@ -112,6 +112,9 @@ import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.MoreExecutors
+import app.solina.player.data.preferences.AppearanceFontFamilies
+import app.solina.player.data.preferences.AppearancePreferences
+import app.solina.player.data.preferences.AppearanceSettings
 import app.solina.player.data.preferences.AppThemeMode
 import app.solina.player.data.preferences.NavBarStyle
 import app.solina.player.data.preferences.sanitizeNavBarCornerRadius
@@ -119,10 +122,19 @@ import app.solina.player.data.preferences.SidebarShortcutKeys
 import app.solina.player.data.preferences.ThemePreferencesRepository
 import app.solina.player.data.preferences.ThemePreset
 import app.solina.player.data.preferences.UserPreferencesRepository
+import android.content.BroadcastReceiver
+import android.content.IntentFilter
+import androidx.core.content.ContextCompat
 import app.solina.player.data.service.MusicService
+import app.solina.player.data.service.VideoPlaybackService
+import app.solina.player.presentation.utils.LocalIsInPictureInPicture
+import app.solina.player.presentation.utils.VideoPipContract
+import app.solina.player.presentation.viewmodel.VideoPlaybackHolder
 import app.solina.player.data.worker.SyncManager
 import app.solina.player.data.worker.SyncProgress
 import app.solina.player.presentation.components.AllFilesAccessDialog
+import app.solina.player.presentation.components.appearancePaletteColors
+import app.solina.player.presentation.components.withPalette
 import app.solina.player.presentation.components.AppSidebarDrawer
 import app.solina.player.presentation.components.CrashReportDialog
 import app.solina.player.presentation.components.DismissUndoBar
@@ -133,6 +145,7 @@ import app.solina.player.presentation.components.PlayerInternalNavigationBar
 import app.solina.player.presentation.components.PlayerNavigationRail
 import app.solina.player.presentation.components.SmartMixHost
 import app.solina.player.presentation.components.UnifiedPlayerSheetV2
+import app.solina.player.presentation.components.VideoMiniPlayerBar
 import app.solina.player.presentation.components.calculatePlayerSheetCollapsedTargetY
 import app.solina.player.presentation.components.resolveNavBarOccupiedHeight
 import app.solina.player.presentation.components.resolveNavBarSurfaceHeight
@@ -144,6 +157,7 @@ import app.solina.player.presentation.viewmodel.MainViewModel
 import app.solina.player.presentation.viewmodel.PlayerViewModel
 import app.solina.player.presentation.splash.SolinaPlayerSplash
 import app.solina.player.ui.theme.SolinaPlayerTheme
+import app.solina.player.ui.theme.appearanceFontFamily
 import app.solina.player.ui.theme.resolveAppWideNowPlayingColorSchemePair
 import app.solina.player.ui.theme.LocalShowScrollbar
 import app.solina.player.utils.AppLocaleManager
@@ -155,6 +169,9 @@ import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import timber.log.Timber
 import javax.inject.Inject
@@ -186,9 +203,26 @@ internal val MainNavItems: ImmutableList<BottomNavItem> = persistentListOf(
     BottomNavItem(R.string.tab_library, R.drawable.rounded_library_music_24, R.drawable.round_library_music_24, Screen.Library)
 )
 
+/**
+ * Bottom bar for the video section (feedback, 2026-11-16): Home, video
+ * Search and Folders. The music Library tab is replaced by Folders here —
+ * video folders live in their own screen, not the music library.
+ */
+internal val VideoNavItems: ImmutableList<BottomNavItem> = persistentListOf(
+    BottomNavItem(R.string.tab_home, R.drawable.rounded_home_24, R.drawable.home_24_rounded_filled, Screen.Home),
+    BottomNavItem(R.string.search, R.drawable.rounded_search_24, R.drawable.rounded_search_24, Screen.VideoSearch),
+    BottomNavItem(R.string.library_tab_folders, R.drawable.rounded_folder_24, R.drawable.rounded_folder_open_24, Screen.VideoFolders)
+)
+
 private data class DismissUndoBarSlice(
     val isVisible: Boolean = false,
     val durationMillis: Long = 4000L
+)
+
+private data class NowPlayingRootThemeSlice(
+    val songId: String? = null,
+    val albumArtUriString: String? = null,
+    val isPlaying: Boolean = false
 )
 
 private const val SYSTEM_SPLASH_HANDOFF_MS = 150L
@@ -205,11 +239,33 @@ class MainActivity : ComponentActivity() {
     lateinit var userPreferencesRepository: UserPreferencesRepository
     @Inject
     lateinit var themePreferencesRepository: ThemePreferencesRepository
+    // Appearance customisation (bug-fix round 2026-11-17, item 6).
+    @Inject
+    lateinit var appearancePreferences: AppearancePreferences
     @Inject
     lateinit var syncManager: SyncManager
+    @Inject
+    lateinit var videoPlaybackHolder: VideoPlaybackHolder
     private val _pendingPlaylistNavigation = kotlinx.coroutines.flow.MutableStateFlow<String?>(null)
     private val _pendingShuffleAll = kotlinx.coroutines.flow.MutableStateFlow(false)
     private val _pendingUpdatesNavigation = kotlinx.coroutines.flow.MutableStateFlow(false)
+    private val _pendingVideoNavigation = kotlinx.coroutines.flow.MutableStateFlow<String?>(null)
+    private val _isInPictureInPicture = kotlinx.coroutines.flow.MutableStateFlow(false)
+
+    // Round 21: mirrors the current nav route for onUserLeaveHint(), which
+    // runs outside composition and cannot read MainUI's currentRoute.
+    private var isVideoPlayerRouteActive: Boolean = false
+
+    private val videoPipReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (intent?.action != VideoPipContract.ACTION_PIP_CONTROL) return
+            when (intent.getIntExtra(VideoPipContract.EXTRA_CONTROL_TYPE, 0)) {
+                VideoPipContract.CONTROL_PREV -> videoPlaybackHolder.seekToPrevious()
+                VideoPipContract.CONTROL_PLAY_PAUSE -> videoPlaybackHolder.togglePlayPause()
+                VideoPipContract.CONTROL_NEXT -> videoPlaybackHolder.seekToNext()
+            }
+        }
+    }
 
     /** Flips when the system splash view is removed; SolinaPlayerSplash starts animating then. */
     private val systemSplashGone = mutableStateOf(false)
@@ -225,6 +281,12 @@ class MainActivity : ComponentActivity() {
     @OptIn(ExperimentalPermissionsApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         LogUtils.d(this, "onCreate")
+        ContextCompat.registerReceiver(
+            this,
+            videoPipReceiver,
+            IntentFilter(VideoPipContract.ACTION_PIP_CONTROL),
+            ContextCompat.RECEIVER_NOT_EXPORTED
+        )
         val splashScreen = installSplashScreen()
         enableEdgeToEdge(
             statusBarStyle = SystemBarStyle.auto(
@@ -305,6 +367,13 @@ class MainActivity : ComponentActivity() {
             val systemDarkTheme = isSystemInDarkTheme()
             val appThemeMode by themePreferencesRepository.appThemeModeFlow.collectAsStateWithLifecycle(initialValue = AppThemeMode.FOLLOW_SYSTEM)
             val themePreset by themePreferencesRepository.themePresetFlow.collectAsStateWithLifecycle(initialValue = ThemePreset.DEFAULT)
+            // Appearance customisation (bug-fix round 2026-11-17, item 6):
+            // Only observe fontFamily at the root so bar/glass/card changes do not recompose the full app.
+            val appearanceFontFamilyKey by remember(appearancePreferences) {
+                appearancePreferences.appearanceFlow
+                    .map { it.fontFamily }
+                    .distinctUntilChanged()
+            }.collectAsStateWithLifecycle(initialValue = AppearanceFontFamilies.ROUNDED)
             val useDarkTheme = when (appThemeMode) {
                 AppThemeMode.DARK -> true
                 AppThemeMode.LIGHT -> false
@@ -313,18 +382,38 @@ class MainActivity : ComponentActivity() {
             val globalNowPlayingThemeEnabled by themePreferencesRepository
                 .globalNowPlayingThemeEnabledFlow
                 .collectAsStateWithLifecycle(initialValue = false)
-            val activePlayerColorSchemePair by playerViewModel
-                .activePlayerColorSchemePair
-                .collectAsStateWithLifecycle()
-            val themedAlbumArtUri by playerViewModel
-                .currentThemedAlbumArtUri
-                .collectAsStateWithLifecycle()
-            val stablePlayerState by playerViewModel
-                .stablePlayerState
-                .collectAsStateWithLifecycle()
-            val currentSongId = stablePlayerState.currentSong?.id
+            val activePlayerColorSchemePair by remember(globalNowPlayingThemeEnabled, playerViewModel) {
+                if (globalNowPlayingThemeEnabled) {
+                    playerViewModel.activePlayerColorSchemePair
+                } else {
+                    flowOf(null)
+                }
+            }.collectAsStateWithLifecycle(initialValue = null)
+            val themedAlbumArtUri by remember(globalNowPlayingThemeEnabled, playerViewModel) {
+                if (globalNowPlayingThemeEnabled) {
+                    playerViewModel.currentThemedAlbumArtUri
+                } else {
+                    flowOf(null)
+                }
+            }.collectAsStateWithLifecycle(initialValue = null)
+            val nowPlayingThemeSlice by remember(globalNowPlayingThemeEnabled, playerViewModel) {
+                if (globalNowPlayingThemeEnabled) {
+                    playerViewModel.stablePlayerState
+                        .map { state ->
+                            NowPlayingRootThemeSlice(
+                                songId = state.currentSong?.id,
+                                albumArtUriString = state.currentSong?.albumArtUriString,
+                                isPlaying = state.isPlaying
+                            )
+                        }
+                        .distinctUntilChanged()
+                } else {
+                    flowOf(NowPlayingRootThemeSlice())
+                }
+            }.collectAsStateWithLifecycle(initialValue = NowPlayingRootThemeSlice())
+            val currentSongId = nowPlayingThemeSlice.songId
             val currentSongScheme = activePlayerColorSchemePair.takeIf {
-                val artworkUri = stablePlayerState.currentSong?.albumArtUriString
+                val artworkUri = nowPlayingThemeSlice.albumArtUriString
                 !artworkUri.isNullOrBlank() && artworkUri == themedAlbumArtUri
             }
             var lastValidNowPlayingSongId by remember { mutableStateOf<String?>(null) }
@@ -346,7 +435,7 @@ class MainActivity : ComponentActivity() {
             val appWideNowPlayingScheme = resolveAppWideNowPlayingColorSchemePair(
                 enabled = globalNowPlayingThemeEnabled,
                 currentSongId = currentSongId,
-                isPlaying = stablePlayerState.isPlaying,
+                isPlaying = nowPlayingThemeSlice.isPlaying,
                 currentSongScheme = currentSongScheme,
                 lastValidSongId = lastValidNowPlayingSongId,
                 lastValidScheme = lastValidNowPlayingScheme
@@ -356,8 +445,10 @@ class MainActivity : ComponentActivity() {
             var showCrashReportDialog by remember { mutableStateOf(false) }
             var crashLogData by remember { mutableStateOf<CrashLogData?>(null) }
             
+            // Only audio read access gates entry into the main app; video and notification
+            // permissions are optional and requested in Setup/Video without locking out users.
             val permissions = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                listOf(Manifest.permission.READ_MEDIA_AUDIO, Manifest.permission.POST_NOTIFICATIONS)
+                listOf(Manifest.permission.READ_MEDIA_AUDIO)
             } else {
                 listOf(Manifest.permission.READ_EXTERNAL_STORAGE)
             }
@@ -389,19 +480,15 @@ class MainActivity : ComponentActivity() {
             SolinaPlayerTheme(
                 darkTheme = useDarkTheme,
                 colorSchemePairOverride = appWideNowPlayingScheme,
-                themePreset = themePreset
+                themePreset = themePreset,
+                fontFamily = appearanceFontFamily(appearanceFontFamilyKey)
             ) {
-                var contentVisible by remember { mutableStateOf(false) }
+                var contentVisible by remember { mutableStateOf(true) }
                 val contentAlpha by animateFloatAsState(
                     targetValue = if (contentVisible) 1f else 0f,
-                    animationSpec = tween(600, easing = LinearOutSlowInEasing),
+                    animationSpec = tween(250, easing = LinearOutSlowInEasing),
                     label = "AppContentAlpha"
                 )
-
-                LaunchedEffect(Unit) {
-                    delay(100)
-                    contentVisible = true
-                }
 
                 var showAnimatedSplash by remember { mutableStateOf(playAnimatedSplash) }
 
@@ -485,6 +572,14 @@ class MainActivity : ComponentActivity() {
                 intent.action = null
             }
 
+            intent.getBooleanExtra(VideoPlaybackService.EXTRA_OPEN_VIDEO_PLAYER, false) -> {
+                intent.removeExtra(VideoPlaybackService.EXTRA_OPEN_VIDEO_PLAYER)
+                val currentUri = videoPlaybackHolder.currentVideo.value?.contentUriString
+                if (!currentUri.isNullOrBlank()) {
+                    _pendingVideoNavigation.value = Screen.VideoPlayer.createRoute(currentUri)
+                }
+            }
+
             intent.getBooleanExtra("ACTION_SHOW_PLAYER", false) -> {
                 playerViewModel.showPlayer()
             }
@@ -492,7 +587,19 @@ class MainActivity : ComponentActivity() {
             intent.action == android.content.Intent.ACTION_VIEW && intent.data != null -> {
                 intent.data?.let { uri ->
                     persistUriPermissionIfNeeded(intent, uri)
-                    playerViewModel.playExternalUri(uri)
+                    if (isVideoIntent(intent, uri)) {
+                        _pendingVideoNavigation.value = Screen.VideoPlayer.createRoute(uri.toString())
+                    } else {
+                        playerViewModel.playExternalUri(uri)
+                    }
+                }
+                clearExternalIntentPayload(intent)
+            }
+
+            intent.action == android.content.Intent.ACTION_SEND && intent.type?.startsWith("video/") == true -> {
+                resolveStreamUri(intent)?.let { uri ->
+                    persistUriPermissionIfNeeded(intent, uri)
+                    _pendingVideoNavigation.value = Screen.VideoPlayer.createRoute(uri.toString())
                 }
                 clearExternalIntentPayload(intent)
             }
@@ -555,6 +662,22 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    private fun isVideoIntent(intent: Intent, uri: android.net.Uri): Boolean {
+        val explicitMime = intent.type
+        if (explicitMime != null) {
+            if (explicitMime.startsWith("video/")) return true
+            if (explicitMime.startsWith("audio/")) return false
+        }
+        val resolvedMime = runCatching { contentResolver.getType(uri) }.getOrNull()
+        if (resolvedMime != null) {
+            if (resolvedMime.startsWith("video/")) return true
+            if (resolvedMime.startsWith("audio/")) return false
+        }
+        val path = uri.toString().substringBefore('?').substringBefore('#').lowercase()
+        val videoExts = listOf(".mp4", ".mkv", ".webm", ".avi", ".mov", ".m4v", ".3gp", ".ts", ".flv", ".wmv")
+        return videoExts.any { path.endsWith(it) }
     }
 
     private fun clearExternalIntentPayload(intent: Intent) {
@@ -638,6 +761,19 @@ class MainActivity : ComponentActivity() {
             }
         }
 
+        val pendingVideoNav by _pendingVideoNavigation.collectAsStateWithLifecycle()
+        LaunchedEffect(pendingVideoNav) {
+            val route = pendingVideoNav ?: return@LaunchedEffect
+            repeat(50) {
+                if (navController.navigateSafely(route)) {
+                    _pendingVideoNavigation.value = null
+                    return@LaunchedEffect
+                }
+                delay(100)
+            }
+            _pendingVideoNavigation.value = null
+        }
+
         val pendingUpdatesNav by _pendingUpdatesNavigation.collectAsStateWithLifecycle()
         LaunchedEffect(pendingUpdatesNav) {
             if (!pendingUpdatesNav) return@LaunchedEffect
@@ -695,6 +831,11 @@ class MainActivity : ComponentActivity() {
     ) = traceSection("MainActivity.MainUI") {
         val navBackStackEntry by navController.currentBackStackEntryAsState()
         val currentRoute = navBackStackEntry?.destination?.route
+        // Appearance customisation (bug-fix round 2026-11-17, item 6):
+        // the floating music bar's colour is read here (MainUI is a
+        // separate composable, so it cannot see setContent's locals).
+        val appearanceSettings by appearancePreferences.appearanceFlow
+            .collectAsStateWithLifecycle(initialValue = AppearanceSettings())
         var isSearchBarActive by remember { mutableStateOf(false) }
         val windowSizeClass = currentWindowAdaptiveInfo().windowSizeClass
         val useNavigationRail =
@@ -702,6 +843,23 @@ class MainActivity : ComponentActivity() {
 
         val routesWithHiddenNavigationBar = remember {
             setOf(
+                // Home feedback (2026-11-16): the floating bottom bar must not
+                // show on Home — only once inside the Music (Library) or Video
+                // (VideoLibrary / VideoPlayer) sections. Customise Home is
+                // reached from Home, so it hides it too.
+                // Search feedback (2026-11-16): Screen.Search is NOT hidden
+                // any more — the floating bar stays active on the Music
+                // Search screen (Home / Search / Library, Search selected).
+                // The video Search screen shows the video bar instead.
+                // Folders + Player feedback (2026-11-16): the floating bar
+                // must be HIDDEN while a video is playing, so it never
+                // covers the player controls.
+                Screen.VideoPlayer.route,
+                Screen.Home.route,
+                Screen.HomeCustomization.route,
+                Screen.MusicCustomization.route,
+                Screen.VideoCustomization.route,
+                Screen.AppearanceCustomization.route,
                 Screen.Settings.route,
                 Screen.Accounts.route,
                 Screen.PlaylistDetail.route,
@@ -753,6 +911,22 @@ class MainActivity : ComponentActivity() {
         }
 
         val navBarStyle by playerViewModel.navBarStyle.collectAsStateWithLifecycle()
+
+        // Bottom-bar feedback (2026-11-16): the video section (library,
+        // player, video search, folders) shows Home / Search / Folders;
+        // everywhere else the music bar (Home / Search / Library) is used.
+        // Route patterns carry "{...}" placeholders, so prefix-match them.
+        val isVideoSection by remember(currentRoute) {
+            derivedStateOf {
+                val route = currentRoute.orEmpty()
+                route == Screen.VideoLibrary.route ||
+                    route == Screen.VideoSearch.route ||
+                    route == Screen.VideoFolders.route ||
+                    route.startsWith("video_player") ||
+                    route.startsWith("video_folder")
+            }
+        }
+        val bottomNavItems = if (isVideoSection) VideoNavItems else MainNavItems
         val navBarCompactMode by playerViewModel.navBarCompactMode.collectAsStateWithLifecycle()
         val navBarCornerRadiusRaw by playerViewModel.navBarCornerRadius.collectAsStateWithLifecycle()
         val navBarCornerRadius = sanitizeNavBarCornerRadius(navBarCornerRadiusRaw)
@@ -836,11 +1010,48 @@ class MainActivity : ComponentActivity() {
         }
 
         val showScrollbar by userPreferencesRepository.showScrollbarFlow.collectAsStateWithLifecycle(initialValue = true)
+        val isInPictureInPicture by _isInPictureInPicture.collectAsStateWithLifecycle()
+        val isVideoPlaying by videoPlaybackHolder.isPlaying.collectAsStateWithLifecycle()
+        val currentVideoItem by videoPlaybackHolder.currentVideo.collectAsStateWithLifecycle()
+        val inVideoPlayerRoute = currentRoute?.startsWith("video_player") == true
+
+        // Round 21: keep the activity field in sync for onUserLeaveHint().
+        LaunchedEffect(inVideoPlayerRoute) { isVideoPlayerRouteActive = inVideoPlayerRoute }
+
+        // Round 21: consume a pending full-player expand requested from Home
+        // (Home music bar): the Library route must be active first, and the
+        // sheet's route-change sync must have settled, so wait briefly
+        // before expanding — otherwise the expand is cancelled/snapped
+        // back by the sheet's syncToExpansion on the route change.
+        val pendingExpandPlayerSheet by playerViewModel.pendingExpandPlayerSheet.collectAsStateWithLifecycle()
+        LaunchedEffect(currentRoute, pendingExpandPlayerSheet) {
+            if (pendingExpandPlayerSheet && currentRoute == Screen.Library.route) {
+                playerViewModel.clearPendingExpandPlayerSheet()
+                delay(200)
+                playerViewModel.expandPlayerSheet()
+            }
+        }
+
+        LaunchedEffect(inVideoPlayerRoute, isVideoPlaying, currentVideoItem) {
+            // Round 21: always (re)publish the PiP params — autoEnter must
+            // be cleared (false) when leaving the video player route or
+            // when playback stops, otherwise a stale autoEnter=true makes
+            // the system auto-enter PiP later from other sections.
+            val params = VideoPipContract.buildParams(
+                context = this@MainActivity,
+                isPlaying = isVideoPlaying,
+                videoWidth = currentVideoItem?.width ?: 16,
+                videoHeight = currentVideoItem?.height ?: 9,
+                autoEnter = inVideoPlayerRoute && isVideoPlaying
+            )
+            runCatching { setPictureInPictureParams(params) }
+        }
 
         CompositionLocalProvider(
             LocalAppHapticsConfig provides appHapticsConfig,
             LocalHapticFeedback provides scopedHapticFeedback,
-            LocalShowScrollbar provides showScrollbar
+            LocalShowScrollbar provides showScrollbar,
+            LocalIsInPictureInPicture provides isInPictureInPicture
         ) {
             val sidebarShortcuts by userPreferencesRepository.sidebarShortcutsFlow
                 .collectAsStateWithLifecycle(initialValue = SidebarShortcutKeys.DEFAULT)
@@ -904,7 +1115,7 @@ class MainActivity : ComponentActivity() {
                         }
                         PlayerNavigationRail(
                             navController = navController,
-                            navItems = MainNavItems,
+                            navItems = bottomNavItems,
                             currentRoute = currentRoute,
                             onSearchIconDoubleTap = onSearchIconDoubleTap
                         )
@@ -1015,7 +1226,7 @@ class MainActivity : ComponentActivity() {
                             ) {
                                 PlayerInternalNavigationBar(
                                     navController = navController,
-                                    navItems = MainNavItems,
+                                    navItems = bottomNavItems,
                                     currentRoute = currentRoute,
                                     navBarStyle = navBarStyle,
                                     compactMode = navBarCompactMode,
@@ -1043,11 +1254,31 @@ class MainActivity : ComponentActivity() {
                         }.collectAsStateWithLifecycle(initialValue = false)
                         // The recap story is full screen; its own Play button closes it so the
                         // player shows up again.
+                        // Home + mini-player feedback (2026-11-16): the floating music
+                        // mini player must NOT show on Home, and must NOT show on any
+                        // video screen (library / folders / search / folder detail /
+                        // player) — Home gets fixed in-flow playback bars instead,
+                        // and the Video section has its own video mini bar. It
+                        // stays visible in the Music section (Library / Search).
+                        // Video routes carry "{...}" placeholders, so prefix-match
+                        // them like routesWithHiddenNavigationBar does.
                         val routesWithHiddenMiniPlayer = remember {
-                            setOf(Screen.NavBarCrRad.route, Screen.Recap.route)
+                            setOf(
+                                Screen.NavBarCrRad.route,
+                                Screen.Recap.route,
+                                Screen.Home.route,
+                                Screen.VideoLibrary.route,
+                                Screen.VideoSearch.route,
+                                Screen.VideoFolders.route
+                            )
                         }
                         val shouldHideMiniPlayer by remember(currentRoute) {
-                            derivedStateOf { currentRoute in routesWithHiddenMiniPlayer }
+                            derivedStateOf {
+                                val route = currentRoute.orEmpty()
+                                route in routesWithHiddenMiniPlayer ||
+                                    route.startsWith("video_player") ||
+                                    route.startsWith("video_folder")
+                            }
                         }
 
                         val miniPlayerH = with(density) { MiniPlayerHeight.toPx() }
@@ -1126,6 +1357,18 @@ class MainActivity : ComponentActivity() {
                             miniPlayerPaddingEnd = horizontalPadding
                         }
 
+                        // Appearance customisation (bug-fix round
+                        // 2026-11-17, item 6): the floating music
+                        // bar's colour is the only part of it that
+                        // can change — its size and corners are fixed
+                        // by the player sheet's layout math.
+                        val miniPlayerSchemeOverride =
+                            appearancePaletteColors(
+                                appearanceSettings.floatingMusicBarPalette
+                            )?.let { palette ->
+                                MaterialTheme.colorScheme.withPalette(palette)
+                            }
+
                         UnifiedPlayerSheetV2(
                             playerViewModel = playerViewModel,
                             sheetCollapsedTargetY = sheetCollapsedTargetY,
@@ -1136,8 +1379,38 @@ class MainActivity : ComponentActivity() {
                             containerHeight = containerHeight,
                             containerWidth = containerWidth,
                             navController = navController,
-                            isNavBarHidden = isNavBarEffectivelyHidden
+                            isNavBarHidden = isNavBarEffectivelyHidden,
+                            miniPlayerSchemeOverride = miniPlayerSchemeOverride
                         )
+
+                        // Video mini-player bar (2026-11-16): in the Video
+                        // section (library / folders / search / folder
+                        // detail — never on the full player itself), a bar
+                        // above the floating nav bar shows the last-played
+                        // video, like the music now-playing bar. It stacks
+                        // above the music mini-player when that is visible.
+                        // The bar hides itself when no video was ever
+                        // played, so this only places it.
+                        if (isVideoSection &&
+                            currentRoute?.startsWith("video_player") != true
+                        ) {
+                            VideoMiniPlayerBar(
+                                navController = navController,
+                                modifier = Modifier
+                                    .align(Alignment.BottomCenter)
+                                    .padding(
+                                        bottom = miniPlayerBottomMargin + 8.dp +
+                                            if (showPlayerContentInitially &&
+                                                !shouldHideMiniPlayer
+                                            ) {
+                                                MiniPlayerHeight + 8.dp
+                                            } else {
+                                                0.dp
+                                            }
+                                    )
+                                    .padding(horizontal = horizontalPadding)
+                            )
+                        }
 
                         val dismissUndoBarSlice by remember {
                             playerViewModel.playerUiState
@@ -1268,6 +1541,42 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
+    }
+
+    override fun onPictureInPictureModeChanged(
+        isInPictureInPictureMode: Boolean,
+        newConfig: Configuration
+    ) {
+        super.onPictureInPictureModeChanged(isInPictureInPictureMode, newConfig)
+        _isInPictureInPicture.value = isInPictureInPictureMode
+    }
+
+    override fun onUserLeaveHint() {
+        super.onUserLeaveHint()
+        // Round 21: PiP on Home-press ONLY while a video is playing inside
+        // the video player screen — never from other sections. The route
+        // check matters as well as videoPlayerActive, because a stale
+        // autoEnter PiP param could otherwise re-enter PiP later.
+        if (PhoneOrientationPolicy.videoPlayerActive &&
+            isVideoPlayerRouteActive &&
+            videoPlaybackHolder.isPlaying.value &&
+            !isInPictureInPictureMode
+        ) {
+            val currentVideo = videoPlaybackHolder.currentVideo.value
+            val params = VideoPipContract.buildParams(
+                context = this,
+                isPlaying = true,
+                videoWidth = currentVideo?.width ?: 16,
+                videoHeight = currentVideo?.height ?: 9,
+                autoEnter = true
+            )
+            runCatching { enterPictureInPictureMode(params) }
+        }
+    }
+
+    override fun onDestroy() {
+        runCatching { unregisterReceiver(videoPipReceiver) }
+        super.onDestroy()
     }
 
     // configChanges keeps this activity alive across fold/unfold, so re-check the phone lock here.

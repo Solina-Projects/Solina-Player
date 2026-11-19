@@ -116,7 +116,7 @@ abstract class SolinaPlayerDatabase : RoomDatabase() {
             db.execSQL(
                 """
                     CREATE TRIGGER IF NOT EXISTS trg_songs_fts_update
-                    AFTER UPDATE ON songs
+                    AFTER UPDATE OF title, artist_name ON songs
                     BEGIN
                         DELETE FROM songs_fts WHERE rowid = OLD.id;
                         INSERT INTO songs_fts(rowid, title, artist_name)
@@ -142,6 +142,20 @@ abstract class SolinaPlayerDatabase : RoomDatabase() {
                     super.onCreate(db)
                     installFavoriteSyncTriggers(db)
                     installSongsSearchSyncTriggers(db)
+                }
+
+                override fun onOpen(db: SupportSQLiteDatabase) {
+                    super.onOpen(db)
+                    // Upgrade legacy trg_songs_fts_update triggers that fired on every column
+                    // update (e.g. favorite toggles) without requiring a Room schema bump.
+                    val triggerSql = db.query(
+                        "SELECT sql FROM sqlite_master WHERE type = 'trigger' AND name = 'trg_songs_fts_update'"
+                    ).use { cursor ->
+                        if (cursor.moveToFirst()) cursor.getString(0) else null
+                    }
+                    if (triggerSql == null || !triggerSql.contains("OF title, artist_name", ignoreCase = true)) {
+                        installSongsSearchSyncTriggers(db)
+                    }
                 }
             }
         }

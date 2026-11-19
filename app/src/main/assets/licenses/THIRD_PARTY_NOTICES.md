@@ -38,6 +38,7 @@ The full text of every license listed here is bundled in `licenses/texts/`.
 | Vorbis Java | Nick Burch (Gagravarr) | Apache 2.0 |
 | JSyn (via Media3 MIDI) | Phil Burk · `https://github.com/philburk/jsyn` | Apache 2.0 |
 | Wavy Slider | Mahdi Hosseinzadeh (Mahozad) | Apache 2.0 |
+| blur-engine (`blur-compose`) | MrSluffy · `https://github.com/MrSluffy/blur-engine` | Apache 2.0 |
 | Compose Reorderable | Calvin Liang | Apache 2.0 |
 | Capturable | Shreyas Patil | MIT License |
 | Smooth Corner Rect Android Compose | racra · `https://github.com/racra/smooth-corner-rect-android-compose` | MIT License |
@@ -54,6 +55,7 @@ The full text of every license listed here is bundled in `licenses/texts/`.
 | --- | --- | --- |
 | Google Sans Flex (`gflex_variable.ttf`) | Google LLC · `https://fonts.google.com/specimen/Google+Sans+Flex` | SIL Open Font License 1.1 |
 | Roboto Flex (`genre_variable.ttf`) | The Roboto Flex Project Authors · `https://github.com/googlefonts/roboto-flex` | SIL Open Font License 1.1 |
+| Vazirmatn (`vazirmatn_variable.ttf`, v33.003) | The Vazirmatn Project Authors · `https://github.com/rastikerdar/vazirmatn` | SIL Open Font License 1.1 |
 
 ## Bundled data assets
 

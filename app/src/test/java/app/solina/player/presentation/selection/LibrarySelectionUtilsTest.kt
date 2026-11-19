@@ -1,5 +1,6 @@
 package app.solina.player.presentation.selection
 
+import app.solina.player.data.cloud.CloudFeatures
 import app.solina.player.data.model.StorageFilter
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
@@ -11,8 +12,9 @@ class LibrarySelectionUtilsTest {
 
     @Test
     fun `hidden local media forces online filter for category batch actions`() {
+        val expectedWhenHidden = if (CloudFeatures.ENABLED) StorageFilter.ONLINE else StorageFilter.ALL
         assertEquals(
-            StorageFilter.ONLINE,
+            expectedWhenHidden,
             effectiveLibraryStorageFilter(StorageFilter.ALL, hideLocalMedia = true),
         )
         assertEquals(

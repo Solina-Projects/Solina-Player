@@ -54,7 +54,7 @@ android {
         // makes the system language picker offer languages we have no strings for.
         localeFilters.addAll(
             listOf(
-                "en", "ar", "de", "es", "fr", "in",
+                "en", "ar", "de", "es", "fa", "fr", "in",
                 "it", "ko", "nb", "pt-rBR", "ru", "tr", "zh-rCN", "vi"
             )
         )
@@ -249,6 +249,10 @@ dependencies {
     implementation(libs.jaudiotagger)
     implementation(libs.vorbisjava.core)
     implementation(libs.wavy.slider)
+    // blur-engine (MrSluffy): real-time background blur + liquid glass
+    // for Compose. Only blur-compose is needed (it pulls in blur-view).
+    // Apache-2.0, minSdk 29; RenderEffect GPU path on API 31+.
+    implementation(libs.blur.compose)
     implementation(libs.androidx.graphics.shapes)
 
     implementation(libs.retrofit)

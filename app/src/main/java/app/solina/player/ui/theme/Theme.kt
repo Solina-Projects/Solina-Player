@@ -21,6 +21,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
@@ -37,6 +38,16 @@ private tailrec fun Context.findActivity(): Activity? = when (this) {
     is ContextWrapper -> baseContext.findActivity()
     else -> null
 }
+
+/**
+ * Content colour guaranteed readable on [background]: black on light
+ * backgrounds, white on dark ones, decided by the background's actual
+ * luminance. Use where a surface must stay a vivid/dynamic colour (so the
+ * contrast-guaranteed container pair cannot be used) but its icon or text
+ * still has to stay legible — e.g. a primary disc on a primaryContainer row.
+ */
+fun contentColorFor(background: Color): Color =
+    if (ColorUtils.calculateLuminance(background.toArgb()) > 0.5f) Color.Black else Color.White
 
 @Suppress("DEPRECATION")
 @Composable
@@ -159,6 +170,9 @@ fun SolinaPlayerTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     colorSchemePairOverride: ColorSchemePair? = null,
     themePreset: String = ThemePreset.DEFAULT,
+    // Appearance customisation (bug-fix round 2026-11-17, item 6): the
+    // font family chosen in Settings; defaults to the app's Rounded face.
+    fontFamily: FontFamily = RoundedSans,
     content: @Composable () -> Unit
 ) {
     val context = LocalContext.current
@@ -193,7 +207,7 @@ fun SolinaPlayerTheme(
         MaterialTheme(
             colorScheme = finalColorScheme,
             motionScheme = MotionScheme.expressive(),
-            typography = Typography,
+            typography = typographyFor(fontFamily),
             shapes = Shapes,
             content = content
         )

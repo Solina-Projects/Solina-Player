@@ -7,6 +7,7 @@ import app.solina.player.R
 enum class AppLanguage(val tag: String, @StringRes val labelRes: Int) {
     SYSTEM("", R.string.setcat_language_system),
     ENGLISH("en", R.string.setcat_language_english),
+    PERSIAN("fa", R.string.setcat_language_persian),
     ARABIC("ar", R.string.setcat_language_arabic),
     GERMAN("de", R.string.setcat_language_german),
     SPANISH("es", R.string.setcat_language_spanish),

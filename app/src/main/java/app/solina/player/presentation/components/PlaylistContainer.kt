@@ -1,6 +1,7 @@
 package app.solina.player.presentation.components
 
 import app.solina.player.presentation.navigation.navigateSafely
+import app.solina.player.data.cloud.CloudFeatures
 
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateDpAsState
@@ -669,7 +670,9 @@ fun PlaylistItem(
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f, fill = false)
                     )
-                    if (playlist.source == "NAVIDROME") {
+                    // Cloud disabled (2026-11-16, user: fully offline
+                    // for now): the Navidrome badge is not shown.
+                    if (playlist.source == "NAVIDROME" && CloudFeatures.ENABLED) {
                         Spacer(modifier = Modifier.width(8.dp))
                         Icon(
                             painter = painterResource(R.drawable.ic_navidrome),

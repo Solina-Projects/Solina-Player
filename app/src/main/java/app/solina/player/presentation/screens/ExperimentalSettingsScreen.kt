@@ -27,6 +27,7 @@ import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.clickable
@@ -177,7 +178,18 @@ fun ExperimentalSettingsScreen(
 
         LazyColumn(
             state = lazyListState,
-            contentPadding = PaddingValues(top = currentTopBarHeightDp + 8.dp),
+            // Round 15, E3: the old top-only padding let the floating
+            // mini-player bar cover the last rows. Bottom = bar height +
+            // system nav bar + 16 dp, the same formula as the other
+            // settings lists. This replaces the trailing
+            // "experimental_bottom_spacer" item (MiniPlayerHeight + 36 dp),
+            // which did the same job as a one-off instead of padding.
+            contentPadding = PaddingValues(
+                top = currentTopBarHeightDp + 8.dp,
+                bottom = MiniPlayerHeight +
+                    WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() +
+                    16.dp
+            ),
             modifier = Modifier.fillMaxSize()
         ) {
             item(key = "player_ui_tweaks_section") {
@@ -698,9 +710,6 @@ fun ExperimentalSettingsScreen(
                 }
             }
 
-            item(key = "experimental_bottom_spacer") {
-                Spacer(modifier = Modifier.height(MiniPlayerHeight + 36.dp))
-            }
         }
 
         CollapsibleCommonTopBar(

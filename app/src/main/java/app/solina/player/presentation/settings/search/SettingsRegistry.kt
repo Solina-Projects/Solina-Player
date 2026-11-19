@@ -1,6 +1,7 @@
 package app.solina.player.presentation.settings.search
 
 import app.solina.player.R
+import app.solina.player.data.cloud.CloudFeatures
 import app.solina.player.presentation.model.SettingsCategory
 import app.solina.player.presentation.navigation.Screen
 import app.solina.player.presentation.navigation.navigateSafely
@@ -166,13 +167,15 @@ object SettingsRegistry {
                 type = SettingType.ACTION,
                 keywordsStatic = listOf("smart mix", "mix", "history", "clear", "recent requests", "historial", "borrar")
             ),
+            // Moved to the Lyrics screen (round 15, wave 1, A2): same
+            // preference key and item key, only the home changed.
             SettingSpec(
                 id = "library_auto_scan_lrc",
                 itemKey = "item_library_auto_scan_lrc",
                 titleRes = R.string.setcat_auto_scan_lrc_title,
                 subtitleRes = R.string.setcat_auto_scan_lrc_subtitle,
-                category = SettingsCategory.LIBRARY,
-                subscreenRoute = Screen.SettingsCategory.createRoute("library"),
+                category = SettingsCategory.PLAYBACK,
+                subscreenRoute = Screen.LyricsSettings.createRoute(),
                 type = SettingType.SWITCH,
                 keywordsStatic = listOf("lrc", "lyrics", "file", "scan"),
                 getValue = { it.autoScanLrcFiles },
@@ -203,13 +206,15 @@ object SettingsRegistry {
                 type = SettingType.NAVIGABLE_CARD,
                 keywordsStatic = listOf("duplicate", "cleanup", "copies", "same song")
             ),
+            // Moved to the Lyrics screen (round 15, wave 1, A2): same
+            // preference key and item key, only the home changed.
             SettingSpec(
                 id = "library_external_lyrics",
                 itemKey = "item_library_external_lyrics",
                 titleRes = R.string.setcat_external_lyrics_title,
                 subtitleRes = R.string.setcat_external_lyrics_subtitle,
-                category = SettingsCategory.LIBRARY,
-                subscreenRoute = Screen.SettingsCategory.createRoute("library"),
+                category = SettingsCategory.PLAYBACK,
+                subscreenRoute = Screen.LyricsSettings.createRoute(),
                 type = SettingType.SWITCH,
                 keywordsStatic = listOf("lrclib", "online lyrics", "fetch", "internet", "download lyrics"),
                 getValue = { it.externalLyricsEnabled },
@@ -512,26 +517,29 @@ object SettingsRegistry {
                 type = SettingType.NAVIGABLE_CARD,
                 keywordsStatic = listOf("corner radius", "rounded", "navbar", "roundness")
             ),
+            // Moved to the Lyrics screen (round 15, wave 1, A2): same
+            // preference key and item key, only the home changed.
             SettingSpec(
                 id = "appearance_immersive_lyrics",
                 itemKey = "item_appearance_immersive_lyrics",
                 titleRes = R.string.setcat_immersive_lyrics_title,
                 subtitleRes = R.string.setcat_immersive_lyrics_subtitle,
-                category = SettingsCategory.APPEARANCE,
-                subscreenRoute = Screen.SettingsCategory.createRoute("appearance"),
+                category = SettingsCategory.PLAYBACK,
+                subscreenRoute = Screen.LyricsSettings.createRoute(),
                 type = SettingType.SWITCH,
                 keywordsStatic = listOf("immersive", "lyrics", "fullscreen", "auto hide", "controls"),
                 getValue = { it.immersiveLyricsEnabled },
                 onToggle = { viewModel, checked -> viewModel.setImmersiveLyricsEnabled(checked) }
             ),
-            // Shown only while immersive lyrics is on.
+            // Shown only while immersive lyrics is on. Moved to the Lyrics
+            // screen with it (round 15, wave 1, A2).
             SettingSpec(
                 id = "appearance_lyrics_auto_hide_delay",
                 itemKey = "item_appearance_lyrics_auto_hide_delay",
                 titleRes = R.string.setcat_auto_hide_delay_label,
                 subtitleRes = R.string.setcat_auto_hide_delay_desc,
-                category = SettingsCategory.APPEARANCE,
-                subscreenRoute = Screen.SettingsCategory.createRoute("appearance"),
+                category = SettingsCategory.PLAYBACK,
+                subscreenRoute = Screen.LyricsSettings.createRoute(),
                 type = SettingType.NAVIGABLE_CARD,
                 keywordsStatic = listOf("auto hide", "delay", "timeout", "lyrics", "controls")
             ),
@@ -554,6 +562,211 @@ object SettingsRegistry {
                 subscreenRoute = Screen.SettingsCategory.createRoute("appearance"),
                 type = SettingType.NAVIGABLE_CARD,
                 keywordsStatic = listOf("library tabs", "pill", "navigation mode", "tab row")
+            ),
+
+            // --- CUSTOMISATION SCREENS (round 15, wave 1, A5) ---
+            // The Home / Appearance customisation screens and the glass
+            // section had no search entries, so "glass", "corner" or
+            // "recent cards" found nothing. ACTION, not NAVIGABLE_CARD:
+            // neither destination declares a highlightKey argument, so
+            // the search opens the screen itself.
+            SettingSpec(
+                id = "appearance_customize_home",
+                itemKey = "item_home_customization",
+                titleRes = R.string.home_customize_title,
+                subtitleRes = R.string.home_customize_subtitle,
+                category = SettingsCategory.APPEARANCE,
+                subscreenRoute = Screen.HomeCustomization.route,
+                type = SettingType.ACTION,
+                keywordsStatic = listOf(
+                    "home", "customise", "customize", "sections", "order",
+                    "recent cards", "recently added", "recently played", "layout",
+                    "خانه", "شخصی‌سازی خانه", "کارت‌های اخیر", "بخش‌ها"
+                ),
+                onAction = { it.navigateSafely(Screen.HomeCustomization.route) }
+            ),
+            SettingSpec(
+                id = "appearance_customize_music",
+                itemKey = "item_music_customization",
+                titleRes = R.string.music_customize_title,
+                subtitleRes = R.string.music_customize_subtitle,
+                category = SettingsCategory.APPEARANCE,
+                subscreenRoute = Screen.MusicCustomization.route,
+                type = SettingType.ACTION,
+                keywordsStatic = listOf(
+                    "music", "customise", "customize", "mini player", "seek bar",
+                    "list rows", "music palette", "carousel", "now playing",
+                    "موزیک", "شخصی‌سازی موزیک", "نوار موزیک", "پخش‌کننده", "فهرست آهنگ"
+                ),
+                onAction = { it.navigateSafely(Screen.MusicCustomization.route) }
+            ),
+            SettingSpec(
+                id = "appearance_customize_video",
+                itemKey = "item_video_customization",
+                titleRes = R.string.video_customize_title,
+                subtitleRes = R.string.video_customize_subtitle,
+                category = SettingsCategory.VIDEO,
+                subscreenRoute = Screen.VideoCustomization.route,
+                type = SettingType.ACTION,
+                keywordsStatic = listOf(
+                    "video", "customise", "customize", "video bar", "video cards",
+                    "video palette", "subtitles", "aspect ratio", "video player",
+                    "ویدیو", "شخصی‌سازی ویدیو", "نوار ویدیو", "کارت ویدیو", "زیرنویس"
+                ),
+                onAction = { it.navigateSafely(Screen.VideoCustomization.route) }
+            ),
+            SettingSpec(
+                id = "appearance_customize_appearance",
+                itemKey = "item_appearance_customization",
+                titleRes = R.string.appearance_customize_title,
+                subtitleRes = R.string.appearance_customize_subtitle,
+                category = SettingsCategory.APPEARANCE,
+                subscreenRoute = Screen.AppearanceCustomization.route,
+                type = SettingType.ACTION,
+                keywordsStatic = listOf(
+                    "appearance", "customise", "customize", "bars", "cards",
+                    "colours", "colors", "fonts", "corners", "corner", "radius",
+                    "theme", "preset",
+                    "ظاهر", "شخصی‌سازی ظاهر", "نوارها", "کارت‌ها", "گوشه", "فونت"
+                ),
+                onAction = { it.navigateSafely(Screen.AppearanceCustomization.route) }
+            ),
+            SettingSpec(
+                id = "appearance_glass",
+                itemKey = "item_appearance_glass",
+                titleRes = R.string.appearance_glass_title,
+                subtitleRes = R.string.appearance_glass_subtitle,
+                category = SettingsCategory.APPEARANCE,
+                subscreenRoute = Screen.AppearanceCustomization.route,
+                type = SettingType.ACTION,
+                keywordsStatic = listOf(
+                    "glass", "blur", "frosted", "liquid", "refraction", "tint",
+                    "شیشه", "تاری", "مات", "مایع"
+                ),
+                onAction = { it.navigateSafely(Screen.AppearanceCustomization.route) }
+            ),
+
+            // --- VIDEO CATEGORY (round 15, wave 1, B1) ---
+            SettingSpec(
+                id = "video_aspect",
+                itemKey = "item_video_aspect",
+                titleRes = R.string.setcat_video_aspect_title,
+                subtitleRes = R.string.setcat_video_aspect_desc,
+                category = SettingsCategory.VIDEO,
+                subscreenRoute = Screen.SettingsCategory.createRoute("video"),
+                type = SettingType.NAVIGABLE_CARD,
+                keywordsStatic = listOf(
+                    "aspect", "fit", "fill", "zoom", "stretch", "resize",
+                    "ratio", "نسبت تصویر"
+                )
+            ),
+            SettingSpec(
+                id = "video_decoder",
+                itemKey = "item_video_decoder",
+                titleRes = R.string.setcat_video_decoder_title,
+                subtitleRes = R.string.setcat_video_decoder_desc,
+                category = SettingsCategory.VIDEO,
+                subscreenRoute = Screen.SettingsCategory.createRoute("video"),
+                type = SettingType.NAVIGABLE_CARD,
+                keywordsStatic = listOf(
+                    "decoder", "hardware", "software", "auto", "hw", "sw",
+                    "codec", "decode", "رمزگشا"
+                )
+            ),
+            SettingSpec(
+                id = "video_default_speed",
+                itemKey = "item_video_default_speed",
+                titleRes = R.string.setcat_video_default_speed_title,
+                subtitleRes = R.string.setcat_video_default_speed_desc,
+                category = SettingsCategory.VIDEO,
+                subscreenRoute = Screen.SettingsCategory.createRoute("video"),
+                type = SettingType.NAVIGABLE_CARD,
+                keywordsStatic = listOf(
+                    "speed", "tempo", "rate", "faster", "slower", "video speed",
+                    "سرعت"
+                )
+            ),
+            SettingSpec(
+                id = "video_resume_behaviour",
+                itemKey = "item_video_resume_behaviour",
+                titleRes = R.string.setcat_video_resume_title,
+                subtitleRes = R.string.setcat_video_resume_desc,
+                category = SettingsCategory.VIDEO,
+                subscreenRoute = Screen.SettingsCategory.createRoute("video"),
+                type = SettingType.NAVIGABLE_CARD,
+                keywordsStatic = listOf(
+                    "resume", "continue", "start over", "where left off",
+                    "ادامه", "ادامهٔ پخش"
+                )
+            ),
+            SettingSpec(
+                id = "video_background_playback",
+                itemKey = "item_video_background_playback",
+                titleRes = R.string.setcat_video_background_title,
+                subtitleRes = R.string.setcat_video_background_desc,
+                category = SettingsCategory.VIDEO,
+                subscreenRoute = Screen.SettingsCategory.createRoute("video"),
+                type = SettingType.SWITCH,
+                keywordsStatic = listOf(
+                    "background", "keep playing", "audio", "minimise",
+                    "پس‌زمینه", "پخش در پس‌زمینه"
+                ),
+                getValue = { it.videoBackgroundPlayback },
+                onToggle = { viewModel, checked -> viewModel.setVideoBackgroundPlayback(checked) }
+            ),
+            SettingSpec(
+                id = "video_swipe_gestures",
+                itemKey = "item_video_swipe_gestures",
+                titleRes = R.string.setcat_video_gestures_title,
+                subtitleRes = R.string.setcat_video_gestures_desc,
+                category = SettingsCategory.VIDEO,
+                subscreenRoute = Screen.SettingsCategory.createRoute("video"),
+                type = SettingType.SWITCH,
+                keywordsStatic = listOf(
+                    "gesture", "swipe", "seek", "brightness", "volume", "drag",
+                    "ژست", "کشویی"
+                ),
+                getValue = { it.videoSwipeGesturesEnabled },
+                onToggle = { viewModel, checked -> viewModel.setVideoSwipeGesturesEnabled(checked) }
+            ),
+            SettingSpec(
+                id = "video_subtitle_size",
+                itemKey = "item_video_subtitle_size",
+                titleRes = R.string.setcat_video_subtitle_size_title,
+                subtitleRes = R.string.setcat_video_subtitle_size_desc,
+                category = SettingsCategory.VIDEO,
+                subscreenRoute = Screen.SettingsCategory.createRoute("video"),
+                type = SettingType.NAVIGABLE_CARD,
+                keywordsStatic = listOf(
+                    "subtitle", "subtitles", "text size", "caption", "font",
+                    "زیرنویس", "اندازهٔ متن"
+                )
+            ),
+            SettingSpec(
+                id = "video_subtitle_color",
+                itemKey = "item_video_subtitle_color",
+                titleRes = R.string.setcat_video_subtitle_color_title,
+                subtitleRes = R.string.setcat_video_subtitle_color_desc,
+                category = SettingsCategory.VIDEO,
+                subscreenRoute = Screen.SettingsCategory.createRoute("video"),
+                type = SettingType.NAVIGABLE_CARD,
+                keywordsStatic = listOf(
+                    "subtitle", "subtitles", "colour", "color", "caption",
+                    "زیرنویس", "رنگ"
+                )
+            ),
+            SettingSpec(
+                id = "video_subtitle_background",
+                itemKey = "item_video_subtitle_background",
+                titleRes = R.string.setcat_video_subtitle_bg_title,
+                subtitleRes = R.string.setcat_video_subtitle_bg_desc,
+                category = SettingsCategory.VIDEO,
+                subscreenRoute = Screen.SettingsCategory.createRoute("video"),
+                type = SettingType.NAVIGABLE_CARD,
+                keywordsStatic = listOf(
+                    "subtitle", "subtitles", "background", "caption",
+                    "زیرنویس", "پس‌زمینه"
+                )
             ),
 
             // --- PLAYBACK CATEGORY ---
@@ -750,7 +963,9 @@ object SettingsRegistry {
                 type = SettingType.SWITCH,
                 keywordsStatic = listOf(
                     "mini player", "miniplayer", "swipe", "skip", "next song", "previous song",
-                    "swipe down", "dismiss", "gesture"
+                    "next video", "previous video", "track", "video",
+                    "swipe down", "dismiss", "gesture",
+                    "ویدیو", "آهنگ"
                 ),
                 getValue = { it.miniPlayerSwipeToSkip },
                 onToggle = { viewModel, checked -> viewModel.setMiniPlayerSwipeToSkip(checked) }
@@ -891,12 +1106,15 @@ object SettingsRegistry {
             ),
 
             // --- EQUALIZER & DEVICE ---
+            // Equalizer demoted from its own category to a main-list row
+            // (round 15, wave 1, A4); the search entry now groups under
+            // Playback, next to the other audio settings.
             SettingSpec(
                 id = "equalizer_main",
                 itemKey = "item_equalizer_main",
                 titleRes = R.string.settings_category_equalizer_title,
                 subtitleRes = R.string.settings_category_equalizer_subtitle,
-                category = SettingsCategory.EQUALIZER,
+                category = SettingsCategory.PLAYBACK,
                 subscreenRoute = Screen.Equalizer.createRoute(),
                 type = SettingType.NAVIGABLE_CARD,
                 keywordsStatic = listOf("equalizer", "eq", "bass", "treble", "bands", "frequencies")
@@ -954,5 +1172,16 @@ object SettingsRegistry {
                 keywordsStatic = listOf("licenses", "open source", "third party", "notices", "attribution", "fonts")
             )
         )
+            // Cloud disabled (2026-11-16, user: fully offline for now):
+            // the Accounts / Cloud Downloads / ListenBrainz search
+            // entries must not surface cloud screens that have no entry
+            // point left. Re-enable by removing this filter.
+            .filter { spec ->
+                CloudFeatures.ENABLED || spec.id !in setOf(
+                    "accounts_hub",
+                    "cloud_downloads",
+                    "accounts_listenbrainz"
+                )
+            }
     }
 }

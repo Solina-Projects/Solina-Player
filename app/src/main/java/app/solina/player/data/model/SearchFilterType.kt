@@ -6,6 +6,7 @@ import androidx.compose.runtime.Immutable
 enum class SearchFilterType {
     ALL,
     SONGS,
+    VIDEOS,
     ALBUMS,
     ARTISTS,
     PLAYLISTS

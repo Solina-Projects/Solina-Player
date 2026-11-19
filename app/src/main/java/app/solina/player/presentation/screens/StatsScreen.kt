@@ -821,8 +821,10 @@ private fun RangeTabsHeader(
                     index = index,
                     selectedIndex = selectedIndex,
                     onClick = { onRangeSelected(range) },
-                    selectedColor = MaterialTheme.colorScheme.primary,
-                    onSelectedColor = MaterialTheme.colorScheme.onPrimary,
+                    // Container pair, not primary/onPrimary: a pale dynamic
+                    // (wallpaper) primary makes white selected text unreadable.
+                    selectedColor = MaterialTheme.colorScheme.primaryContainer,
+                    onSelectedColor = MaterialTheme.colorScheme.onPrimaryContainer,
                     unselectedColor = MaterialTheme.colorScheme.surfaceContainerLowest,
                     onUnselectedColor = MaterialTheme.colorScheme.onSurfaceVariant,
                     title = stringResource(range.displayNameRes())

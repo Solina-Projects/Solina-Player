@@ -234,7 +234,6 @@ class MusicService : MediaSessionService() {
     private var isManualShuffleEnabled = false
     private var persistentShuffleEnabled = false
     private var previousButtonBehavior = PreviousButtonBehavior.DEFAULT
-    private var previousMainThreadExceptionHandler: Thread.UncaughtExceptionHandler? = null
     private val sleepTimerController by lazy {
         SleepTimerController(
             engine = engine,
@@ -414,18 +413,6 @@ class MusicService : MediaSessionService() {
     }
 
     override fun onCreate() {
-        val existingHandler = Thread.currentThread().uncaughtExceptionHandler
-        previousMainThreadExceptionHandler = existingHandler
-        Thread.currentThread().setUncaughtExceptionHandler { thread, throwable ->
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
-                throwable is ForegroundServiceStartNotAllowedException
-            ) {
-                Timber.tag(TAG).w(throwable, "Suppressed ForegroundServiceStartNotAllowedException from Media3 internal path")
-            } else {
-                existingHandler?.uncaughtException(thread, throwable)
-            }
-        }
-
         // Marked foreground-service starts (media buttons, and the widget's
         // startForegroundService() fallback) are promoted here, before super.onCreate(),
         // so Hilt injection and MediaSession setup cannot use up Android's FGS deadline.
@@ -437,6 +424,13 @@ class MusicService : MediaSessionService() {
         }
 
         super.onCreate()
+        setListener(object : Listener {
+            override fun onForegroundServiceStartNotAllowedException() {
+                Timber.tag(TAG).w("Suppressed ForegroundServiceStartNotAllowedException from Media3 internal path")
+                clearTemporaryForegroundNotification()
+                stopSelf()
+            }
+        })
         listeningStatsTracker.initialize(appScope)
         
         engine.initialize()
@@ -1024,8 +1018,7 @@ class MusicService : MediaSessionService() {
         engine.release()
         controller.release()
         serviceScope.cancel()
-        Thread.currentThread().setUncaughtExceptionHandler(previousMainThreadExceptionHandler)
-        previousMainThreadExceptionHandler = null
+        clearListener()
         super.onDestroy()
     }
 

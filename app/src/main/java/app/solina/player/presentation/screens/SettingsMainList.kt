@@ -5,14 +5,19 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AccountCircle
 import androidx.compose.material.icons.rounded.CloudDownload
+import androidx.compose.material.icons.rounded.GraphicEq
+import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.Lyrics
+import androidx.compose.material.icons.rounded.MusicNote
 import androidx.compose.material.icons.rounded.SystemUpdate
+import androidx.compose.material.icons.rounded.VideoLibrary
 import androidx.compose.material3.ColorScheme
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import app.solina.player.R
+import app.solina.player.data.cloud.CloudFeatures
 import app.solina.player.presentation.model.SettingsCategory
 import app.solina.player.presentation.navigation.Screen
 
@@ -45,10 +50,10 @@ internal val SettingsCategory.iconTone: SettingsIconTone
         SettingsCategory.LIBRARY -> SettingsIconTone.PRIMARY
         SettingsCategory.APPEARANCE -> SettingsIconTone.TERTIARY
         SettingsCategory.PLAYBACK -> SettingsIconTone.SECONDARY
+        SettingsCategory.VIDEO -> SettingsIconTone.SECONDARY
         SettingsCategory.BEHAVIOR -> SettingsIconTone.PRIMARY
         SettingsCategory.BACKUP_RESTORE -> SettingsIconTone.TERTIARY
         SettingsCategory.DEVELOPER -> SettingsIconTone.SECONDARY
-        SettingsCategory.EQUALIZER -> SettingsIconTone.TERTIARY
         SettingsCategory.DEVICE_CAPABILITIES -> SettingsIconTone.SECONDARY
         SettingsCategory.ABOUT -> SettingsIconTone.SECONDARY
     }
@@ -65,7 +70,6 @@ internal sealed interface MainSettingsEntry {
 
         override val route: String
             get() = when (category) {
-                SettingsCategory.EQUALIZER -> Screen.Equalizer.createRoute()
                 SettingsCategory.DEVICE_CAPABILITIES -> Screen.DeviceCapabilities.createRoute()
                 SettingsCategory.ABOUT -> Screen.About.route
                 else -> Screen.SettingsCategory.createRoute(category.id)
@@ -80,6 +84,27 @@ internal sealed interface MainSettingsEntry {
         override val iconTone: SettingsIconTone,
         override val route: String
     ) : MainSettingsEntry {
+        HOME_CUSTOMIZATION(
+            titleRes = R.string.home_customize_title,
+            subtitleRes = R.string.home_customize_hub_subtitle,
+            icon = Icons.Rounded.Home,
+            iconTone = SettingsIconTone.PRIMARY,
+            route = Screen.HomeCustomization.route
+        ),
+        MUSIC_CUSTOMIZATION(
+            titleRes = R.string.music_customize_title,
+            subtitleRes = R.string.music_customize_subtitle,
+            icon = Icons.Rounded.MusicNote,
+            iconTone = SettingsIconTone.SECONDARY,
+            route = Screen.MusicCustomization.route
+        ),
+        VIDEO_CUSTOMIZATION(
+            titleRes = R.string.video_customize_title,
+            subtitleRes = R.string.video_customize_subtitle,
+            icon = Icons.Rounded.VideoLibrary,
+            iconTone = SettingsIconTone.TERTIARY,
+            route = Screen.VideoCustomization.route
+        ),
         // Settings search groups the lyrics options under Playback, so the row shares its tone.
         LYRICS(
             titleRes = R.string.setcat_lyrics_title,
@@ -87,6 +112,13 @@ internal sealed interface MainSettingsEntry {
             icon = Icons.Rounded.Lyrics,
             iconTone = SettingsIconTone.SECONDARY,
             route = Screen.LyricsSettings.createRoute()
+        ),
+        EQUALIZER(
+            titleRes = R.string.settings_category_equalizer_title,
+            subtitleRes = R.string.settings_category_equalizer_subtitle,
+            icon = Icons.Rounded.GraphicEq,
+            iconTone = SettingsIconTone.TERTIARY,
+            route = Screen.Equalizer.createRoute()
         ),
         DOWNLOADS(
             titleRes = R.string.cloud_downloads_title,
@@ -112,23 +144,67 @@ internal sealed interface MainSettingsEntry {
     }
 }
 
+/** A named section of related rows rendered as its own Material 3 Expressive card stack. */
+internal data class MainSettingsGroup(
+    @StringRes val titleRes: Int,
+    val entries: List<MainSettingsEntry>
+)
+
 /**
- * Every row of the main Settings list, in display order. Row shapes and the gaps between rows
- * are derived from this list, so adding a row here cannot leave the group outline out of step.
+ * Organised Settings groups:
+ * 1. Personalisation: Home, Music, Video customisers + Global Theme & Appearance
+ * 2. Media & Playback: Music Library, Playback, Lyrics, Equalizer, Video defaults
+ * 3. App & Data: Behaviour, Backup & Restore (+ Cloud when enabled)
+ * 4. System & About: Device Capabilities, Developer, Updates, About
  */
-internal val mainSettingsEntries: List<MainSettingsEntry> = buildList {
-    SettingsCategory.entries
-        .filter { it != SettingsCategory.DEVICE_CAPABILITIES && it != SettingsCategory.ABOUT }
-        .forEach { category ->
-            add(MainSettingsEntry.Category(category))
-            if (category == SettingsCategory.PLAYBACK) add(MainSettingsEntry.Destination.LYRICS)
+internal val mainSettingsGroups: List<MainSettingsGroup> = listOf(
+    MainSettingsGroup(
+        titleRes = R.string.settings_group_personalisation,
+        entries = listOf(
+            MainSettingsEntry.Destination.HOME_CUSTOMIZATION,
+            MainSettingsEntry.Destination.MUSIC_CUSTOMIZATION,
+            MainSettingsEntry.Destination.VIDEO_CUSTOMIZATION,
+            MainSettingsEntry.Category(SettingsCategory.APPEARANCE)
+        )
+    ),
+    MainSettingsGroup(
+        titleRes = R.string.settings_group_media_playback,
+        entries = listOf(
+            MainSettingsEntry.Category(SettingsCategory.LIBRARY),
+            MainSettingsEntry.Category(SettingsCategory.PLAYBACK),
+            MainSettingsEntry.Destination.LYRICS,
+            MainSettingsEntry.Destination.EQUALIZER,
+            MainSettingsEntry.Category(SettingsCategory.VIDEO)
+        )
+    ),
+    MainSettingsGroup(
+        titleRes = R.string.settings_group_app_data,
+        entries = buildList {
+            add(MainSettingsEntry.Category(SettingsCategory.BEHAVIOR))
+            add(MainSettingsEntry.Category(SettingsCategory.BACKUP_RESTORE))
+            if (CloudFeatures.ENABLED) {
+                add(MainSettingsEntry.Destination.DOWNLOADS)
+                add(MainSettingsEntry.Destination.ACCOUNTS)
+            }
         }
-    add(MainSettingsEntry.Destination.DOWNLOADS)
-    add(MainSettingsEntry.Category(SettingsCategory.DEVICE_CAPABILITIES))
-    add(MainSettingsEntry.Destination.ACCOUNTS)
-    add(MainSettingsEntry.Destination.UPDATES)
-    add(MainSettingsEntry.Category(SettingsCategory.ABOUT))
-}
+    ),
+    MainSettingsGroup(
+        titleRes = R.string.settings_group_system_info,
+        entries = listOf(
+            MainSettingsEntry.Category(SettingsCategory.DEVICE_CAPABILITIES),
+            MainSettingsEntry.Category(SettingsCategory.DEVELOPER),
+            MainSettingsEntry.Destination.UPDATES,
+            MainSettingsEntry.Category(SettingsCategory.ABOUT)
+        )
+    )
+)
+
+/**
+ * Every row of the main Settings list, flattened in display order. Derived directly from
+ * [mainSettingsGroups] so flat lookups and group rendering can never drift out of sync.
+ */
+internal val mainSettingsEntries: List<MainSettingsEntry> =
+    mainSettingsGroups.flatMap { it.entries }
 
 private val SingleGroupItemShape = RoundedCornerShape(24.dp)
 private val FirstGroupItemShape =

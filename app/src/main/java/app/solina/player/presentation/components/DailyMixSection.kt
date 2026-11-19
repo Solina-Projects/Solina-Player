@@ -56,6 +56,7 @@ import app.solina.player.R
 import app.solina.player.data.model.Song
 import app.solina.player.presentation.components.resolveNavBarOccupiedHeight
 import app.solina.player.presentation.components.subcomps.EnhancedSongListItem
+import app.solina.player.presentation.viewmodel.AppearanceViewModel
 import app.solina.player.presentation.viewmodel.PlayerViewModel
 import app.solina.player.presentation.viewmodel.PlaylistViewModel
 import app.solina.player.utils.shapes.RoundedStarShape
@@ -76,6 +77,9 @@ fun DailyMixSection(
     onNavigateToArtist: (Song) -> Unit = {},
     onNavigateToGenre: (Song) -> Unit = {},
     topSpacing: Dp = 16.dp,
+    // Round 15, wave 2, C4: the mix card's corners + fonts come from
+    // the appearance settings (its own card block).
+    appearanceViewModel: AppearanceViewModel = hiltViewModel(),
 ) {
     val playlistViewModel: PlaylistViewModel = hiltViewModel()
     val favoriteSongIds by playerViewModel.favoriteSongIds.collectAsStateWithLifecycle()
@@ -101,6 +105,7 @@ fun DailyMixSection(
         DailyMixCard(
             songs = songs,
             playerViewModel = playerViewModel,
+            appearanceViewModel = appearanceViewModel,
             onClickOpen = onClickOpen,
             onMoreOptionsClick = { song ->
                 playerViewModel.selectSongForInfo(song)
@@ -191,20 +196,26 @@ private fun DailyMixCard(
     songs: ImmutableList<Song>,
     onClickOpen: () -> Unit,
     playerViewModel: PlayerViewModel,
-    onMoreOptionsClick: (Song) -> Unit
+    onMoreOptionsClick: (Song) -> Unit,
+    appearanceViewModel: AppearanceViewModel = hiltViewModel()
 ) {
     val headerSongs = remember(songs) { songs.take(3).toImmutableList() }
     val visibleSongs = remember(songs) { songs.take(4).toImmutableList() }
-    val cornerRadius = 30.dp
+    // Round 15, wave 2, C4: the card's corners come from the Your Mix
+    // appearance block (default 30 dp on all four, the old hardcoded
+    // radius); the smooth-corner shape keeps its 60% smoothness.
+    val appearance by appearanceViewModel.appearance.collectAsStateWithLifecycle()
+    val mixCorners = appearance.yourMixCard.effectiveCorners
+    val mixFontScale = appearance.fontScale
     Card(
         shape = AbsoluteSmoothCornerShape(
-            cornerRadiusBR = cornerRadius,
+            cornerRadiusTL = mixCorners.topStart.dp,
+            cornerRadiusTR = mixCorners.topEnd.dp,
+            cornerRadiusBL = mixCorners.bottomStart.dp,
+            cornerRadiusBR = mixCorners.bottomEnd.dp,
             smoothnessAsPercentTL = 60,
-            cornerRadiusTR = cornerRadius,
             smoothnessAsPercentTR = 60,
-            cornerRadiusBL = cornerRadius,
             smoothnessAsPercentBL = 60,
-            cornerRadiusTL = cornerRadius,
             smoothnessAsPercentBR = 60
         ),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
@@ -212,7 +223,7 @@ private fun DailyMixCard(
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
-            DailyMixHeader(thumbnails = headerSongs)
+            DailyMixHeader(thumbnails = headerSongs, fontScale = mixFontScale)
             DailyMixSongList(
                 songs = visibleSongs,
                 playbackQueue = songs,
@@ -231,14 +242,15 @@ private fun DailyMixCard(
                 onClickOpen = {
                     onClickOpen()
                 },
+                fontScale = mixFontScale
             )
         }
     }
 }
 
 @Composable
-fun DailyMixHeader(thumbnails: ImmutableList<Song>) {
-    val titleStyle = rememberDailyMixTitleStyle()
+fun DailyMixHeader(thumbnails: ImmutableList<Song>, fontScale: Float = 1f) {
+    val titleStyle = rememberDailyMixTitleStyle(fontScale)
 
     fun shapeConditionalModifier(index: Int): Modifier {
         if (index == 0){
@@ -270,7 +282,7 @@ fun DailyMixHeader(thumbnails: ImmutableList<Song>) {
                 .fillMaxWidth()
                 .padding(start = 22.dp, end = 16.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Absolute.SpaceBetween
+            horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
@@ -281,7 +293,9 @@ fun DailyMixHeader(thumbnails: ImmutableList<Song>) {
                 Text(
                     modifier = Modifier.padding(start = 1.dp),
                     text = stringResource(R.string.presentation_batch_g_daily_mix_based_on_history),
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = MaterialTheme.typography.bodyMedium.copy(
+                        fontSize = MaterialTheme.typography.bodyMedium.fontSize * fontScale
+                    ),
                     fontWeight = FontWeight.Normal,
                     color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f)
                 )
@@ -379,7 +393,8 @@ private fun DailyMixSongList(
 @Composable
 private fun ViewAllDailyMixButton(
     modifier: Modifier = Modifier,
-    onClickOpen: () -> Unit
+    onClickOpen: () -> Unit,
+    fontScale: Float = 1f
 ) {
     FilledTonalButton(
         modifier = modifier,
@@ -408,7 +423,9 @@ private fun ViewAllDailyMixButton(
         ) {
             Text(
                 text = stringResource(R.string.presentation_batch_g_daily_mix_see_all),
-                style = MaterialTheme.typography.bodyLarge,
+                style = MaterialTheme.typography.bodyLarge.copy(
+                    fontSize = MaterialTheme.typography.bodyLarge.fontSize * fontScale
+                ),
                 fontWeight = FontWeight.Medium
             )
             Icon(
@@ -422,8 +439,8 @@ private fun ViewAllDailyMixButton(
 
 @OptIn(ExperimentalTextApi::class)
 @Composable
-private fun rememberDailyMixTitleStyle(): TextStyle {
-    return remember {
+private fun rememberDailyMixTitleStyle(fontScale: Float = 1f): TextStyle {
+    return remember(fontScale) {
         TextStyle(
             fontFamily = FontFamily(
                 Font(
@@ -440,8 +457,8 @@ private fun rememberDailyMixTitleStyle(): TextStyle {
                 )
             ),
             fontWeight = FontWeight(630),
-            fontSize = 20.sp,
-            lineHeight = 22.sp,
+            fontSize = 20.sp * fontScale,
+            lineHeight = 22.sp * fontScale,
             letterSpacing = (-0.35).sp
         )
     }

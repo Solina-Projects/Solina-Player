@@ -25,6 +25,7 @@ import app.solina.player.utils.LyricsUtils
 import app.solina.player.utils.MultiLangRomanizer
 import app.solina.player.utils.NetworkRetryUtils
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -422,6 +423,7 @@ class LyricsRepositoryImpl @Inject constructor(
                     return@withContext lyrics
                 }
             } catch (e: Exception) {
+                if (e is CancellationException) throw e
                 Timber.tag(TAG).w("Error fetching from source $sourceName: ${e.message}")
             }
         }
@@ -565,6 +567,7 @@ class LyricsRepositoryImpl @Inject constructor(
 
             return@withContext null
         } catch (e: Exception) {
+            if (e is CancellationException) throw e
             Timber.tag(TAG).e(e, "LRCLIB lyrics fetch failed: ${e.message}")
             return@withContext null
         }
@@ -1245,6 +1248,7 @@ class LyricsRepositoryImpl @Inject constructor(
                 Result.failure(NoLyricsFoundException())
             }
         } catch (e: Exception) {
+            if (e is CancellationException) throw e
             LogUtils.e(this@LyricsRepositoryImpl, e, "Error fetching lyrics from remote")
             when {
                 e is HttpException && e.code() == 404 -> Result.failure(NoLyricsFoundException())
@@ -1327,6 +1331,7 @@ class LyricsRepositoryImpl @Inject constructor(
                 Result.failure(NoLyricsFoundException(combinedQuery))
             }
         } catch (e: Exception) {
+            if (e is CancellationException) throw e
             LogUtils.e(this@LyricsRepositoryImpl, e, "Error searching remote for lyrics")
             when {
                 e is SocketTimeoutException -> Result.failure(LyricsException(context.getString(R.string.lyrics_fetch_timeout), e))
@@ -1384,6 +1389,7 @@ class LyricsRepositoryImpl @Inject constructor(
                 Result.success(Pair(query, results))
             }
         } catch (e: Exception) {
+            if (e is CancellationException) throw e
             LogUtils.e(this@LyricsRepositoryImpl, e, "Manual search failed")
             Result.failure(LyricsException(context.getString(R.string.failed_to_search_for_lyrics), e)
             )

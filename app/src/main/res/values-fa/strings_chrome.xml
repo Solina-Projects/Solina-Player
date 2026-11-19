@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="setup_gate_preparing">در حال آماده‌سازی راه‌اندازی…</string>
+    <string name="song_info_label_provider">ارائه‌دهنده</string>
+    <string name="song_info_label_path">مسیر</string>
+    <string name="cd_playlist_artwork">پلی‌لیست</string>
+    <string name="home_your_mix_subtitle">میکس امروز برای شما</string>
+    <string name="home_your_mix_play">پخش میکس امروز</string>
+    <string name="home_your_mix_queue_name">میکس شما</string>
+    <string name="queue_name_liked_songs">آهنگ‌های پسندیده‌شده</string>
+    <string name="queue_name_all_songs_shuffled">همهٔ آهنگ‌ها (تصادفی)</string>
+    <string name="queue_name_liked_songs_shuffled">آهنگ‌های پسندیده‌شده (تصادفی)</string>
+    <string name="queue_name_selected_songs">آهنگ‌های انتخاب‌شده</string>
+
+    <!-- Player sheet, mini player and full player chrome -->
+    <string name="cd_player_sheet_collapsed">پنل پخش‌کنندهٔ Solina Player جمع شده، %1$s</string>
+    <string name="cd_player_sheet_expanded">پنل پخش‌کنندهٔ Solina Player باز شده، %1$s</string>
+    <string name="cd_player_sheet_collapsed_no_track">پنل پخش‌کنندهٔ Solina Player جمع شده</string>
+    <string name="cd_player_sheet_expanded_no_track">پنل پخش‌کنندهٔ Solina Player باز شده</string>
+    <string name="mini_player_connecting_device">در حال اتصال به دستگاه…</string>
+    <string name="mini_player_preparing_playback">در حال آماده‌سازی پخش…</string>
+    <string name="mini_player_loading_audio">در حال بارگذاری صدا…</string>
+    <string name="cd_shuffle">پخش تصادفی</string>
+    <string name="cd_playback_position">موقعیت پخش</string>
+    <string name="add_bookmark_title">ذخیرهٔ نشانک</string>
+    <string name="add_bookmark_saved_point">نقطهٔ پخش ذخیره‌شده</string>
+    <string name="add_bookmark_use_lyric_line">استفاده از خط شعر</string>
+    <string name="add_bookmark_default_name">نشانک در %1$s</string>
+</resources>

@@ -28,6 +28,14 @@ import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.ui.draw.blur
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.layout.ContentScale
+import app.solina.player.data.preferences.AppearanceSettings
+import app.solina.player.data.preferences.GlassAppearance
+import app.solina.player.data.preferences.SeekBarStyleNames
+import app.solina.player.presentation.components.SmartImage
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.aspectRatio
@@ -241,7 +249,14 @@ fun FullPlayerContent(
     onShuffleToggle: () -> Unit,
     onRepeatToggle: () -> Unit,
     onFavoriteToggle: () -> Unit,
-    onSongInfoClick: (Song) -> Unit = {}
+    onSongInfoClick: (Song) -> Unit = {},
+    // Glass & blur (blur-engine test build, 2026-11-17): the Now
+    // Playing backdrop settings, passed down from the sheet layers.
+    glass: GlassAppearance = GlassAppearance(),
+    // Round 15, wave 2: the whole appearance (font scale for the
+    // title/artist metadata, seek-bar style). Defaults keep every
+    // other caller compiling unchanged.
+    appearance: AppearanceSettings = AppearanceSettings()
 ) {
     var retainedSong by remember { mutableStateOf(currentSong) }
     LaunchedEffect(currentSong?.id) {
@@ -321,7 +336,15 @@ fun FullPlayerContent(
 
     val totalDurationValue = totalDurationProvider()
 
-    val playerOnBaseColor = LocalMaterialTheme.current.onPrimaryContainer
+    // R15 F2: when the glass Now Playing backdrop is on, the backdrop
+    // is blurred album art under a dark scrim, so the light-sheet
+    // dark-brown onPrimaryContainer text is unreadable (dark on dark).
+    // Force white for the base colour — it flows to the title/artist,
+    // the seek times and the seek bar itself. Non-glass appearance
+    // is unchanged.
+    val glassBackdropOn = glass.enabled && glass.nowPlayingBackground
+    val playerOnBaseColor = if (glassBackdropOn) Color.White
+    else LocalMaterialTheme.current.onPrimaryContainer
     val playerAccentColor = LocalMaterialTheme.current.primary
     val playerOnAccentColor = LocalMaterialTheme.current.onPrimary
     val transportPlayPauseColors = expressivePlayPauseButtonColors(LocalMaterialTheme.current)
@@ -592,7 +615,9 @@ fun FullPlayerContent(
             playerOnBaseColor = playerOnBaseColor,
             allowRealtimeUpdates = allowRealtimeUpdates,
             isSheetDragGestureActive = isSheetDragGestureActive,
-            loadingTweaks = loadingTweaks
+            loadingTweaks = loadingTweaks,
+            // Round 15, wave 2, C4: wavy or classic seek bar.
+            seekBarStyle = appearance.seekBarStyle
         )
     }
 
@@ -635,12 +660,17 @@ fun FullPlayerContent(
             playerOnBaseColor = playerOnBaseColor,
             playerViewModel = playerViewModel,
             gradientEdgeColor = LocalMaterialTheme.current.primaryContainer,
-            chipColor = playerOnAccentColor.copy(alpha = 0.8f),
+            // R15 F2: solid chip in glass mode (was white at 0.8 alpha
+            // over the blurred backdrop).
+            chipColor = if (glassBackdropOn) playerOnAccentColor
+            else playerOnAccentColor.copy(alpha = 0.8f),
             chipContentColor = playerAccentColor,
             onQueueClick = onSongMetadataQueueClick,
             onArtistClick = onSongMetadataArtistClick,
             isPlayingProvider = isPlayingProvider,
-            isLyricsActive = isFoldableTwoPane && foldableRightPane == FoldableRightPane.LYRICS
+            isLyricsActive = isFoldableTwoPane && foldableRightPane == FoldableRightPane.LYRICS,
+            // Round 15, wave 2, C2: title/artist follow the main font scale.
+            fontScale = appearance.fontScale
         )
     }
 
@@ -659,11 +689,16 @@ fun FullPlayerContent(
             playerOnBaseColor = playerOnBaseColor,
             playerViewModel = playerViewModel,
             gradientEdgeColor = LocalMaterialTheme.current.primaryContainer,
-            chipColor = playerOnAccentColor.copy(alpha = 0.8f),
+            // R15 F2: solid chip in glass mode (was white at 0.8 alpha
+            // over the blurred backdrop).
+            chipColor = if (glassBackdropOn) playerOnAccentColor
+            else playerOnAccentColor.copy(alpha = 0.8f),
             chipContentColor = playerAccentColor,
             onQueueClick = onSongMetadataQueueClick,
             onArtistClick = onSongMetadataArtistClick,
-            isPlayingProvider = isPlayingProvider
+            isPlayingProvider = isPlayingProvider,
+            // Round 15, wave 2, C2: title/artist follow the main font scale.
+            fontScale = appearance.fontScale
         )
     }
 
@@ -743,7 +778,9 @@ fun FullPlayerContent(
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
                         containerColor = Color.Transparent,
-                        titleContentColor = LocalMaterialTheme.current.onPrimaryContainer,
+                        // R15 F2: white title in glass mode (was the dark
+                        // onPrimaryContainer, unreadable over the scrim).
+                        titleContentColor = playerOnBaseColor,
                     ),
                     title = {
                         if (!isOutputConnecting) {
@@ -762,7 +799,7 @@ fun FullPlayerContent(
                                         Icon(
                                             imageVector = androidx.compose.material.icons.Icons.Rounded.Cloud,
                                             contentDescription = stringResource(R.string.presentation_batch_g_player_cd_cloud_stream),
-                                            tint = LocalMaterialTheme.current.onPrimaryContainer.copy(alpha = 0.6f),
+                                            tint = playerOnBaseColor.copy(alpha = 0.6f),
                                             modifier = Modifier.padding(start = 8.dp).size(16.dp)
                                         )
                                     }
@@ -887,6 +924,55 @@ fun FullPlayerContent(
                 .fillMaxSize()
                 .graphicsLayer { alpha = contentAlpha }
         ) {
+            // Glass & blur (blur-engine test build, 2026-11-17):
+            // Now Playing background — a static, one-shot blur of the
+            // album art as the backdrop. Native Modifier.blur (one GPU
+            // blur per artwork change, no per-frame capture), darkened
+            // so the text stays readable.
+            // R15 F2: scrim raised to 0.6 (was 0.45) — the old scrim
+            // left dark-brown text unreadable over bright blurred art.
+            // R15 F4: the backdrop now draws even with no art. Before,
+            // no art meant no backdrop at all, so the strip above the
+            // top bar showed the bare player-area background as a grey
+            // rounded bar; now a dark gradient covers the whole card.
+            val artUri = song.albumArtUriString?.takeIf { it.isNotBlank() }
+            if (glassBackdropOn) {
+                Box(modifier = Modifier.fillMaxSize()) {
+                    if (artUri != null) {
+                        SmartImage(
+                            model = artUri,
+                            contentDescription = null,
+                            modifier = Modifier
+                                .fillMaxSize()
+                                // Round 15, wave 2, C5: the backdrop
+                                // blur follows the sheet radius group.
+                                .blur(glass.sheetRadius.dp),
+                            shape = RectangleShape,
+                            contentScale = ContentScale.Crop,
+                            targetSize = coil.size.Size(400, 400),
+                            placeHolderBackgroundColor = Color.Transparent
+                        )
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(Color.Black.copy(alpha = 0.6f))
+                        )
+                    } else {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(
+                                    Brush.verticalGradient(
+                                        listOf(
+                                            Color(0xFF2A2A2E),
+                                            Color(0xFF101012)
+                                        )
+                                    )
+                                )
+                        )
+                    }
+                }
+            }
             if (isFoldableTwoPane) {
                 FullPlayerTwoPaneFoldableContent(
                     paddingValues = paddingValues,
@@ -1269,7 +1355,9 @@ private fun FullPlayerProgressSection(
     playerOnBaseColor: Color,
     allowRealtimeUpdates: Boolean,
     isSheetDragGestureActive: Boolean,
-    loadingTweaks: FullPlayerLoadingTweaks
+    loadingTweaks: FullPlayerLoadingTweaks,
+    // Round 15, wave 2, C4: wavy or classic seek bar.
+    seekBarStyle: String = SeekBarStyleNames.WAVY
 ) {
     val isMetadataForCurrentSong = playbackMetadataMediaId == song.id
     val audioMimeType = if (isMetadataForCurrentSong) {
@@ -1307,7 +1395,9 @@ private fun FullPlayerProgressSection(
         timeTextColor = playerOnBaseColor,
         allowRealtimeUpdates = allowRealtimeUpdates,
         isSheetDragGestureActive = isSheetDragGestureActive,
-        loadingTweaks = loadingTweaks
+        loadingTweaks = loadingTweaks,
+        // Round 15, wave 2, C4: wavy or classic seek bar.
+        seekBarStyle = seekBarStyle
     )
 }
 
@@ -1378,7 +1468,9 @@ private fun FullPlayerSongMetadataSection(
     onQueueClick: () -> Unit,
     onArtistClick: () -> Unit,
     isPlayingProvider: () -> Boolean = { true },
-    isLyricsActive: Boolean = false
+    isLyricsActive: Boolean = false,
+    // Round 15, wave 2, C2: title/artist follow the main font scale.
+    fontScale: Float = 1f
 ) {
     val shouldDelay = loadingTweaks.delayAll || loadingTweaks.delaySongMetadata
 
@@ -1424,7 +1516,10 @@ private fun FullPlayerSongMetadataSection(
             onClickQueue = onQueueClick,
             onClickArtist = onArtistClick,
             isPlayingProvider = isPlayingProvider,
-            isLyricsActive = isLyricsActive
+            isLyricsActive = isLyricsActive,
+            // Round 15, wave 2, C2: the title/artist metadata follow
+            // the main font size scale.
+            fontScale = fontScale
         )
     }
 }
@@ -1659,7 +1754,9 @@ private fun SongMetadataDisplaySection(
     onClickArtist: () -> Unit,
     modifier: Modifier = Modifier,
     isPlayingProvider: () -> Boolean = { true },
-    isLyricsActive: Boolean = false
+    isLyricsActive: Boolean = false,
+    // Round 15, wave 2, C2: title/artist follow the main font scale.
+    fontScale: Float = 1f
 ) {
     Row(
         modifier
@@ -1683,7 +1780,8 @@ private fun SongMetadataDisplaySection(
                 modifier = Modifier
                     .weight(1f)
                     .align(Alignment.CenterVertically),
-                isPlayingProvider = isPlayingProvider
+                isPlayingProvider = isPlayingProvider,
+                fontScale = fontScale
             )
         }
         
@@ -1842,6 +1940,8 @@ private fun PlayerProgressBarSection(
     allowRealtimeUpdates: Boolean = true,
     isSheetDragGestureActive: Boolean = false,
     loadingTweaks: FullPlayerLoadingTweaks? = null,
+    // Round 15, wave 2, C4: wavy or classic seek bar.
+    seekBarStyle: String = SeekBarStyleNames.WAVY,
     modifier: Modifier = Modifier
 ) {
     val progressSectionHorizontalInset = 0.dp
@@ -2000,7 +2100,8 @@ private fun PlayerProgressBarSection(
                     interactionSource = interactionSource,
                     isPlaying = shouldAnimateWavyProgress,
                     isVisible = isVisible,
-                    trackEdgePadding = progressSectionHorizontalInset
+                    trackEdgePadding = progressSectionHorizontalInset,
+                    seekBarStyle = seekBarStyle
                 )
             }
 
@@ -2027,7 +2128,9 @@ private fun EfficientSlider(
     interactionSource: MutableInteractionSource,
     isPlaying: Boolean,
     isVisible: Boolean,
-    trackEdgePadding: Dp
+    trackEdgePadding: Dp,
+    // Round 15, wave 2, C4: wavy or classic seek bar.
+    seekBarStyle: String = SeekBarStyleNames.WAVY
 ) {
     val haptics = LocalHapticFeedback.current
     val currentOnValueChange = rememberUpdatedState(onValueChange)
@@ -2042,6 +2145,29 @@ private fun EfficientSlider(
             }
             currentOnValueChange.value(newValue)
         }
+    }
+
+    // Classic: a plain M3 Slider with the same seek behaviour (tap
+    // jumps, drag scrubs, haptic steps) — only the look changes.
+    // animatedProgressState already reflects the drag value while
+    // dragging, so committing its current value on release is exact.
+    if (seekBarStyle == SeekBarStyleNames.CLASSIC) {
+        androidx.compose.material3.Slider(
+            value = valueState.value,
+            onValueChange = onValueChangeWithHaptics,
+            onValueChangeFinished = { onValueCommit(valueState.value) },
+            valueRange = 0f..1f,
+            interactionSource = interactionSource,
+            colors = androidx.compose.material3.SliderDefaults.colors(
+                thumbColor = thumbColor,
+                activeTrackColor = activeTrackColor,
+                inactiveTrackColor = inactiveTrackColor
+            ),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 8.dp, horizontal = 0.dp)
+        )
+        return
     }
 
     WavySliderExpressive(
@@ -2312,7 +2438,9 @@ private fun PlayerSongInfo(
     playerViewModel: PlayerViewModel,
     onClickArtist: () -> Unit,
     modifier: Modifier = Modifier,
-    isPlayingProvider: () -> Boolean = { true }
+    isPlayingProvider: () -> Boolean = { true },
+    // Round 15, wave 2, C2: title/artist follow the main font scale.
+    fontScale: Float = 1f
 ) {
     val coroutineScope = rememberCoroutineScope()
     var isNavigatingToArtist by remember { mutableStateOf(false) }
@@ -2322,11 +2450,13 @@ private fun PlayerSongInfo(
     val titleStyle = MaterialTheme.typography.headlineSmall.copy(
         fontWeight = FontWeight.Bold,
         fontFamily = RoundedSans,
+        fontSize = MaterialTheme.typography.headlineSmall.fontSize * fontScale,
         color = textColor
     )
 
     val artistStyle = MaterialTheme.typography.titleMedium.copy(
         letterSpacing = 0.sp,
+        fontSize = MaterialTheme.typography.titleMedium.fontSize * fontScale,
         color = artistTextColor
     )
 

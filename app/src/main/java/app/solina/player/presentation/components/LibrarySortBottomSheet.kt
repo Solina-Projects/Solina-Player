@@ -36,7 +36,7 @@ import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
+import app.solina.player.presentation.components.GlassModalBottomSheet
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
@@ -118,7 +118,7 @@ fun LibrarySortBottomSheet(
         label = "boxCornerRadiusAnimation"
     )
 
-    ModalBottomSheet(
+    GlassModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
         dragHandle = { BottomSheetDefaults.DragHandle() },
@@ -362,9 +362,11 @@ private fun LibrarySheetSortTargetSwitcher(
         ToggleSegmentButton(
             modifier = Modifier.weight(1f),
             active = !secondarySelected,
-            activeColor = MaterialTheme.colorScheme.primary,
+            // Container pair, not primary/onPrimary: a pale dynamic primary
+            // makes white text on the active segment unreadable.
+            activeColor = MaterialTheme.colorScheme.primaryContainer,
             inactiveColor = MaterialTheme.colorScheme.surfaceVariant,
-            activeContentColor = MaterialTheme.colorScheme.onPrimary,
+            activeContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
             inactiveContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
             activeCornerRadius = 32.dp,
             onClick = { onSecondarySelectedChange(false) },
@@ -373,9 +375,9 @@ private fun LibrarySheetSortTargetSwitcher(
         ToggleSegmentButton(
             modifier = Modifier.weight(1f),
             active = secondarySelected,
-            activeColor = MaterialTheme.colorScheme.primary,
+            activeColor = MaterialTheme.colorScheme.primaryContainer,
             inactiveColor = MaterialTheme.colorScheme.surfaceVariant,
-            activeContentColor = MaterialTheme.colorScheme.onPrimary,
+            activeContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
             inactiveContentColor = MaterialTheme.colorScheme.onSurfaceVariant,
             activeCornerRadius = 32.dp,
             onClick = { onSecondarySelectedChange(true) },

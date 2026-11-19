@@ -30,9 +30,12 @@ import androidx.compose.ui.unit.lerp
 import androidx.compose.ui.util.lerp
 import androidx.compose.ui.zIndex
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import app.solina.player.data.preferences.AppearanceSettings
+import app.solina.player.data.preferences.CornerRadii
 import androidx.media3.common.util.UnstableApi
 import app.solina.player.data.model.Song
 import app.solina.player.data.preferences.FullPlayerLoadingTweaks
+import app.solina.player.data.preferences.GlassAppearance
 import app.solina.player.presentation.components.player.FullPlayerContent
 import app.solina.player.presentation.components.scoped.FullPlayerVisualState
 import app.solina.player.presentation.components.scoped.miniPlayerLayerOffsetXPx
@@ -73,7 +76,13 @@ internal fun BoxScope.UnifiedPlayerMiniAndFullLayers(
     onQueueDragStart: () -> Unit,
     onQueueDrag: (Float) -> Unit,
     onQueueRelease: (Float, Float) -> Unit,
-    onSongInfoClick: (Song) -> Unit = {}
+    onSongInfoClick: (Song) -> Unit = {},
+    // Glass & blur (blur-engine test build, 2026-11-17): the floating
+    // bar's glass settings, passed down from UnifiedPlayerSheetV2.
+    glass: GlassAppearance = GlassAppearance(),
+    // Round 15, wave 2: the whole appearance (font scale, seek-bar
+    // style) for the full player, passed down the same way.
+    appearance: AppearanceSettings = AppearanceSettings()
 ) {
     currentSong?.let { currentSongNonNull ->
         miniPlayerScheme?.let { readyScheme ->
@@ -85,11 +94,48 @@ internal fun BoxScope.UnifiedPlayerMiniAndFullLayers(
                         if (playerContentExpansionFraction.value < 0.5f) 1f else 0f
                     }
                 }
+                // Round 16 follow-up: the glass pill follows the
+                // floating bar's corners — the same averaged
+                // top/bottom values the sheet's radius providers use
+                // (V2 scales them with the expansion; the pill fades
+                // out by half expansion, so the collapsed values are
+                // the ones that matter). The old hardcoded 32 clipped
+                // against the sheet: with user corners below 32 the
+                // pill's corners showed sheet background instead of
+                // blur. At the default (top 32 / bottom 10) this
+                // reproduces the old top radius exactly.
+                val floatingCorners =
+                    appearance.effectiveFloatingMusicBar.effectiveCorners
+                val pillTopRadiusDp =
+                    (floatingCorners.topStartDp + floatingCorners.topEndDp) / 2
+                val pillBottomRadiusDp =
+                    (floatingCorners.bottomStartDp + floatingCorners.bottomEndDp) / 2
+                val pillCorners = CornerRadii(
+                    topStartDp = pillTopRadiusDp,
+                    topEndDp = pillTopRadiusDp,
+                    bottomStartDp = pillBottomRadiusDp,
+                    bottomEndDp = pillBottomRadiusDp,
+                    linked = floatingCorners.linked
+                )
                 Box(
                     modifier = Modifier
                         .align(Alignment.TopCenter)
                         .fillMaxWidth()
                         .height(MiniPlayerHeight)
+                        // Glass & blur (blur-engine test build,
+                        // 2026-11-17): the floating mini bar is a glass
+                        // pill when the master switch and the mini-bars
+                        // toggle are on. Its background is the player
+                        // area background, which V2 already fades to
+                        // transparent while collapsed, so the blur of
+                        // the list behind shows through, tinted with
+                        // the bar's own palette colour.
+                        .glassBar(
+                            glass = glass,
+                            tintColor = readyScheme.primaryContainer,
+                            corners = pillCorners,
+                            enabled = glass.enabled && glass.miniBars
+                        )
                         .graphicsLayer {
                             alpha = (1f - playerContentExpansionFraction.value * 2f)
                                 .coerceIn(0f, 1f)
@@ -132,7 +178,8 @@ internal fun BoxScope.UnifiedPlayerMiniAndFullLayers(
                         onPrevious = { playerViewModel.previousSong() },
                         onNext = { playerViewModel.nextSong() },
                         canScroll = isMiniPlayerVisible && infrequentPlayerState.isPlaying,
-                        modifier = Modifier.fillMaxSize()
+                        modifier = Modifier.fillMaxSize(),
+                        glassOn = glass.enabled && glass.miniBars
                     )
                 }
             }
@@ -255,7 +302,9 @@ internal fun BoxScope.UnifiedPlayerMiniAndFullLayers(
                         onShuffleToggle = onShuffleToggle,
                         onRepeatToggle = onRepeatToggle,
                         onFavoriteToggle = onFavoriteToggle,
-                        onSongInfoClick = onSongInfoClick
+                        onSongInfoClick = onSongInfoClick,
+                        glass = glass,
+                        appearance = appearance
                     )
                 }
             }
@@ -281,7 +330,12 @@ internal fun UnifiedPlayerPrewarmLayer(
     onShowQueueClicked: () -> Unit,
     onQueueDragStart: () -> Unit,
     onQueueDrag: (Float) -> Unit,
-    onQueueRelease: (Float, Float) -> Unit
+    onQueueRelease: (Float, Float) -> Unit,
+    // Glass & blur (blur-engine test build, 2026-11-17).
+    glass: GlassAppearance = GlassAppearance(),
+    // Round 15, wave 2: the whole appearance (font scale, seek-bar
+    // style) for the full player, passed down the same way.
+    appearance: AppearanceSettings = AppearanceSettings()
 ) {
     if (prewarmFullPlayer && currentSong != null) {
         val currentPlaybackQueue by playerViewModel.queueFlow
@@ -347,7 +401,9 @@ internal fun UnifiedPlayerPrewarmLayer(
                     onCollapse = {},
                     onShuffleToggle = onShuffleToggle,
                     onRepeatToggle = onRepeatToggle,
-                    onFavoriteToggle = onFavoriteToggle
+                    onFavoriteToggle = onFavoriteToggle,
+                    glass = glass,
+                    appearance = appearance
                 )
             }
         }

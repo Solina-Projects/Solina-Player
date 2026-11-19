@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -255,7 +256,10 @@ fun SettingsScreen(
                     top = currentTopBarHeightDp + 8.dp,
                     start = 16.dp,
                     end = 16.dp,
-                    bottom = MiniPlayerHeight + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + 8.dp
+                    // Round 15, E4: the 16 dp margin is the single standard
+                    // for every settings list, so the last row never touches
+                    // the floating bar's shadow (was 8 dp here).
+                    bottom = MiniPlayerHeight + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + 16.dp
                 ),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
                 modifier = Modifier.fillMaxSize()
@@ -293,36 +297,52 @@ fun SettingsScreen(
                 Spacer(modifier = Modifier.height(4.dp))
             }
 
-            item {
-                val colorScheme = MaterialTheme.colorScheme
-                ExpressiveSettingsGroup {
-                    mainSettingsEntries.forEachIndexed { index, entry ->
-                        val shape = settingsGroupItemShape(index, mainSettingsEntries.size)
-                        val colors = colorScheme.settingsIconColors(entry.iconTone)
+            mainSettingsGroups.forEach { group ->
+                item(key = "settings_group_${group.titleRes}") {
+                    val colorScheme = MaterialTheme.colorScheme
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text(
+                            text = stringResource(group.titleRes),
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.SemiBold,
+                            color = colorScheme.primary,
+                            modifier = Modifier.padding(start = 8.dp, top = 8.dp)
+                        )
+                        ExpressiveSettingsGroup {
+                            group.entries.forEachIndexed { index, entry ->
+                                val shape = settingsGroupItemShape(index, group.entries.size)
+                                val colors = colorScheme.settingsIconColors(entry.iconTone)
 
-                        when (entry) {
-                            is MainSettingsEntry.Category -> ExpressiveCategoryItem(
-                                category = entry.category,
-                                customColors = colors,
-                                onClick = { navController.navigateSafely(entry.route) },
-                                shape = shape
-                            )
-                            is MainSettingsEntry.Destination -> ExpressiveNavigationItem(
-                                title = stringResource(entry.titleRes),
-                                subtitle = stringResource(entry.subtitleRes),
-                                icon = entry.icon,
-                                colors = colors,
-                                onClick = { navController.navigateSafely(entry.route) },
-                                shape = shape
-                            )
-                        }
-                        if (index < mainSettingsEntries.lastIndex) {
-                            Spacer(modifier = Modifier.height(2.dp))
+                                when (entry) {
+                                    is MainSettingsEntry.Category -> ExpressiveCategoryItem(
+                                        category = entry.category,
+                                        customColors = colors,
+                                        onClick = { navController.navigateSafely(entry.route) },
+                                        shape = shape
+                                    )
+                                    is MainSettingsEntry.Destination -> ExpressiveNavigationItem(
+                                        title = stringResource(entry.titleRes),
+                                        subtitle = stringResource(entry.subtitleRes),
+                                        icon = entry.icon,
+                                        colors = colors,
+                                        onClick = { navController.navigateSafely(entry.route) },
+                                        shape = shape
+                                    )
+                                }
+                                if (index < group.entries.lastIndex) {
+                                    Spacer(modifier = Modifier.height(2.dp))
+                                }
+                            }
                         }
                     }
                 }
+            }
 
-                Spacer(modifier = Modifier.height(32.dp))
+            item(key = "settings_bottom_spacer") {
+                Spacer(modifier = Modifier.height(16.dp))
             }
         }
         CollapsibleCommonTopBar(
@@ -412,7 +432,11 @@ fun SettingsScreen(
                         navController = navController,
                         contentPadding = PaddingValues(
                             top = 16.dp,
-                            bottom = 16.dp + MiniPlayerHeight,
+                            // Round 15, E4: same 16 dp margin standard as the
+                            // main list, plus the system nav bar inset it was
+                            // missing (the results list sits in the same area
+                            // as the main list, under the same floating bar).
+                            bottom = MiniPlayerHeight + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + 16.dp,
                             start = 16.dp,
                             end = 16.dp
                         ),
@@ -456,11 +480,11 @@ fun ExpressiveNavigationItem(
         onClick = onClick,
         shape = shape,
         color = MaterialTheme.colorScheme.surfaceContainer,
-        modifier = Modifier.fillMaxWidth().height(88.dp)
+        modifier = Modifier.fillMaxWidth().heightIn(min = 84.dp)
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.padding(16.dp).fillMaxSize()
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp).fillMaxWidth()
         ) {
             Box(
                 contentAlignment = Alignment.Center,
@@ -511,11 +535,11 @@ fun ExpressiveCategoryItem(
         onClick = onClick,
         shape = shape,
         color = MaterialTheme.colorScheme.surfaceContainer,
-        modifier = Modifier.fillMaxWidth().height(88.dp) 
+        modifier = Modifier.fillMaxWidth().heightIn(min = 84.dp) 
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.padding(16.dp).fillMaxSize()
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp).fillMaxWidth()
         ) {
             Box(
                 contentAlignment = Alignment.Center,
