@@ -256,4 +256,57 @@
     <string name="video_system_volume">صدای دستگاه</string>
     <string name="video_player_gain">تقویت صدای پخش‌کننده</string>
     <string name="video_pip_play_pause">پخش / مکث</string>
+
+    <!-- Home redesign & deep customisation -->
+    <string name="home_greeting_morning">صبح بخیر</string>
+    <string name="home_greeting_afternoon">ظهر بخیر</string>
+    <string name="home_greeting_evening">عصر بخیر</string>
+    <string name="home_greeting_night">شب بخیر</string>
+    <string name="home_unknown_artist">هنرمند ناشناس</string>
+    <string name="home_music_meta_label">%1$d آهنگ · %2$d آلبوم</string>
+    <string name="home_video_meta_label">%1$d ویدیو · %2$d پوشه</string>
+    <string name="home_quick_shuffle_music">پخش تصادفی موزیک</string>
+    <string name="home_quick_play_video">ادامهٔ پخش ویدیو</string>
+    <string name="home_play_all">پخش همه</string>
+    <string name="home_section_quick_shortcuts">میانبرهای سریع</string>
+    <string name="home_shortcut_recent">اخیر</string>
+    <string name="home_shortcut_video_folders">پوشه‌های ویدیو</string>
+    <string name="home_shortcut_daily_mix">میکس روزانه</string>
+    <string name="home_shortcut_equalizer">اکولایزر</string>
+    <string name="home_shortcut_appearance">ظاهر و رنگ</string>
+    <string name="home_mix_refresh_cd">تازه‌سازی میکس</string>
+    <string name="home_mix_view_all">مشاهدهٔ همهٔ %1$d آهنگ</string>
+    <string name="home_mix_shuffle_short">تصادفی</string>
+    <string name="home_video_action_play">پخش ویدیو</string>
+    <string name="home_stats_video_summary_plain">کتابخانهٔ ویدیو: %1$d ویدیو</string>
+    <string name="home_stats_video_summary_with_progress">%1$d ویدیو · %2$d نیمه‌تمام</string>
+    <string name="home_customize_appearance_title">ظاهر، رنگ‌ها و شیشه</string>
+    <string name="home_customize_appearance_subtitle">تنظیم اندازه کارت‌ها، گوشه‌ها، پالت رنگی، افکت شیشه و فونت</string>
+    <string name="home_customize_group_header">نوار بالا و جستجو</string>
+    <string name="home_customize_group_content">محتوا و چیدمان</string>
+    <string name="home_customize_group_sections">بخش‌ها و ترتیب نمایش</string>
+    <string name="home_pref_greeting_title">خوشامدگویی بر اساس ساعت روز</string>
+    <string name="home_pref_greeting_subtitle">نمایش پیام صبح/عصر/شب بخیر بالای نام برنامه</string>
+    <string name="home_pref_search_bar_title">نمایش نوار جستجو</string>
+    <string name="home_pref_search_bar_subtitle">نمایش کادر جستجو در صفحه خانه (آیکون نوار بالا همیشه در دسترس است)</string>
+    <string name="home_pref_pin_search_title">سنجاق کردن نوار جستجو هنگام اسکرول</string>
+    <string name="home_pref_pin_search_subtitle">ثابت ماندن نوار جستجو در بالا به‌جای تبدیل شدن به آیکون</string>
+    <string name="home_pref_changelog_btn_title">آیکون تغییرات نسخه در نوار بالا</string>
+    <string name="home_pref_changelog_btn_subtitle">نمایش میانبر یادداشت تغییرات در نوار بالای خانه</string>
+    <string name="home_pref_build_badge_title">برچسب نسخه در نوار بالا</string>
+    <string name="home_pref_build_badge_subtitle">نمایش دکمه Stable / Debug کنار عنوان</string>
+    <string name="home_pref_smart_filter_title">فیلتر هوشمند موزیک</string>
+    <string name="home_pref_smart_filter_subtitle">حذف زنگ‌خورها، ضبط تماس‌ها و کلیپ‌های زیر ۳۰ ثانیه از میکس و اخیر</string>
+    <string name="home_pref_entry_quick_actions_title">دکمه‌های پخش سریع روی کارت‌های ورود</string>
+    <string name="home_pref_entry_quick_actions_subtitle">نمایش دکمه پخش تصادفی و ادامهٔ ویدیو روی کارت‌های موزیک و ویدیو</string>
+    <string name="home_pref_video_progress_title">نوار پیشرفت تماشا روی ویدیوها</string>
+    <string name="home_pref_video_progress_subtitle">نمایش میزان تماشاشده زیر تامبنیل ویدیوهای خانه</string>
+    <string name="home_pref_video_stats_title">خلاصهٔ ویدیو در کارت آمار</string>
+    <string name="home_pref_video_stats_subtitle">نمایش تعداد ویدیوها و ویدیوهای نیمه‌تمام در کارت آمار گوش دادن</string>
+    <string name="home_pref_recent_limit_title">تعداد آیتم در هر ردیف اخیر</string>
+    <string name="home_pref_density_title">تراکم فاصلهٔ بخش‌ها</string>
+    <string name="home_pref_density_compact">فشرده</string>
+    <string name="home_pref_density_comfortable">متعادل</string>
+    <string name="home_pref_density_spacious">باز</string>
 </resources>
+

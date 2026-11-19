@@ -1,25 +1,31 @@
 package app.solina.player.presentation.components
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.rounded.Cloud
+import androidx.compose.material.icons.rounded.DashboardCustomize
+import androidx.compose.material.icons.rounded.Menu
+import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
-import androidx.compose.material.icons.filled.Warning
-import androidx.compose.material.icons.rounded.Cloud
-import androidx.compose.material.icons.rounded.Menu
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.LargeTopAppBar
@@ -36,14 +42,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import app.solina.player.BuildConfig
 import app.solina.player.R
 import app.solina.player.data.cloud.CloudFeatures
 import app.solina.player.ui.theme.RoundedSans
 import app.solina.player.ui.theme.SolinaPlayerStatusBarStyle
-import androidx.compose.ui.res.stringResource
+import java.util.Calendar
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -97,7 +105,6 @@ fun GenreGradientTopBar(
     )
 }
 
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeGradientTopBar(
@@ -106,70 +113,138 @@ fun HomeGradientTopBar(
     onBetaClick: () -> Unit,
     onStreamingClick: () -> Unit,
     onMenuClick: () -> Unit,
+    onCustomizeClick: () -> Unit = {},
+    onSearchClick: () -> Unit = {},
+    showSearchAction: Boolean = false,
+    showGreetingHeader: Boolean = true,
+    showChangelogButton: Boolean = false,
+    showBuildBadge: Boolean = false,
     isScrolled: Boolean = false,
 ) {
-    val surfaceContainerHigh = MaterialTheme.colorScheme.surfaceContainerHighest
-
-    SolinaPlayerStatusBarStyle(color = surfaceContainerHigh)
+    val surfaceContainer = MaterialTheme.colorScheme.surfaceContainer
+    SolinaPlayerStatusBarStyle(
+        color = if (isScrolled) surfaceContainer else MaterialTheme.colorScheme.background
+    )
 
     val animatedAlpha by animateFloatAsState(
         targetValue = if (isScrolled) 1f else 0f,
-        animationSpec = tween(durationMillis = 300),
+        animationSpec = tween(durationMillis = 220),
         label = "topbar_alpha_transition"
     )
 
+    val greetingRes = remember {
+        val hour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
+        when (hour) {
+            in 5..11 -> R.string.home_greeting_morning
+            in 12..17 -> R.string.home_greeting_afternoon
+            in 18..22 -> R.string.home_greeting_evening
+            else -> R.string.home_greeting_night
+        }
+    }
+
     TopAppBar(
-        modifier = Modifier.background(surfaceContainerHigh.copy(alpha = animatedAlpha)),
-        title = { },
-        navigationIcon = {
+        modifier = Modifier.background(surfaceContainer.copy(alpha = animatedAlpha)),
+        title = {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
-                modifier = Modifier.padding(start = 12.dp)
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.padding(start = 4.dp)
             ) {
-                // Opens the app sidebar (shortcuts such as Listening Stats and Equalizer).
-                FilledIconButton(
-                    colors = IconButtonDefaults.filledIconButtonColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                        contentColor = MaterialTheme.colorScheme.onSurface
-                    ),
-                    onClick = onMenuClick
-                ) {
-                    Icon(
-                        imageVector = Icons.Rounded.Menu,
-                        contentDescription = stringResource(R.string.sidebar_open)
-                    )
-                }
-                FilledTonalButton(
-                    shape = CircleShape,
-                    contentPadding = PaddingValues(horizontal = 14.dp, vertical = 10.dp),
-                    colors = ButtonDefaults.filledTonalButtonColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                        contentColor = MaterialTheme.colorScheme.onSurface
-                    ),
-                    onClick = onBetaClick
-                ) {
+                if (showGreetingHeader) {
+                    Column(verticalArrangement = Arrangement.spacedBy(0.dp)) {
+                        Text(
+                            text = stringResource(greetingRes),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        Text(
+                            text = stringResource(R.string.app_name),
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            fontFamily = RoundedSans,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                } else {
                     Text(
-                        text = when (BuildConfig.BUILD_TYPE) {
-                            "release" -> stringResource(R.string.presentation_batch_g_topbar_build_stable)
-                            "debug" -> stringResource(R.string.presentation_batch_g_topbar_build_debug)
-                            else -> BuildConfig.BUILD_TYPE.replaceFirstChar { it.uppercase() }
-                        },
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.SemiBold
+                        text = stringResource(R.string.app_name),
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        fontFamily = RoundedSans,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
+
+                if (showBuildBadge) {
+                    FilledTonalButton(
+                        shape = CircleShape,
+                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                        colors = ButtonDefaults.filledTonalButtonColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                            contentColor = MaterialTheme.colorScheme.onSurface
+                        ),
+                        onClick = onBetaClick
+                    ) {
+                        Text(
+                            text = when (BuildConfig.BUILD_TYPE) {
+                                "release" -> stringResource(R.string.presentation_batch_g_topbar_build_stable)
+                                "debug" -> stringResource(R.string.presentation_batch_g_topbar_build_debug)
+                                else -> BuildConfig.BUILD_TYPE.replaceFirstChar { it.uppercase() }
+                            },
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+                }
+            }
+        },
+        navigationIcon = {
+            FilledIconButton(
+                modifier = Modifier.padding(start = 12.dp),
+                colors = IconButtonDefaults.filledIconButtonColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                    contentColor = MaterialTheme.colorScheme.onSurface
+                ),
+                onClick = onMenuClick
+            ) {
+                Icon(
+                    imageVector = Icons.Rounded.Menu,
+                    contentDescription = stringResource(R.string.sidebar_open)
+                )
             }
         },
         actions = {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.padding(end = 14.dp)
+                horizontalArrangement = Arrangement.spacedBy(2.dp),
+                modifier = Modifier.padding(end = 12.dp)
             ) {
-                // Cloud disabled (2026-11-16, user: fully offline for
-                // now): the streaming button (Navidrome / Jellyfin login)
-                // is not shown. onStreamingClick stays as a parameter so
-                // re-enabling is a one-line change here.
+                AnimatedVisibility(
+                    visible = showSearchAction,
+                    enter = fadeIn(tween(180)) + scaleIn(tween(180), initialScale = 0.85f),
+                    exit = fadeOut(tween(150)) + scaleOut(tween(150), targetScale = 0.85f)
+                ) {
+                    FilledIconButton(
+                        colors = IconButtonDefaults.filledIconButtonColors(
+                            containerColor = MaterialTheme.colorScheme.primaryContainer,
+                            contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                        ),
+                        onClick = onSearchClick
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.Search,
+                            contentDescription = stringResource(R.string.cd_search_icon),
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                }
+
                 if (CloudFeatures.ENABLED) {
                     FilledIconButton(
                         colors = IconButtonDefaults.filledIconButtonColors(
@@ -184,18 +259,36 @@ fun HomeGradientTopBar(
                         )
                     }
                 }
+
                 FilledIconButton(
                     colors = IconButtonDefaults.filledIconButtonColors(
                         containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
                         contentColor = MaterialTheme.colorScheme.onSurface
                     ),
-                    onClick = onMoreOptionsClick
+                    onClick = onCustomizeClick
                 ) {
                     Icon(
-                        painter = painterResource(R.drawable.round_newspaper_24),
-                        contentDescription = stringResource(R.string.presentation_batch_g_topbar_cd_changelog)
+                        imageVector = Icons.Rounded.DashboardCustomize,
+                        contentDescription = stringResource(R.string.home_customize_title),
+                        modifier = Modifier.size(20.dp)
                     )
                 }
+
+                if (showChangelogButton) {
+                    FilledIconButton(
+                        colors = IconButtonDefaults.filledIconButtonColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                            contentColor = MaterialTheme.colorScheme.onSurface
+                        ),
+                        onClick = onMoreOptionsClick
+                    ) {
+                        Icon(
+                            painter = painterResource(R.drawable.round_newspaper_24),
+                            contentDescription = stringResource(R.string.presentation_batch_g_topbar_cd_changelog)
+                        )
+                    }
+                }
+
                 FilledIconButton(
                     colors = IconButtonDefaults.filledIconButtonColors(
                         containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
