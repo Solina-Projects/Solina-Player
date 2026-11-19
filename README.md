@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/PixelPlayerOSS.svg" alt="App Icon" height="250"/>
+  <img src="assets/solina_player_icon.svg" alt="Solina Player icon" width="160" height="160"/>
 </p>
 
 <p align="center">
