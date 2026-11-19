@@ -400,8 +400,8 @@
     <string name="updates_notification_confirm_text">برای تأیید نصب ضربه بزنید.</string>
 
     <!-- Appearance customisation (bug-fix round 2026-11-17, item 6) -->
-    <string name="appearance_customize_title">شخصی‌سازی ظاهر</string>
-    <string name="appearance_customize_subtitle">نوارها، کارت‌ها، رنگ‌ها و فونت‌ها — هر بخش جدا.</string>
+    <string name="appearance_customize_title">شیشه، فونت و ظاهرهای آماده</string>
+    <string name="appearance_customize_subtitle">افکت شیشه و تاری، فونت سراسری، ظاهرهای آماده و ذخیره‌شده</string>
     <string name="appearance_preset_title">ظاهرهای آماده</string>
     <string name="appearance_preset_default">پیش‌فرض</string>
     <string name="appearance_preset_compact">فشرده</string>

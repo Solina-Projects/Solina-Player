@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -479,11 +480,11 @@ fun ExpressiveNavigationItem(
         onClick = onClick,
         shape = shape,
         color = MaterialTheme.colorScheme.surfaceContainer,
-        modifier = Modifier.fillMaxWidth().height(88.dp)
+        modifier = Modifier.fillMaxWidth().heightIn(min = 84.dp)
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.padding(16.dp).fillMaxSize()
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp).fillMaxWidth()
         ) {
             Box(
                 contentAlignment = Alignment.Center,
@@ -534,11 +535,11 @@ fun ExpressiveCategoryItem(
         onClick = onClick,
         shape = shape,
         color = MaterialTheme.colorScheme.surfaceContainer,
-        modifier = Modifier.fillMaxWidth().height(88.dp) 
+        modifier = Modifier.fillMaxWidth().heightIn(min = 84.dp) 
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.padding(16.dp).fillMaxSize()
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp).fillMaxWidth()
         ) {
             Box(
                 contentAlignment = Alignment.Center,

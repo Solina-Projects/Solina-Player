@@ -2,7 +2,6 @@ package app.solina.player.presentation.screens
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -19,10 +18,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Delete
-import androidx.compose.material.icons.rounded.Home
-import androidx.compose.material.icons.rounded.MusicNote
 import androidx.compose.material.icons.rounded.RestartAlt
-import androidx.compose.material.icons.rounded.VideoLibrary
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -46,23 +42,22 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import app.solina.player.R
-import app.solina.player.data.preferences.AppThemeMode
 import app.solina.player.data.preferences.AppearanceFontFamilies
 import app.solina.player.data.preferences.AppearancePresetNames
 import app.solina.player.data.preferences.GlassPresetNames
 import app.solina.player.data.preferences.GlassStyleNames
 import app.solina.player.presentation.components.MiniPlayerHeight
-import app.solina.player.presentation.navigation.Screen
-import app.solina.player.presentation.navigation.navigateSafely
 import app.solina.player.presentation.viewmodel.AppearanceViewModel
 
 /**
- * Global Appearance & Theme hub:
- * - Quick switcher to the 3 dedicated section customisers (Home, Music, Video)
- * - App-wide presets & theme mode (System / Light / Dark)
+ * Global Visual Effects, Fonts & Presets screen:
+ * - Ready-made global presets
  * - Glass & blur engine
  * - Global typography (font family & base scale)
  * - Saved looks (save, apply, delete)
+ *
+ * Section-specific customisation (Home, Music, Video) lives strictly in its own
+ * dedicated screen and is never duplicated here.
  */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -71,7 +66,6 @@ fun AppearanceCustomizationScreen(
     viewModel: AppearanceViewModel = hiltViewModel()
 ) {
     val appearance by viewModel.appearance.collectAsStateWithLifecycle()
-    val appThemeMode by viewModel.appThemeMode.collectAsStateWithLifecycle()
     val savedPresets by viewModel.savedPresets.collectAsStateWithLifecycle()
     val presetNoticeRes by viewModel.presetNoticeRes.collectAsStateWithLifecycle()
     var showSaveLookDialog by remember { mutableStateOf(false) }
@@ -133,43 +127,10 @@ fun AppearanceCustomizationScreen(
                 )
             }
 
-            // ---- Dedicated section customisers hub ----
-            item(key = "appearance_section_hub") {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    CustomizationGroupHeading(
-                        text = stringResource(R.string.customize_by_section_heading)
-                    )
-                    CustomizationLinkCard(
-                        title = stringResource(R.string.home_customize_title),
-                        subtitle = stringResource(R.string.home_customize_hub_subtitle),
-                        icon = Icons.Rounded.Home,
-                        iconContainerColor = MaterialTheme.colorScheme.primaryContainer,
-                        iconTint = MaterialTheme.colorScheme.onPrimaryContainer,
-                        onClick = { navController.navigateSafely(Screen.HomeCustomization.route) }
-                    )
-                    CustomizationLinkCard(
-                        title = stringResource(R.string.music_customize_title),
-                        subtitle = stringResource(R.string.music_customize_subtitle),
-                        icon = Icons.Rounded.MusicNote,
-                        iconContainerColor = MaterialTheme.colorScheme.secondaryContainer,
-                        iconTint = MaterialTheme.colorScheme.onSecondaryContainer,
-                        onClick = { navController.navigateSafely(Screen.MusicCustomization.route) }
-                    )
-                    CustomizationLinkCard(
-                        title = stringResource(R.string.video_customize_title),
-                        subtitle = stringResource(R.string.video_customize_subtitle),
-                        icon = Icons.Rounded.VideoLibrary,
-                        iconContainerColor = MaterialTheme.colorScheme.tertiaryContainer,
-                        iconTint = MaterialTheme.colorScheme.onTertiaryContainer,
-                        onClick = { navController.navigateSafely(Screen.VideoCustomization.route) }
-                    )
-                }
-            }
-
-            // ---- Theme + ready-made looks ----
-            item(key = "appearance_theme") {
+            // ---- Ready-made looks ----
+            item(key = "appearance_presets") {
                 AppearanceSectionCard(
-                    title = stringResource(R.string.appearance_theme_title),
+                    title = stringResource(R.string.appearance_preset_title),
                     onReset = { viewModel.resetAll() }
                 ) {
                     ChoiceChips(
@@ -181,17 +142,6 @@ fun AppearanceCustomizationScreen(
                         ),
                         selected = null,
                         onSelect = { viewModel.applyPreset(it) },
-                        label = stringResource(R.string.appearance_preset_title)
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    ChoiceChips(
-                        options = listOf(
-                            AppThemeMode.FOLLOW_SYSTEM to stringResource(R.string.appearance_theme_system),
-                            AppThemeMode.LIGHT to stringResource(R.string.appearance_theme_light),
-                            AppThemeMode.DARK to stringResource(R.string.appearance_theme_dark)
-                        ),
-                        selected = appThemeMode,
-                        onSelect = { viewModel.setAppThemeMode(it) },
                         label = null
                     )
                 }

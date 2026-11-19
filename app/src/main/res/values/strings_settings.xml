@@ -400,8 +400,8 @@
     <string name="updates_notification_confirm_text">Tap to confirm the installation.</string>
 
     <!-- Appearance customisation (bug-fix round 2026-11-17, item 6) -->
-    <string name="appearance_customize_title">Customise appearance</string>
-    <string name="appearance_customize_subtitle">Bars, cards, colours and fonts — each section on its own.</string>
+    <string name="appearance_customize_title">Glass, fonts &amp; presets</string>
+    <string name="appearance_customize_subtitle">Blur &amp; glass effects, global fonts, presets and saved looks</string>
     <string name="appearance_preset_title">Ready-made looks</string>
     <string name="appearance_preset_default">Default</string>
     <string name="appearance_preset_compact">Compact</string>

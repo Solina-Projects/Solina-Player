@@ -317,23 +317,24 @@
     <string name="customize_tab_visuals_style">Visuals &amp; Style</string>
     <string name="customize_global_appearance_title">Global theme, glass &amp; fonts</string>
     <string name="customize_global_appearance_subtitle">App-wide presets, light/dark mode, blur engine and saved looks</string>
-    <string name="home_customize_hub_subtitle">Home layout, sections, smart filters, cards &amp; mini-bars</string>
+    <string name="home_customize_hub_subtitle">Layout, sections, cards &amp; Home bars</string>
     <string name="home_customize_palette_title">Home colour palette</string>
     <string name="home_customize_palette_subtitle">Accent palette applied to the Home screen</string>
     <string name="music_customize_title">Customise Music</string>
-    <string name="music_customize_subtitle">Music palette, mini-player, seek bar, song lists &amp; Now Playing</string>
+    <string name="music_customize_subtitle">Palette, mini-player, seek bar &amp; song lists</string>
     <string name="music_customize_tab_player">Visuals &amp; Player</string>
     <string name="music_customize_tab_library">Library &amp; Lists</string>
     <string name="music_customize_palette_title">Music colour palette</string>
     <string name="music_customize_palette_subtitle">Accent palette applied to the Music library and tabs</string>
     <string name="music_customize_more_heading">More music personalisation</string>
     <string name="video_customize_title">Customise Video</string>
-    <string name="video_customize_subtitle">Video palette, video bar, cards, player defaults &amp; subtitles</string>
+    <string name="video_customize_subtitle">Palette, video bar, player &amp; subtitles</string>
     <string name="video_customize_tab_visuals">Visuals &amp; Cards</string>
     <string name="video_customize_tab_player">Player &amp; Subtitles</string>
     <string name="video_customize_palette_title">Video colour palette</string>
     <string name="video_customize_palette_subtitle">Accent palette applied to Video folders and library</string>
     <string name="video_customize_thumbnails_title">Video thumbnails &amp; progress</string>
     <string name="video_customize_controls_title">Controls &amp; Playback</string>
+    <string name="setcat_appearance_effects_section">Effects, fonts &amp; presets</string>
 </resources>
 

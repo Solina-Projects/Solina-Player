@@ -317,23 +317,24 @@
     <string name="customize_tab_visuals_style">ظاهر و رنگ‌ها</string>
     <string name="customize_global_appearance_title">تم سراسری، شیشه و فونت‌ها</string>
     <string name="customize_global_appearance_subtitle">پریست‌های آماده، حالت روشن/تاریک، افکت شیشه‌ای و ظاهرهای ذخیره‌شده</string>
-    <string name="home_customize_hub_subtitle">چیدمان خانه، بخش‌ها، فیلتر هوشمند، کارت‌ها و مینی‌نوارها</string>
+    <string name="home_customize_hub_subtitle">چیدمان، بخش‌ها، کارت‌ها و نوارهای خانه</string>
     <string name="home_customize_palette_title">پالت رنگی بخش خانه</string>
     <string name="home_customize_palette_subtitle">رنگ‌بندی اختصاصی برای صفحه خانه</string>
     <string name="music_customize_title">شخصی‌سازی موزیک</string>
-    <string name="music_customize_subtitle">پالت موزیک، نوار پخش، نوار پیشرفت، فهرست آهنگ‌ها و صفحه پخش</string>
+    <string name="music_customize_subtitle">پالت، نوار پخش، نوار پیشرفت و فهرست آهنگ‌ها</string>
     <string name="music_customize_tab_player">ظاهر و پخش‌کننده</string>
     <string name="music_customize_tab_library">کتابخانه و فهرست‌ها</string>
     <string name="music_customize_palette_title">پالت رنگی بخش موزیک</string>
     <string name="music_customize_palette_subtitle">رنگ‌بندی اختصاصی برای کتابخانه و تب‌های موزیک</string>
     <string name="music_customize_more_heading">تنظیمات تکمیلی موزیک</string>
     <string name="video_customize_title">شخصی‌سازی ویدیو</string>
-    <string name="video_customize_subtitle">پالت ویدیو، نوار ویدیو، کارت‌ها، تنظیمات پخش‌کننده و زیرنویس</string>
+    <string name="video_customize_subtitle">پالت، نوار ویدیو، پخش‌کننده و زیرنویس</string>
     <string name="video_customize_tab_visuals">ظاهر و کارت‌ها</string>
     <string name="video_customize_tab_player">پخش‌کننده و زیرنویس</string>
     <string name="video_customize_palette_title">پالت رنگی بخش ویدیو</string>
     <string name="video_customize_palette_subtitle">رنگ‌بندی اختصاصی برای پوشه‌ها و کتابخانه ویدیو</string>
     <string name="video_customize_thumbnails_title">تصاویر بندانگشتی و پیشرفت تماشا</string>
     <string name="video_customize_controls_title">کنترل‌ها و پخش</string>
+    <string name="setcat_appearance_effects_section">افکت‌ها، فونت و ظاهرهای آماده</string>
 </resources>
 

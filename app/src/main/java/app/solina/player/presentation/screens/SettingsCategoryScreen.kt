@@ -86,10 +86,7 @@ import androidx.compose.material.icons.rounded.Palette
 import androidx.compose.material.icons.rounded.Speed
 import androidx.compose.material.icons.rounded.Swipe
 import androidx.compose.material.icons.rounded.SystemUpdate
-import androidx.compose.material.icons.rounded.DashboardCustomize
-import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.Tune
-import androidx.compose.material.icons.rounded.VideoLibrary
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.ExpandMore
@@ -468,16 +465,6 @@ fun SettingsCategoryScreen(
                ) {
                     when (category) {
                         SettingsCategory.LIBRARY -> {
-                            SettingsSubsection(title = stringResource(R.string.setcat_appearance_customise_section)) {
-                                SettingsItem(
-                                    title = stringResource(R.string.music_customize_title),
-                                    subtitle = stringResource(R.string.music_customize_subtitle),
-                                    leadingIcon = { Icon(Icons.Rounded.DashboardCustomize, null, tint = MaterialTheme.colorScheme.secondary) },
-                                    trailingIcon = { Icon(Icons.AutoMirrored.Rounded.ArrowForwardIos, stringResource(R.string.cd_open), tint = MaterialTheme.colorScheme.onSurfaceVariant) },
-                                    onClick = { navController.navigateSafely(Screen.MusicCustomization.route) }
-                                )
-                            }
-
                             SettingsSubsection(title = stringResource(R.string.setcat_library_structure)) {
                                 SettingsItem(
                                     title = stringResource(R.string.setcat_excluded_directories_title),
@@ -691,34 +678,7 @@ fun SettingsCategoryScreen(
                         SettingsCategory.APPEARANCE -> {
                             val useSmoothCorners by settingsViewModel.useSmoothCorners.collectAsStateWithLifecycle()
 
-                            // Single appearance hub (round 15, wave 1, A1):
-                            // the two customisation screens are reached from
-                            // here now, not from the main Settings list.
-                            SettingsSubsection(title = stringResource(R.string.setcat_appearance_customise_section)) {
-                                SettingsItem(
-                                    title = stringResource(R.string.home_customize_title),
-                                    subtitle = stringResource(R.string.home_customize_hub_subtitle),
-                                    leadingIcon = { Icon(Icons.Rounded.Home, null, tint = MaterialTheme.colorScheme.secondary) },
-                                    trailingIcon = { Icon(Icons.AutoMirrored.Rounded.ArrowForwardIos, stringResource(R.string.cd_open), tint = MaterialTheme.colorScheme.onSurfaceVariant) },
-                                    modifier = Modifier.settingHighlight("item_home_customization", highlightKey),
-                                    onClick = { navController.navigateSafely(Screen.HomeCustomization.route) }
-                                )
-                                SettingsItem(
-                                    title = stringResource(R.string.music_customize_title),
-                                    subtitle = stringResource(R.string.music_customize_subtitle),
-                                    leadingIcon = { Icon(Icons.Rounded.MusicNote, null, tint = MaterialTheme.colorScheme.secondary) },
-                                    trailingIcon = { Icon(Icons.AutoMirrored.Rounded.ArrowForwardIos, stringResource(R.string.cd_open), tint = MaterialTheme.colorScheme.onSurfaceVariant) },
-                                    modifier = Modifier.settingHighlight("item_music_customization", highlightKey),
-                                    onClick = { navController.navigateSafely(Screen.MusicCustomization.route) }
-                                )
-                                SettingsItem(
-                                    title = stringResource(R.string.video_customize_title),
-                                    subtitle = stringResource(R.string.video_customize_subtitle),
-                                    leadingIcon = { Icon(Icons.Rounded.VideoLibrary, null, tint = MaterialTheme.colorScheme.secondary) },
-                                    trailingIcon = { Icon(Icons.AutoMirrored.Rounded.ArrowForwardIos, stringResource(R.string.cd_open), tint = MaterialTheme.colorScheme.onSurfaceVariant) },
-                                    modifier = Modifier.settingHighlight("item_video_customization", highlightKey),
-                                    onClick = { navController.navigateSafely(Screen.VideoCustomization.route) }
-                                )
+                            SettingsSubsection(title = stringResource(R.string.setcat_appearance_effects_section)) {
                                 SettingsItem(
                                     title = stringResource(R.string.appearance_customize_title),
                                     subtitle = stringResource(R.string.appearance_customize_subtitle),
@@ -1115,16 +1075,6 @@ fun SettingsCategoryScreen(
                         // player UI. Same preference keys — the player reads
                         // them too, so both places stay in sync.
                         SettingsCategory.VIDEO -> {
-                            SettingsSubsection(title = stringResource(R.string.setcat_appearance_customise_section)) {
-                                SettingsItem(
-                                    title = stringResource(R.string.video_customize_title),
-                                    subtitle = stringResource(R.string.video_customize_subtitle),
-                                    leadingIcon = { Icon(Icons.Rounded.DashboardCustomize, null, tint = MaterialTheme.colorScheme.secondary) },
-                                    trailingIcon = { Icon(Icons.AutoMirrored.Rounded.ArrowForwardIos, stringResource(R.string.cd_open), tint = MaterialTheme.colorScheme.onSurfaceVariant) },
-                                    onClick = { navController.navigateSafely(Screen.VideoCustomization.route) }
-                                )
-                            }
-
                             SettingsSubsection(title = stringResource(R.string.setcat_video_playback_section)) {
                                 ThemeSelectorItem(
                                     label = stringResource(R.string.setcat_video_aspect_title),
