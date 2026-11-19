@@ -74,7 +74,6 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import app.solina.player.R
-import app.solina.player.data.preferences.HomeSectionDensity
 import app.solina.player.data.preferences.HomeSectionId
 import app.solina.player.presentation.components.MiniPlayerHeight
 import app.solina.player.presentation.navigation.Screen
@@ -189,8 +188,8 @@ fun HomeCustomizationScreen(
                                 icon = Icons.Rounded.WbSunny,
                                 title = stringResource(R.string.home_pref_greeting_title),
                                 subtitle = stringResource(R.string.home_pref_greeting_subtitle),
-                                checked = layoutPrefs.showGreeting,
-                                onCheckedChange = viewModel::setShowGreeting
+                                checked = layoutPrefs.showGreetingHeader,
+                                onCheckedChange = viewModel::setShowGreetingHeader
                             )
                             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
                             CustomizationSwitchRow(
@@ -205,25 +204,25 @@ fun HomeCustomizationScreen(
                                 icon = Icons.Rounded.PushPin,
                                 title = stringResource(R.string.home_pref_pin_search_title),
                                 subtitle = stringResource(R.string.home_pref_pin_search_subtitle),
-                                checked = layoutPrefs.pinSearchBarOnScroll,
+                                checked = layoutPrefs.pinSearchBar,
                                 enabled = layoutPrefs.showSearchBar,
-                                onCheckedChange = viewModel::setPinSearchBarOnScroll
+                                onCheckedChange = viewModel::setPinSearchBar
                             )
                             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
                             CustomizationSwitchRow(
                                 icon = Icons.Rounded.NewReleases,
                                 title = stringResource(R.string.home_pref_changelog_btn_title),
                                 subtitle = stringResource(R.string.home_pref_changelog_btn_subtitle),
-                                checked = layoutPrefs.showChangelogButton,
-                                onCheckedChange = viewModel::setShowChangelogButton
+                                checked = layoutPrefs.showChangelogInTopBar,
+                                onCheckedChange = viewModel::setShowChangelogInTopBar
                             )
                             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
                             CustomizationSwitchRow(
                                 icon = Icons.Rounded.Verified,
                                 title = stringResource(R.string.home_pref_build_badge_title),
                                 subtitle = stringResource(R.string.home_pref_build_badge_subtitle),
-                                checked = layoutPrefs.showBuildBadge,
-                                onCheckedChange = viewModel::setShowBuildBadge
+                                checked = layoutPrefs.showBuildBadgeInTopBar,
+                                onCheckedChange = viewModel::setShowBuildBadgeInTopBar
                             )
                         }
                     }
@@ -248,16 +247,16 @@ fun HomeCustomizationScreen(
                                 icon = Icons.Rounded.FilterAlt,
                                 title = stringResource(R.string.home_pref_smart_filter_title),
                                 subtitle = stringResource(R.string.home_pref_smart_filter_subtitle),
-                                checked = layoutPrefs.smartMusicFilter,
-                                onCheckedChange = viewModel::setSmartMusicFilter
+                                checked = layoutPrefs.filterShortAudioInMix,
+                                onCheckedChange = viewModel::setFilterShortAudioInMix
                             )
                             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
                             CustomizationSwitchRow(
                                 icon = Icons.Rounded.Bolt,
                                 title = stringResource(R.string.home_pref_entry_quick_actions_title),
                                 subtitle = stringResource(R.string.home_pref_entry_quick_actions_subtitle),
-                                checked = layoutPrefs.showEntryQuickActions,
-                                onCheckedChange = viewModel::setShowEntryQuickActions
+                                checked = layoutPrefs.showQuickActionsOnEntryCards,
+                                onCheckedChange = viewModel::setShowQuickActionsOnEntryCards
                             )
                             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
                             CustomizationSwitchRow(
@@ -289,8 +288,8 @@ fun HomeCustomizationScreen(
                             ) {
                                 listOf(6, 12, 20).forEach { count ->
                                     FilterChip(
-                                        selected = layoutPrefs.recentItemsLimit == count,
-                                        onClick = { viewModel.setRecentItemsLimit(count) },
+                                        selected = layoutPrefs.effectiveRecentLimit == count,
+                                        onClick = { viewModel.setRecentCardsLimit(count) },
                                         label = { Text(text = "$count") }
                                     )
                                 }
@@ -307,13 +306,13 @@ fun HomeCustomizationScreen(
                                 verticalArrangement = Arrangement.spacedBy(6.dp)
                             ) {
                                 listOf(
-                                    HomeSectionDensity.COMPACT to R.string.home_pref_density_compact,
-                                    HomeSectionDensity.COMFORTABLE to R.string.home_pref_density_comfortable,
-                                    HomeSectionDensity.SPACIOUS to R.string.home_pref_density_spacious
-                                ).forEach { (density, labelRes) ->
+                                    14 to R.string.home_pref_density_compact,
+                                    20 to R.string.home_pref_density_comfortable,
+                                    28 to R.string.home_pref_density_spacious
+                                ).forEach { (dpValue, labelRes) ->
                                     FilterChip(
-                                        selected = layoutPrefs.sectionDensity == density,
-                                        onClick = { viewModel.setSectionDensity(density) },
+                                        selected = layoutPrefs.effectiveSectionSpacingDp == dpValue,
+                                        onClick = { viewModel.setSectionSpacingDp(dpValue) },
                                         label = { Text(text = stringResource(labelRes)) }
                                     )
                                 }
