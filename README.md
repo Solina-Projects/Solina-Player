@@ -14,7 +14,18 @@
   <img src="assets/screenshot1.jpeg" alt="Solina Player home screen" width="205"/>
   <img src="assets/screenshot2.jpeg" alt="Solina Player now playing screen" width="205"/>
   <img src="assets/screenshot3.jpeg" alt="Solina Player library screen" width="205"/>
+</p>
+
+<p align="center">
   <img src="assets/screenshot4.jpeg" alt="Solina Player lyrics screen" width="205"/>
+  <img src="assets/screenshot5.jpeg" alt="Solina Player home screen v1.1.0" width="205"/>
+  <img src="assets/screenshot6.jpeg" alt="Solina Player recent videos and Your Mix" width="205"/>
+</p>
+
+<p align="center">
+  <img src="assets/screenshot7.jpeg" alt="Solina Player listening stats" width="205"/>
+  <img src="assets/screenshot8.jpeg" alt="Solina Player library folders" width="205"/>
+  <img src="assets/screenshot9.jpeg" alt="Solina Player video folders" width="205"/>
 </p>
 
 # Solina Player
