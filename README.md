@@ -11,21 +11,15 @@
 </p>
 
 <p align="center">
-  <img src="assets/screenshot1.jpeg" alt="Solina Player home screen" width="205"/>
-  <img src="assets/screenshot2.jpeg" alt="Solina Player now playing screen" width="205"/>
-  <img src="assets/screenshot3.jpeg" alt="Solina Player library screen" width="205"/>
+  <img src="assets/screenshot1.jpeg" alt="Solina Player now playing screen" width="205"/>
+  <img src="assets/screenshot2.jpeg" alt="Solina Player video folders" width="205"/>
+  <img src="assets/screenshot3.jpeg" alt="Solina Player library folders" width="205"/>
 </p>
 
 <p align="center">
-  <img src="assets/screenshot4.jpeg" alt="Solina Player lyrics screen" width="205"/>
-  <img src="assets/screenshot5.jpeg" alt="Solina Player home screen v1.1.0" width="205"/>
-  <img src="assets/screenshot6.jpeg" alt="Solina Player recent videos and Your Mix" width="205"/>
-</p>
-
-<p align="center">
-  <img src="assets/screenshot7.jpeg" alt="Solina Player listening stats" width="205"/>
-  <img src="assets/screenshot8.jpeg" alt="Solina Player library folders" width="205"/>
-  <img src="assets/screenshot9.jpeg" alt="Solina Player video folders" width="205"/>
+  <img src="assets/screenshot4.jpeg" alt="Solina Player home screen" width="205"/>
+  <img src="assets/screenshot5.jpeg" alt="Solina Player recent videos and Your Mix" width="205"/>
+  <img src="assets/screenshot6.jpeg" alt="Solina Player video player in landscape" width="205"/>
 </p>
 
 # Solina Player
@@ -67,6 +61,25 @@ screenshot, audio settings, sleep mode, night light and background
 playback. Video formats are what ExoPlayer plus the
 bundled FFmpeg decoders support (common containers such as MP4, MKV,
 WebM, MOV, AVI, 3GP and FLV); the music player behaviour is unchanged.
+
+## What's new in v1.1.0
+
+- **Video selection:** long-press any video in the library, search or
+  folders to select it, then play, add to playlist, share, rename, view
+  details or delete — the same selection system the music library
+  already had. Folders themselves are not selectable; rename and
+  details need exactly one video selected. Delete and rename ask for
+  the system MediaStore consent first.
+- **Swapped video swipes:** swiping up/down on the left side of the
+  video player now changes volume, on the right side brightness. The
+  indicator bars stay where they were (volume on the right,
+  brightness on the left).
+- **Seek stays quiet:** seeking in the video player no longer pops the
+  control bars up — only the seek preview shows.
+- **Home second tap:** tapping a recently-added song a second time
+  opens the full music player; tapping a recently-added video plays it
+  inside its card first, and a second tap opens it fullscreen from the
+  same position.
 
 ## What It Is
 
