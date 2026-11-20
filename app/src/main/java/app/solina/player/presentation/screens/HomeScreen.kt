@@ -385,6 +385,23 @@ fun HomeScreen(
     var showYourMixFullSheet by remember { mutableStateOf(false) }
     var songForOptions by remember { mutableStateOf<HomeSongOptions?>(null) }
     var videoForOptions by remember { mutableStateOf<VideoItem?>(null) }
+    // Round 22, item 5: inline playback inside a recent-video card.
+    // The holder is a @Singleton, so the player survives Home leaving the
+    // composition — the URI survives config changes via rememberSaveable.
+    var inlineVideoUri by rememberSaveable { mutableStateOf<String?>(null) }
+    val openingFullPlayer = remember { mutableStateOf(false) }
+    val inlinePlayer by videoViewModel.videoPlaybackHolder.player.collectAsStateWithLifecycle()
+    val inlineIsPlaying by videoViewModel.videoPlaybackHolder.isPlaying.collectAsStateWithLifecycle()
+    DisposableEffect(Unit) {
+        onDispose {
+            // Leaving Home stops the inline playback in the card — unless
+            // we are opening the full player, which takes over the same
+            // shared player.
+            if (!openingFullPlayer.value) {
+                videoViewModel.videoPlaybackHolder.pause()
+            }
+        }
+    }
 
     val sheetState = rememberModalSheetState()
     val betaSheetState = rememberModalSheetState()
@@ -663,11 +680,22 @@ fun HomeScreen(
                                             RecentlyAddedMusicRow(
                                                 songs = displayRecentMusic,
                                                 onSongClick = { song ->
-                                                    playerViewModel.playSongs(
-                                                        songsToPlay = displayRecentMusic,
-                                                        startSong = song,
-                                                        queueName = recentMusicQueueName
-                                                    )
+                                                    // Round 22, item 4: first tap plays,
+                                                    // second tap (same song, already
+                                                    // current) opens the full player —
+                                                    // navigate FIRST, then expand the
+                                                    // sheet (Round 21 mechanism).
+                                                    if (currentSong?.id == song.id) {
+                                                        if (navController.navigateSafely(Screen.Library.route)) {
+                                                            playerViewModel.requestExpandPlayerSheetAfterNavigation()
+                                                        }
+                                                    } else {
+                                                        playerViewModel.playSongs(
+                                                            songsToPlay = displayRecentMusic,
+                                                            startSong = song,
+                                                            queueName = recentMusicQueueName
+                                                        )
+                                                    }
                                                 },
                                                 onSongLongClick = { song ->
                                                     songForOptions = HomeSongOptions(
@@ -725,15 +753,47 @@ fun HomeScreen(
                                                 videos = displayRecentVideos,
                                                 progressMap = videoProgressMap,
                                                 showProgressStrip = layoutPrefs.showVideoProgressOnHome,
+                                                // Round 22, item 5: inline playback
+                                                // inside the tapped card.
+                                                inlinePlayingUri = inlineVideoUri,
+                                                inlinePlayer = inlinePlayer,
+                                                inlineIsPlaying = inlineIsPlaying,
+                                                onInlinePlayPause = {
+                                                    videoViewModel.videoPlaybackHolder.togglePlayPause()
+                                                },
                                                 onVideoClick = { video ->
-                                                    val savedPos = videoProgressMap[video.contentUriString]?.positionMs ?: 0L
-                                                    navController.navigateSafely(
-                                                        Screen.VideoPlayer.createRoute(
-                                                            startUri = video.contentUriString,
-                                                            queueUris = recentVideoQueue,
-                                                            startPositionMs = savedPos
+                                                    if (inlineVideoUri == video.contentUriString) {
+                                                        // Second tap on the same video:
+                                                        // open the full player at the
+                                                        // current inline position (restart
+                                                        // from 0 if within 1.5 s of the end).
+                                                        val position = videoViewModel.videoPlaybackHolder.positionMs.value
+                                                        val duration = videoViewModel.videoPlaybackHolder.durationMs.value
+                                                        val startPosition = if (duration > 0L && duration - position <= 1500L) {
+                                                            0L
+                                                        } else {
+                                                            position
+                                                        }
+                                                        openingFullPlayer.value = true
+                                                        inlineVideoUri = null
+                                                        navController.navigateSafely(
+                                                            Screen.VideoPlayer.createRoute(
+                                                                startUri = video.contentUriString,
+                                                                queueUris = recentVideoQueue,
+                                                                startPositionMs = startPosition
+                                                            )
                                                         )
-                                                    )
+                                                    } else {
+                                                        // First tap: play inside this
+                                                        // card (tapping another video
+                                                        // switches the inline playback).
+                                                        val savedPos = videoProgressMap[video.contentUriString]?.positionMs ?: 0L
+                                                        videoViewModel.videoPlaybackHolder.play(
+                                                            video.contentUriString,
+                                                            savedPos
+                                                        )
+                                                        inlineVideoUri = video.contentUriString
+                                                    }
                                                 },
                                                 onVideoLongClick = { video ->
                                                     videoForOptions = video

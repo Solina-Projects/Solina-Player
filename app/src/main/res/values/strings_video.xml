@@ -207,7 +207,7 @@
     <string name="video_tutorial_title">How to use the player</string>
     <string name="video_tutorial_swipe">Swipe left / right on the video to seek back and forward.</string>
     <string name="video_tutorial_long_press">Press and hold to open the speed bar — slide while holding to pick a speed.</string>
-    <string name="video_tutorial_vertical">Swipe up / down on the left half for brightness, on the right half for volume.</string>
+    <string name="video_tutorial_vertical">Swipe up / down on the left half for volume, on the right half for brightness.</string>
     <string name="video_tutorial_pinch">Pinch with two fingers to zoom the video; double-tap to reset.</string>
     <string name="video_tutorial_tap">Tap the video to show or hide all the bars.</string>
     <string name="video_tutorial_top">The top bar has audio tracks, subtitles and the menu; the arrow opens more controls.</string>
@@ -336,5 +336,29 @@
     <string name="video_customize_thumbnails_title">Video thumbnails &amp; progress</string>
     <string name="video_customize_controls_title">Controls &amp; Playback</string>
     <string name="setcat_appearance_effects_section">Effects, fonts &amp; presets</string>
+
+    <!-- Round 22: long-press multi-selection for video files. -->
+    <string name="video_selected_count">%1$d selected</string>
+    <string name="video_selection_select_all">Select all</string>
+    <string name="video_selection_clear">Clear selection</string>
+    <string name="video_selection_actions">Actions</string>
+    <string name="video_selection_play">Play</string>
+    <string name="video_selection_add_to_playlist">Add to Videos playlist</string>
+    <string name="video_selection_share">Share</string>
+    <string name="video_selection_rename">Rename</string>
+    <string name="video_selection_details">Details</string>
+    <string name="video_selection_delete">Delete</string>
+    <string name="video_selection_delete_title">Delete videos</string>
+    <string name="video_selection_delete_message">%1$d videos will be permanently deleted.</string>
+    <string name="video_selection_delete_failed">Could not delete videos</string>
+    <string name="video_selection_delete_cancelled">Deletion cancelled</string>
+    <string name="video_selection_deleted_count">%1$d videos deleted</string>
+    <string name="video_selection_cannot_delete_playing">Cannot delete the video that is playing</string>
+    <string name="video_selection_rename_title">Rename video</string>
+    <string name="video_selection_rename_hint">Video name</string>
+    <string name="video_selection_rename_done">Video renamed</string>
+    <string name="video_selection_rename_failed">Could not rename video</string>
+    <string name="video_selection_rename_empty">Enter a name first</string>
+    <string name="video_selection_details_date">Date added</string>
 </resources>
 
