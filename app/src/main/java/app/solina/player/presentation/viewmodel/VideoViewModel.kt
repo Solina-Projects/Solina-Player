@@ -1,7 +1,5 @@
 package app.solina.player.presentation.viewmodel
 
-package app.solina.player.presentation.viewmodel
-
 import android.app.Activity
 import android.app.RecoverableSecurityException
 import android.content.ClipData
