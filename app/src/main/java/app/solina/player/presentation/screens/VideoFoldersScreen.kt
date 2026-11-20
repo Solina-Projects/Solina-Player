@@ -1,6 +1,8 @@
 package app.solina.player.presentation.screens
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -67,6 +69,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -81,8 +85,11 @@ import app.solina.player.data.model.VideoProgressEntry
 import app.solina.player.data.model.groupVideosByFolder
 import app.solina.player.data.model.parentFolderPath
 import app.solina.player.presentation.components.D3Reveal
+import app.solina.player.presentation.components.VideoSelectionActionsHost
+import app.solina.player.presentation.components.VideoSelectionCheckOverlay
 import app.solina.player.presentation.components.VideoThumbnail
 import app.solina.player.presentation.components.rememberRevealedKeys
+import app.solina.player.presentation.components.subcomps.SelectionActionRow
 import app.solina.player.presentation.navigation.Screen
 import app.solina.player.presentation.navigation.navigateSafely
 import app.solina.player.presentation.viewmodel.AppearanceViewModel
@@ -115,6 +122,14 @@ fun VideoFoldersScreen(
     val progressMap by videoViewModel.videoProgressMap.collectAsStateWithLifecycle()
     val favouriteUris by videoViewModel.favouriteVideoUris.collectAsStateWithLifecycle()
     val playlistEntries by videoViewModel.videoPlaylistEntries.collectAsStateWithLifecycle()
+    // Round 22: long-press multi-selection for files (folder rows/cards
+    // themselves are NOT selectable — only the video files inside them).
+    val selectedUris by videoViewModel.selectedVideoUris.collectAsStateWithLifecycle()
+    val isSelectionMode by videoViewModel.isVideoSelectionMode.collectAsStateWithLifecycle()
+    val haptic = LocalHapticFeedback.current
+    BackHandler(enabled = isSelectionMode) {
+        videoViewModel.clearVideoSelection()
+    }
     var showFavouritesDialog by remember { mutableStateOf(false) }
     var showPlaylistDialog by remember { mutableStateOf(false) }
     var sort by rememberSaveable { mutableStateOf(FolderSort.NAME) }
@@ -399,6 +414,22 @@ fun VideoFoldersScreen(
                 }
             }
             Spacer(Modifier.height(8.dp))
+            // Round 22: selection action row (same component as music).
+            // Only in Files mode — folder rows are not selectable.
+            if (isSelectionMode && viewMode == FolderViewMode.FILES) {
+                SelectionActionRow(
+                    selectedCount = selectedUris.size,
+                    onSelectAll = {
+                        videoViewModel.selectAllVideos(shownVideos.map { it.contentUriString })
+                    },
+                    onDeselect = { videoViewModel.clearVideoSelection() },
+                    onOptionsClick = { videoViewModel.openVideoSelectionSheet() },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp)
+                )
+                Spacer(Modifier.height(8.dp))
+            }
             if (videos.isEmpty()) {
                 Box(
                     modifier = Modifier.fillMaxSize(),
@@ -422,7 +453,16 @@ fun VideoFoldersScreen(
                     videos = shownVideos,
                     progressMap = progressMap,
                     isGrid = isGrid,
-                    navController = navController
+                    navController = navController,
+                    selectedUris = selectedUris,
+                    isSelectionMode = isSelectionMode,
+                    onVideoToggle = { video ->
+                        videoViewModel.toggleVideoSelection(video.contentUriString)
+                    },
+                    onVideoLongClick = { video ->
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        videoViewModel.enterVideoSelection(video.contentUriString)
+                    }
                 )
             } else {
                 VideoFolderList(
@@ -449,6 +489,22 @@ fun VideoFoldersScreen(
                 )
             }
         }
+        // Round 22: selection bottom sheet + dialogs + permission launchers.
+        VideoSelectionActionsHost(
+            videoViewModel = videoViewModel,
+            allVideos = videos,
+            onPlayVideos = { selected ->
+                if (selected.isNotEmpty()) {
+                    videoViewModel.clearVideoSelection()
+                    navController.navigateSafely(
+                        Screen.VideoPlayer.createRoute(
+                            startUri = selected.first().contentUriString,
+                            queueUris = selected.map { it.contentUriString }
+                        )
+                    )
+                }
+            }
+        )
     }
 }
 
@@ -562,7 +618,12 @@ private fun VideoFilesList(
     videos: List<VideoItem>,
     progressMap: Map<String, VideoProgressEntry>,
     isGrid: Boolean,
-    navController: NavController
+    navController: NavController,
+    // Round 22: long-press multi-selection.
+    selectedUris: Set<String> = emptySet(),
+    isSelectionMode: Boolean = false,
+    onVideoToggle: (VideoItem) -> Unit = {},
+    onVideoLongClick: (VideoItem) -> Unit = {}
 ) {
     val bottomPadding = PaddingValues(bottom = 160.dp)
     // Staggered tile reveal (d3motion gemini-image): each card fades in
@@ -585,16 +646,22 @@ private fun VideoFilesList(
                 VideoFileGridCard(
                     video = video,
                     progressFraction = progressMap[video.contentUriString]?.fraction ?: 0f,
+                    selected = video.contentUriString in selectedUris,
+                    onLongClick = { onVideoLongClick(video) },
                     onClick = {
-                        navController.navigateSafely(
-                            // Round 16, item 1a: the tapped video starts
-                            // a queue of the whole visible file list, so
-                            // playback auto-advances instead of stopping.
-                            Screen.VideoPlayer.createRoute(
-                                startUri = video.contentUriString,
-                                queueUris = videos.map { it.contentUriString }
+                        if (isSelectionMode) {
+                            onVideoToggle(video)
+                        } else {
+                            navController.navigateSafely(
+                                // Round 16, item 1a: the tapped video starts
+                                // a queue of the whole visible file list, so
+                                // playback auto-advances instead of stopping.
+                                Screen.VideoPlayer.createRoute(
+                                    startUri = video.contentUriString,
+                                    queueUris = videos.map { it.contentUriString }
+                                )
                             )
-                        )
+                        }
                     }
                 )
                 }
@@ -615,16 +682,22 @@ private fun VideoFilesList(
                 VideoFileRow(
                     video = video,
                     progressFraction = progressMap[video.contentUriString]?.fraction ?: 0f,
+                    selected = video.contentUriString in selectedUris,
+                    onLongClick = { onVideoLongClick(video) },
                     onClick = {
-                        navController.navigateSafely(
-                            // Round 16, item 1a: the tapped video starts
-                            // a queue of the whole visible file list, so
-                            // playback auto-advances instead of stopping.
-                            Screen.VideoPlayer.createRoute(
-                                startUri = video.contentUriString,
-                                queueUris = videos.map { it.contentUriString }
+                        if (isSelectionMode) {
+                            onVideoToggle(video)
+                        } else {
+                            navController.navigateSafely(
+                                // Round 16, item 1a: the tapped video starts
+                                // a queue of the whole visible file list, so
+                                // playback auto-advances instead of stopping.
+                                Screen.VideoPlayer.createRoute(
+                                    startUri = video.contentUriString,
+                                    queueUris = videos.map { it.contentUriString }
+                                )
                             )
-                        )
+                        }
                     }
                 )
                 }
@@ -833,6 +906,9 @@ private fun VideoFileRow(
     video: VideoItem,
     progressFraction: Float = 0f,
     onClick: () -> Unit,
+    // Round 22: long-press multi-selection.
+    selected: Boolean = false,
+    onLongClick: () -> Unit = {},
     // Round 15, wave 2, C2 + C4: row corners + list font size from the
     // appearance settings (same controls as the music library rows).
     appearanceViewModel: AppearanceViewModel = hiltViewModel()
@@ -842,10 +918,14 @@ private fun VideoFileRow(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick),
+            .combinedClickable(onClick = onClick, onLongClick = onLongClick),
         shape = RoundedCornerShape(appearance.listRows.cornerRadiusDp.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainer
+            containerColor = if (selected) {
+                MaterialTheme.colorScheme.primaryContainer
+            } else {
+                MaterialTheme.colorScheme.surfaceContainer
+            }
         ),
         elevation = CardDefaults.cardElevation(0.dp)
     ) {
@@ -853,11 +933,19 @@ private fun VideoFileRow(
             modifier = Modifier.padding(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            VideoThumbnail(
-                video = video,
-                progressFraction = progressFraction,
-                modifier = Modifier.size(width = 112.dp, height = 64.dp)
-            )
+            Box {
+                VideoThumbnail(
+                    video = video,
+                    progressFraction = progressFraction,
+                    modifier = Modifier.size(width = 112.dp, height = 64.dp)
+                )
+                VideoSelectionCheckOverlay(
+                    selected = selected,
+                    modifier = Modifier
+                        .align(Alignment.TopStart)
+                        .padding(4.dp)
+                )
+            }
             Spacer(Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
@@ -901,26 +989,41 @@ private fun VideoFileRow(
 private fun VideoFileGridCard(
     video: VideoItem,
     progressFraction: Float = 0f,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    // Round 22: long-press multi-selection.
+    selected: Boolean = false,
+    onLongClick: () -> Unit = {}
 ) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick),
+            .combinedClickable(onClick = onClick, onLongClick = onLongClick),
         shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainer
+            containerColor = if (selected) {
+                MaterialTheme.colorScheme.primaryContainer
+            } else {
+                MaterialTheme.colorScheme.surfaceContainer
+            }
         ),
         elevation = CardDefaults.cardElevation(0.dp)
     ) {
         Column {
-            VideoThumbnail(
-                video = video,
-                progressFraction = progressFraction,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .aspectRatio(16f / 9f)
-            )
+            Box {
+                VideoThumbnail(
+                    video = video,
+                    progressFraction = progressFraction,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .aspectRatio(16f / 9f)
+                )
+                VideoSelectionCheckOverlay(
+                    selected = selected,
+                    modifier = Modifier
+                        .align(Alignment.TopStart)
+                        .padding(8.dp)
+                )
+            }
             Column(modifier = Modifier.padding(12.dp)) {
                 Text(
                     text = video.displayTitle,
@@ -1178,6 +1281,13 @@ fun VideoFolderDetailScreen(
     val folderName = folderPath.substringAfterLast('/').ifBlank {
         stringResource(R.string.video_folder_unknown)
     }
+    // Round 22: long-press multi-selection (mirrors the music library).
+    val selectedUris by videoViewModel.selectedVideoUris.collectAsStateWithLifecycle()
+    val isSelectionMode by videoViewModel.isVideoSelectionMode.collectAsStateWithLifecycle()
+    val haptic = LocalHapticFeedback.current
+    BackHandler(enabled = isSelectionMode) {
+        videoViewModel.clearVideoSelection()
+    }
 
     Scaffold(
         topBar = {
@@ -1250,6 +1360,21 @@ fun VideoFolderDetailScreen(
                 }
             }
             Spacer(Modifier.height(8.dp))
+            // Round 22: selection action row (same component as music).
+            if (isSelectionMode) {
+                SelectionActionRow(
+                    selectedCount = selectedUris.size,
+                    onSelectAll = {
+                        videoViewModel.selectAllVideos(folderVideos.map { it.contentUriString })
+                    },
+                    onDeselect = { videoViewModel.clearVideoSelection() },
+                    onOptionsClick = { videoViewModel.openVideoSelectionSheet() },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp)
+                )
+                Spacer(Modifier.height(8.dp))
+            }
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(bottom = 160.dp),
@@ -1259,22 +1384,47 @@ fun VideoFolderDetailScreen(
                     VideoFileRow(
                         video = video,
                         progressFraction = progressMap[video.contentUriString]?.fraction ?: 0f,
+                        selected = video.contentUriString in selectedUris,
+                        onLongClick = {
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            videoViewModel.enterVideoSelection(video.contentUriString)
+                        },
                         onClick = {
-                            navController.navigateSafely(
-                                // Round 16, item 1a: the tapped video
-                                // starts a queue of the whole folder, so
-                                // playback auto-advances instead of
-                                // stopping at the end of one video.
-                                Screen.VideoPlayer.createRoute(
-                                    startUri = video.contentUriString,
-                                    queueUris = folderVideos.map { it.contentUriString }
+                            if (isSelectionMode) {
+                                videoViewModel.toggleVideoSelection(video.contentUriString)
+                            } else {
+                                navController.navigateSafely(
+                                    // Round 16, item 1a: the tapped video
+                                    // starts a queue of the whole folder, so
+                                    // playback auto-advances instead of
+                                    // stopping at the end of one video.
+                                    Screen.VideoPlayer.createRoute(
+                                        startUri = video.contentUriString,
+                                        queueUris = folderVideos.map { it.contentUriString }
+                                    )
                                 )
-                            )
+                            }
                         }
                     )
                 }
             }
         }
+        // Round 22: selection bottom sheet + dialogs + permission launchers.
+        VideoSelectionActionsHost(
+            videoViewModel = videoViewModel,
+            allVideos = allVideos,
+            onPlayVideos = { selected ->
+                if (selected.isNotEmpty()) {
+                    videoViewModel.clearVideoSelection()
+                    navController.navigateSafely(
+                        Screen.VideoPlayer.createRoute(
+                            startUri = selected.first().contentUriString,
+                            queueUris = selected.map { it.contentUriString }
+                        )
+                    )
+                }
+            }
+        )
     }
 }
 

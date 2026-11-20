@@ -86,7 +86,6 @@ fun VideoPlayerSurface(
     onApplySpeedLive: (Float) -> Unit,
     onCommitSpeed: (Float) -> Unit,
     onSingleTapCandidate: () -> Unit,
-    onShowBarsAndPoke: () -> Unit,
     onSpeedBarShown: () -> Unit,
     onCancelPendingSingleTap: () -> Unit,
     onLockedTap: () -> Unit,
@@ -318,15 +317,21 @@ fun VideoPlayerSurface(
                                                     change.consume()
                                                     continue
                                                 }
+                                                // Round 22: the swipe sides are swapped —
+                                                // left half = volume, right half = brightness.
+                                                // The edge indicators stay where they were
+                                                // (brightness left, volume right), so a left
+                                                // swipe changes volume and shows its bar on
+                                                // the right, and vice versa.
                                                 mode = when {
                                                     abs(dx) > abs(dy) -> VideoGestureMode.Seek
-                                                    down.position.x < size.width / 2f -> VideoGestureMode.Brightness
-                                                    else -> VideoGestureMode.Volume
+                                                    down.position.x < size.width / 2f -> VideoGestureMode.Volume
+                                                    else -> VideoGestureMode.Brightness
                                                 }
-                                                // Round 20: only a horizontal seek shows the bars.
-                                                // Brightness/volume swipes stay clean — just the
-                                                // edge slider + % hint, no bars, no timer poke.
-                                                if (mode == VideoGestureMode.Seek) onShowBarsAndPoke()
+                                                // Round 22: a seek swipe shows nothing but
+                                                // the seek preview/delta chip — no bars, no
+                                                // info, no timer poke (same as brightness /
+                                                // volume swipes since Round 20).
                                                 if (mode == VideoGestureMode.Seek) {
                                                     val dur = durationMsProvider()
                                                     if (dur > 0L) {

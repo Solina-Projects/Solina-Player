@@ -723,10 +723,6 @@ fun VideoPlayerScreen(
             onApplySpeedLive = { videoPlayerViewModel.setSpeedLive(it) },
             onCommitSpeed = { videoPlayerViewModel.setSpeed(it) },
             onSingleTapCandidate = { pendingSingleTap = true },
-            onShowBarsAndPoke = {
-                barsVisible = true
-                poke()
-            },
             onSpeedBarShown = {
                 // Round 20: the long-press speed bar is solo — do NOT show the bars.
                 barsVisible = false

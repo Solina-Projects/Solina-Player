@@ -207,7 +207,7 @@
     <string name="video_tutorial_title">نحوهٔ استفاده از پخش‌کننده</string>
     <string name="video_tutorial_swipe">برای عقب یا جلو بردن، روی ویدیو به چپ یا راست بکشید.</string>
     <string name="video_tutorial_long_press">انگشت را نگه دارید تا نوار سرعت باز شود — در همان حال بکشید تا سرعت را انتخاب کنید.</string>
-    <string name="video_tutorial_vertical">برای روشنایی، نیمهٔ چپ را بالا یا پایین بکشید؛ برای صدا، نیمهٔ راست را.</string>
+    <string name="video_tutorial_vertical">برای صدا، نیمهٔ چپ را بالا یا پایین بکشید؛ برای روشنایی، نیمهٔ راست را.</string>
     <string name="video_tutorial_pinch">با دو انگشت برای بزرگنمایی نیشگون بگیرید؛ دو بار ضربه بزنید تا برگردد.</string>
     <string name="video_tutorial_tap">برای نمایش یا پنهان کردن همهٔ نوارها، روی ویدیو ضربه بزنید.</string>
     <string name="video_tutorial_top">نوار بالا مسیرهای صدا، زیرنویس و منو را دارد؛ پیکان کنترل‌های بیشتر را باز می‌کند.</string>
@@ -336,5 +336,29 @@
     <string name="video_customize_thumbnails_title">تصاویر بندانگشتی و پیشرفت تماشا</string>
     <string name="video_customize_controls_title">کنترل‌ها و پخش</string>
     <string name="setcat_appearance_effects_section">افکت‌ها، فونت و ظاهرهای آماده</string>
+
+    <!-- Round 22: long-press multi-selection for video files. -->
+    <string name="video_selected_count">%1$d انتخاب شده</string>
+    <string name="video_selection_select_all">انتخاب همه</string>
+    <string name="video_selection_clear">پاک کردن انتخاب</string>
+    <string name="video_selection_actions">کارها</string>
+    <string name="video_selection_play">پخش</string>
+    <string name="video_selection_add_to_playlist">افزودن به لیست پخش ویدیوها</string>
+    <string name="video_selection_share">اشتراک‌گذاری</string>
+    <string name="video_selection_rename">تغییر نام</string>
+    <string name="video_selection_details">جزئیات</string>
+    <string name="video_selection_delete">حذف</string>
+    <string name="video_selection_delete_title">حذف ویدیوها</string>
+    <string name="video_selection_delete_message">%1$d ویدیو برای همیشه حذف می‌شوند.</string>
+    <string name="video_selection_delete_failed">حذف ویدیوها انجام نشد</string>
+    <string name="video_selection_delete_cancelled">حذف لغو شد</string>
+    <string name="video_selection_deleted_count">%1$d ویدیو حذف شد</string>
+    <string name="video_selection_cannot_delete_playing">نمی‌شود ویدیوی در حال پخش را حذف کرد</string>
+    <string name="video_selection_rename_title">تغییر نام ویدیو</string>
+    <string name="video_selection_rename_hint">نام ویدیو</string>
+    <string name="video_selection_rename_done">نام ویدیو عوض شد</string>
+    <string name="video_selection_rename_failed">تغییر نام ویدیو انجام نشد</string>
+    <string name="video_selection_rename_empty">اول یک نام وارد کنید</string>
+    <string name="video_selection_details_date">تاریخ اضافه شدن</string>
 </resources>
 

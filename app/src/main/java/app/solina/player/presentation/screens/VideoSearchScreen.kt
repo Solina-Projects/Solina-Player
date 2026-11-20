@@ -1,8 +1,9 @@
 package app.solina.player.presentation.screens
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -63,8 +64,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -78,7 +81,10 @@ import app.solina.player.R
 import app.solina.player.data.model.VideoItem
 import app.solina.player.data.model.VideoProgressEntry
 import app.solina.player.presentation.components.MiniPlayerHeight
+import app.solina.player.presentation.components.VideoSelectionActionsHost
+import app.solina.player.presentation.components.VideoSelectionCheckOverlay
 import app.solina.player.presentation.components.VideoThumbnail
+import app.solina.player.presentation.components.subcomps.SelectionActionRow
 import app.solina.player.presentation.navigation.Screen
 import app.solina.player.presentation.navigation.navigateSafely
 import app.solina.player.presentation.viewmodel.AppearanceViewModel
@@ -116,6 +122,13 @@ fun VideoSearchScreen(
     val statusBarTopInset = WindowInsets.systemBars.asPaddingValues().calculateTopPadding()
     val isGridView by videoViewModel.isVideoSearchGridView.collectAsStateWithLifecycle()
     val progressMap by videoViewModel.videoProgressMap.collectAsStateWithLifecycle()
+    // Round 22: long-press multi-selection (mirrors the music library).
+    val selectedUris by videoViewModel.selectedVideoUris.collectAsStateWithLifecycle()
+    val isSelectionMode by videoViewModel.isVideoSelectionMode.collectAsStateWithLifecycle()
+    val haptic = LocalHapticFeedback.current
+    BackHandler(enabled = isSelectionMode) {
+        videoViewModel.clearVideoSelection()
+    }
 
     // All videos together in one list: empty query = every video, newest
     // first; typing filters by title/mime; a format chip filters by type.
@@ -281,6 +294,20 @@ fun VideoSearchScreen(
                     )
                 }
             }
+            // Round 22: selection action row (same component as music).
+            if (isSelectionMode) {
+                SelectionActionRow(
+                    selectedCount = selectedUris.size,
+                    onSelectAll = {
+                        videoViewModel.selectAllVideos(results.map { it.contentUriString })
+                    },
+                    onDeselect = { videoViewModel.clearVideoSelection() },
+                    onOptionsClick = { videoViewModel.openVideoSelectionSheet() },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 24.dp, vertical = 4.dp)
+                )
+            }
             VideoSearchResults(
                 results = results,
                 progressMap = progressMap,
@@ -288,18 +315,27 @@ fun VideoSearchScreen(
                 formatFilter = formatFilter,
                 onFormatClick = { formatFilter = it },
                 isGridView = isGridView,
+                selectedUris = selectedUris,
                 onVideoClick = { video ->
-                    navController.navigateSafely(
-                        // Round 16, item 1a: tapping a result plays the
-                        // whole visible result list as one queue, starting
-                        // at the tapped video — so playback auto-advances
-                        // instead of stopping at the end of one video.
-                        // "Play all" below is unchanged.
-                        Screen.VideoPlayer.createRoute(
-                            startUri = video.contentUriString,
-                            queueUris = results.map { it.contentUriString }
+                    if (isSelectionMode) {
+                        videoViewModel.toggleVideoSelection(video.contentUriString)
+                    } else {
+                        navController.navigateSafely(
+                            // Round 16, item 1a: tapping a result plays the
+                            // whole visible result list as one queue, starting
+                            // at the tapped video — so playback auto-advances
+                            // instead of stopping at the end of one video.
+                            // "Play all" below is unchanged.
+                            Screen.VideoPlayer.createRoute(
+                                startUri = video.contentUriString,
+                                queueUris = results.map { it.contentUriString }
+                            )
                         )
-                    )
+                    }
+                },
+                onVideoLongClick = { video ->
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    videoViewModel.enterVideoSelection(video.contentUriString)
                 },
                 onPlayAll = {
                     navController.navigateSafely(
@@ -312,6 +348,22 @@ fun VideoSearchScreen(
                 modifier = Modifier.fillMaxSize()
             )
         }
+        // Round 22: selection bottom sheet + dialogs + permission launchers.
+        VideoSelectionActionsHost(
+            videoViewModel = videoViewModel,
+            allVideos = allVideos,
+            onPlayVideos = { selected ->
+                if (selected.isNotEmpty()) {
+                    videoViewModel.clearVideoSelection()
+                    navController.navigateSafely(
+                        Screen.VideoPlayer.createRoute(
+                            startUri = selected.first().contentUriString,
+                            queueUris = selected.map { it.contentUriString }
+                        )
+                    )
+                }
+            }
+        )
     }
 }
 
@@ -341,7 +393,10 @@ private fun VideoBrowseCard(
     progressFraction: Float = 0f,
     isGridView: Boolean,
     colorSeed: String,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    // Round 22: long-press multi-selection.
+    selected: Boolean = false,
+    onLongClick: () -> Unit = {}
 ) {
     val colorScheme = MaterialTheme.colorScheme
     val palette = remember(colorScheme) {
@@ -365,17 +420,35 @@ private fun VideoBrowseCard(
     Card(
         modifier = cardModifier
             .clip(shape)
-            .clickable(onClick = onClick),
+            .combinedClickable(onClick = onClick, onLongClick = onLongClick),
         shape = shape,
-        colors = CardDefaults.cardColors(containerColor = backgroundColor),
+        colors = CardDefaults.cardColors(
+            containerColor = if (selected) {
+                MaterialTheme.colorScheme.primaryContainer
+            } else {
+                backgroundColor
+            }
+        ),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .clip(RoundedCornerShape(20.dp))
-                .background(backgroundColor)
+                .background(
+                    if (selected) {
+                        MaterialTheme.colorScheme.primaryContainer
+                    } else {
+                        backgroundColor
+                    }
+                )
         ) {
+            VideoSelectionCheckOverlay(
+                selected = selected,
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(8.dp)
+            )
             if (thumbnailVideo != null) {
                 Box(
                     modifier = Modifier
@@ -432,6 +505,9 @@ private fun VideoSearchResults(
     isGridView: Boolean,
     onVideoClick: (VideoItem) -> Unit,
     onPlayAll: () -> Unit,
+    // Round 22: long-press multi-selection.
+    selectedUris: Set<String> = emptySet(),
+    onVideoLongClick: (VideoItem) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val localDensity = LocalDensity.current
@@ -537,7 +613,9 @@ private fun VideoSearchResults(
                         progressFraction = progressMap[video.contentUriString]?.fraction ?: 0f,
                         isGridView = true,
                         colorSeed = video.contentUriString,
-                        onClick = { onVideoClick(video) }
+                        onClick = { onVideoClick(video) },
+                        selected = video.contentUriString in selectedUris,
+                        onLongClick = { onVideoLongClick(video) }
                     )
                 }
             }
@@ -551,7 +629,9 @@ private fun VideoSearchResults(
                     VideoSearchRow(
                         video = video,
                         progressFraction = progressMap[video.contentUriString]?.fraction ?: 0f,
-                        onClick = { onVideoClick(video) }
+                        onClick = { onVideoClick(video) },
+                        selected = video.contentUriString in selectedUris,
+                        onLongClick = { onVideoLongClick(video) }
                     )
                 }
             }
@@ -564,6 +644,9 @@ private fun VideoSearchRow(
     video: VideoItem,
     progressFraction: Float = 0f,
     onClick: () -> Unit,
+    // Round 22: long-press multi-selection.
+    selected: Boolean = false,
+    onLongClick: () -> Unit = {},
     // Round 15, wave 2, C2 + C4: row corners + list font size from the
     // appearance settings (same controls as the music library rows).
     appearanceViewModel: AppearanceViewModel = hiltViewModel()
@@ -573,10 +656,14 @@ private fun VideoSearchRow(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick),
+            .combinedClickable(onClick = onClick, onLongClick = onLongClick),
         shape = RoundedCornerShape(appearance.listRows.cornerRadiusDp.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainer
+            containerColor = if (selected) {
+                MaterialTheme.colorScheme.primaryContainer
+            } else {
+                MaterialTheme.colorScheme.surfaceContainer
+            }
         ),
         elevation = CardDefaults.cardElevation(0.dp)
     ) {
@@ -584,11 +671,19 @@ private fun VideoSearchRow(
             modifier = Modifier.padding(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            VideoThumbnail(
-                video = video,
-                progressFraction = progressFraction,
-                modifier = Modifier.size(width = 112.dp, height = 64.dp)
-            )
+            Box {
+                VideoThumbnail(
+                    video = video,
+                    progressFraction = progressFraction,
+                    modifier = Modifier.size(width = 112.dp, height = 64.dp)
+                )
+                VideoSelectionCheckOverlay(
+                    selected = selected,
+                    modifier = Modifier
+                        .align(Alignment.TopStart)
+                        .padding(4.dp)
+                )
+            }
             Spacer(Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(

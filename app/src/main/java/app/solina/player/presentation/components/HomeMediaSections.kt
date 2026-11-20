@@ -37,6 +37,7 @@ import androidx.compose.material.icons.rounded.Folder
 import androidx.compose.material.icons.rounded.History
 import androidx.compose.material.icons.rounded.MusicNote
 import androidx.compose.material.icons.rounded.Palette
+import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Shuffle
 import androidx.compose.material.icons.rounded.VideoLibrary
@@ -68,8 +69,11 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.ui.PlayerView
 import app.solina.player.R
 import app.solina.player.data.model.Song
 import app.solina.player.data.model.VideoItem
@@ -724,6 +728,11 @@ fun RecentlyAddedVideosRow(
     onVideoLongClick: ((VideoItem) -> Unit)? = null,
     progressMap: Map<String, VideoProgressEntry> = emptyMap(),
     showProgressStrip: Boolean = true,
+    // Round 22, item 5: inline playback inside one card at a time.
+    inlinePlayingUri: String? = null,
+    inlinePlayer: ExoPlayer? = null,
+    inlineIsPlaying: Boolean = false,
+    onInlinePlayPause: (VideoItem) -> Unit = {},
     modifier: Modifier = Modifier,
     appearanceViewModel: AppearanceViewModel = hiltViewModel()
 ) {
@@ -794,47 +803,87 @@ fun RecentlyAddedVideosRow(
                 ) {
                     Column(modifier = Modifier.padding(7.dp)) {
                         Box {
-                            VideoThumbnail(
-                                video = video,
-                                progressFraction = progressFraction,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(86.dp * cardScale)
-                                    .clip(thumbCorners.toShape())
-                            )
-                            Box(
-                                modifier = Modifier
-                                    .align(Alignment.BottomEnd)
-                                    .padding(5.dp)
-                                    .background(
-                                        Color.Black.copy(alpha = 0.72f),
-                                        RoundedCornerShape(6.dp)
+                            // Round 22, item 5: the tapped video plays
+                            // INSIDE its own card (small PlayerView over
+                            // the shared holder's ExoPlayer, no controls);
+                            // every other card keeps its thumbnail.
+                            if (inlinePlayingUri == video.contentUriString && inlinePlayer != null) {
+                                AndroidView(
+                                    factory = { context ->
+                                        PlayerView(context).apply {
+                                            player = inlinePlayer
+                                            useController = false
+                                        }
+                                    },
+                                    update = { view -> view.player = inlinePlayer },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(86.dp * cardScale)
+                                        .clip(thumbCorners.toShape())
+                                )
+                                Box(
+                                    modifier = Modifier
+                                        .align(Alignment.Center)
+                                        .size(32.dp * cardScale)
+                                        .clip(CircleShape)
+                                        .background(Color.Black.copy(alpha = 0.45f))
+                                        .clickable { onInlinePlayPause(video) },
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = if (inlineIsPlaying) {
+                                            Icons.Rounded.Pause
+                                        } else {
+                                            Icons.Rounded.PlayArrow
+                                        },
+                                        contentDescription = null,
+                                        tint = Color.White,
+                                        modifier = Modifier.size(20.dp * cardScale)
                                     )
-                                    .padding(horizontal = 5.dp, vertical = 2.dp)
-                            ) {
-                                Text(
-                                    text = formatDuration(video.durationMs),
-                                    style = MaterialTheme.typography.labelSmall.copy(
-                                        fontSize = 10.sp * fontScale,
-                                        fontWeight = FontWeight.Medium
-                                    ),
-                                    color = Color.White
+                                }
+                            } else {
+                                VideoThumbnail(
+                                    video = video,
+                                    progressFraction = progressFraction,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(86.dp * cardScale)
+                                        .clip(thumbCorners.toShape())
                                 )
-                            }
-                            Box(
-                                modifier = Modifier
-                                    .align(Alignment.Center)
-                                    .size(32.dp * cardScale)
-                                    .clip(CircleShape)
-                                    .background(Color.Black.copy(alpha = 0.45f)),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Rounded.PlayArrow,
-                                    contentDescription = null,
-                                    tint = Color.White,
-                                    modifier = Modifier.size(20.dp * cardScale)
-                                )
+                                Box(
+                                    modifier = Modifier
+                                        .align(Alignment.BottomEnd)
+                                        .padding(5.dp)
+                                        .background(
+                                            Color.Black.copy(alpha = 0.72f),
+                                            RoundedCornerShape(6.dp)
+                                        )
+                                        .padding(horizontal = 5.dp, vertical = 2.dp)
+                                ) {
+                                    Text(
+                                        text = formatDuration(video.durationMs),
+                                        style = MaterialTheme.typography.labelSmall.copy(
+                                            fontSize = 10.sp * fontScale,
+                                            fontWeight = FontWeight.Medium
+                                        ),
+                                        color = Color.White
+                                    )
+                                }
+                                Box(
+                                    modifier = Modifier
+                                        .align(Alignment.Center)
+                                        .size(32.dp * cardScale)
+                                        .clip(CircleShape)
+                                        .background(Color.Black.copy(alpha = 0.45f)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Rounded.PlayArrow,
+                                        contentDescription = null,
+                                        tint = Color.White,
+                                        modifier = Modifier.size(20.dp * cardScale)
+                                    )
+                                }
                             }
                         }
                         Spacer(Modifier.height(7.dp))
